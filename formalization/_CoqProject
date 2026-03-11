@@ -8,5 +8,7 @@ FreeVars.v
 StructCong.v
 Reduction.v
 Substitution.v
+Preservation.v
 FinalProcess.v
 Progress.v
+Results.v
