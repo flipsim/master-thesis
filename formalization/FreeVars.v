@@ -345,4 +345,219 @@ Proof.
     intro H_fv. apply H1. apply fv_wait; auto.
 Qed.
 
-(* TODO: lift_process p n k -> ~ (n ∈ p) *)
+Lemma nfv_lift_n :
+  (forall (p : process),
+    forall k n j, k <= j /\ j < k + n -> ~ (j ∈ (lift_process p k n)))
+  /\
+  (forall (m : message),
+    forall k n j, k <= j /\ j < k + n -> ~ (occurs_free_message j (lift_message m k n)))
+  /\
+  (forall (s : statement),
+    forall k n j, k <= j /\ j < k + n -> ~ (occurs_free_statement j (lift_statement s k n))).
+Proof.
+  apply syntax_ind; intros; intro Hnfv; inversion Hnfv; subst;
+  try match goal with
+    | [ IH : forall k n j, _ -> ~ occurs_free_message j (lift_message ?m k n),
+         H : occurs_free_message ?j (lift_message ?m ?k ?n)
+        |- _ ] => apply (IH k n j); try lia; auto
+    | [ IH : forall k n j, _ -> ~ occurs_free_statement j (lift_statement ?s k n),
+         H : occurs_free_statement ?j (lift_statement ?s ?k ?n)
+        |- _ ] => apply (IH k n j); try lia; auto
+    | [ IH : forall k n j, _ -> ~ occurs_free_process j (lift_process ?p k n),
+         H : occurs_free_process ?j (lift_process ?p ?k ?n)
+        |- _ ] => apply (IH k n j); try lia; auto
+    end.
+  unfold relocate in H.
+  destruct (Nat.leb k n) eqn:E.
+  + apply Compare_dec.leb_complete in E. lia.
+  + apply PeanoNat.Nat.leb_gt in E. lia.
+Qed.
+
+Lemma free_vars_decidable :
+  (forall (p : process),
+    forall n, (n ∈ p) \/ (~ (n ∈ p)))
+  /\
+  (forall (m : message),
+    forall n, (occurs_free_message n m) \/ (~ (occurs_free_message n m)))
+  /\
+  (forall (s : statement),
+    forall n, (occurs_free_statement n s) \/ (~ (occurs_free_statement n s))).
+Proof.
+  apply syntax_ind; intros.
+  + destruct (H n), (H0 n).
+    - left. econstructor; eauto.
+    - left. econstructor; eauto.
+    - left. apply fv_link_r; auto.
+    - right; intro Hfv. inversion Hfv; congruence.
+  + destruct (H (S n)), (H0 (S n)).
+    - left. econstructor; eauto.
+    - left. econstructor; eauto.
+    - left. apply fv_cut_r; auto.
+    - right; intro Hfv. inversion Hfv; congruence.
+  + destruct (H (S n)), (H0 n).
+    - left. econstructor; eauto.
+    - left. econstructor; eauto.
+    - left. apply fv_seq_r; auto.
+    - right; intro Hfv. inversion Hfv; congruence.
+  + right; intro Hfv; inversion Hfv.
+  + destruct (PeanoNat.Nat.eq_dec n n0).
+    - left; subst; econstructor.
+    - right; intro Hfv; inversion Hfv; congruence.
+  + destruct (H n).
+    - left; econstructor; auto.
+    - right; intro Hfv; inversion Hfv; auto.
+  + destruct (H (S n)).
+    - left; econstructor; auto.
+    - right; intro Hfv; inversion Hfv; auto.
+  + destruct (H (S n)).
+    - left; econstructor; auto.
+    - right; intro Hfv; inversion Hfv; auto.
+  + destruct (H (S n)), (H0 (S n)).
+    - left. econstructor; eauto.
+    - left. econstructor; eauto.
+    - left. apply fv_choice_r; auto.
+    - right; intro Hfv. inversion Hfv; congruence.
+  + destruct (H (S n)), (H0 (S n)).
+    - left. econstructor; eauto.
+    - left. econstructor; eauto.
+    - left. apply fv_send_r; auto.
+    - right; intro Hfv. inversion Hfv; congruence.
+  + destruct (H (S (S n))).
+    - left; econstructor; auto.
+    - right; intro Hfv; inversion Hfv; auto.
+  + right; intro Hfv; inversion Hfv.
+  + destruct (H n).
+    - left; econstructor; auto.
+    - right; intro Hfv; inversion Hfv; auto.
+Qed.
+
+Lemma fv_under_renaming :
+  (forall (p : process),
+    forall r j, bijective r -> (j ∈ p) <-> ((r j) ∈ (rename_process p r)))
+  /\
+  (forall (m : message),
+    forall r j, bijective r -> (occurs_free_message j m) <-> (occurs_free_message (r j) (rename_message m r)))
+  /\
+  (forall (s : statement),
+    forall r j, bijective r -> (occurs_free_statement j s) <-> (occurs_free_statement (r j) (rename_statement s r))).
+Proof.
+  apply syntax_ind; intros.
+  + split; intros Hfv; simpl in Hfv; simpl; inversion Hfv; subst.
+    - apply fv_link_l; apply H; auto.
+    - apply fv_link_r; apply H0; auto.
+    - apply fv_link_l. apply (proj2 (H _ _ H1) H4).
+    - apply fv_link_r. apply (proj2 (H0 _ _ H1) H4).
+  + split; intros Hfv; simpl in Hfv; simpl; inversion Hfv; subst.
+    - apply fv_cut_l.
+      replace (S (r j)) with (up_ren r (S j)) by reflexivity.
+      apply H; auto.
+      apply shift_preserves_bijection; auto.
+    - apply fv_cut_r.
+      replace (S (r j)) with (up_ren r (S j)) by reflexivity.
+      apply H0; auto.
+      apply shift_preserves_bijection; auto.
+    - apply fv_cut_l. eapply (H (up_ren r) (S j)); auto.
+      apply shift_preserves_bijection; auto.
+    - apply fv_cut_r. eapply (H0 (up_ren r) (S j)); auto.
+      apply shift_preserves_bijection; auto.
+  + split; intros Hfv; simpl in Hfv; simpl; inversion Hfv; subst.
+    - apply fv_seq_l.
+      replace (S (r j)) with (up_ren r (S j)) by reflexivity.
+      apply H; auto.
+      apply shift_preserves_bijection; auto.
+    - apply fv_seq_r.
+      replace (S (r j)) with (up_ren r (S j)) by reflexivity.
+      apply H0; auto.
+    - apply fv_seq_l. eapply (H (up_ren r) (S j)); auto.
+      apply shift_preserves_bijection; auto.
+    - apply fv_seq_r. eapply (H0 r j); auto.
+  + split; intros Hfv; simpl in Hfv; simpl; inversion Hfv; subst.
+  + split; intros Hfv; simpl in Hfv; simpl; inversion Hfv; subst.
+    - econstructor.
+    - destruct H.
+      assert (g (r j) = g (r n)) by auto.
+      repeat rewrite c in H. rewrite H.
+      econstructor.
+  + split; intros Hfv; simpl in Hfv; simpl; inversion Hfv; subst.
+    - econstructor. apply H; auto.
+    - econstructor. apply (proj2 (H _ _ H0)); auto.
+  + split; intros Hfv; simpl in Hfv; simpl; inversion Hfv; subst.
+    - econstructor.
+      replace (S (r j)) with (up_ren r (S j)) by reflexivity.
+      apply H; auto. apply shift_preserves_bijection; auto.
+    - econstructor.
+      replace (S (r j)) with (up_ren r (S j)) in H3 by reflexivity.
+      apply (H (up_ren r)); auto. apply shift_preserves_bijection; auto.
+  + split; intros Hfv; simpl in Hfv; simpl; inversion Hfv; subst.
+    - econstructor.
+      replace (S (r j)) with (up_ren r (S j)) by reflexivity.
+      apply H; auto. apply shift_preserves_bijection; auto.
+    - econstructor.
+      replace (S (r j)) with (up_ren r (S j)) in H3 by reflexivity.
+      apply (H (up_ren r)); auto. apply shift_preserves_bijection; auto.
+  + split; intros Hfv; simpl in Hfv; simpl; inversion Hfv; subst.
+    - apply fv_choice_l.
+      replace (S (r j)) with (up_ren r (S j)) by reflexivity.
+      apply H; auto.
+      apply shift_preserves_bijection; auto.
+    - apply fv_choice_r.
+      replace (S (r j)) with (up_ren r (S j)) by reflexivity.
+      apply H0; auto.
+      apply shift_preserves_bijection; auto.
+    - apply fv_choice_l. eapply (H (up_ren r) (S j)); auto.
+      apply shift_preserves_bijection; auto.
+    - apply fv_choice_r. eapply (H0 (up_ren r) (S j)); auto.
+      apply shift_preserves_bijection; auto.
+  + split; intros Hfv; simpl in Hfv; simpl; inversion Hfv; subst.
+    - apply fv_send_l.
+      replace (S (r j)) with (up_ren r (S j)) by reflexivity.
+      apply H; auto.
+      apply shift_preserves_bijection; auto.
+    - apply fv_send_r.
+      replace (S (r j)) with (up_ren r (S j)) by reflexivity.
+      apply H0; auto.
+      apply shift_preserves_bijection; auto.
+    - apply fv_send_l. eapply (H (up_ren r) (S j)); auto.
+      apply shift_preserves_bijection; auto.
+    - apply fv_send_r. eapply (H0 (up_ren r) (S j)); auto.
+      apply shift_preserves_bijection; auto.
+  + split; intros Hfv; simpl in Hfv; simpl; inversion Hfv; subst.
+    - econstructor.
+      replace (S (S (r j))) with ((up_ren (up_ren r)) (S (S j))) by reflexivity.
+      apply H; auto. repeat apply shift_preserves_bijection; auto.
+    - econstructor.
+      replace (S (S (r j))) with ((up_ren (up_ren r)) (S (S j))) by reflexivity.
+      apply (H (up_ren (up_ren r))); auto. repeat apply shift_preserves_bijection; auto.
+  + split; intros Hfv; simpl in Hfv; simpl; inversion Hfv; subst.
+  + split; intros Hfv; simpl in Hfv; simpl; inversion Hfv; subst.
+    - econstructor. apply H; auto.
+    - econstructor. apply (proj2 (H _ _ H0)); auto.
+Qed.
+
+Corollary nfv_under_renaming :
+  (forall (p : process),
+    forall r j, bijective r -> ~ (j ∈ p) -> ~ ((r j) ∈ (rename_process p r)))
+  /\
+  (forall (m : message),
+    forall r j, bijective r -> ~ (occurs_free_message j m) -> ~ (occurs_free_message (r j) (rename_message m r)))
+  /\
+  (forall (s : statement),
+    forall r j, bijective r -> ~ (occurs_free_statement j s) -> ~ (occurs_free_statement (r j) (rename_statement s r))).
+Proof.
+  repeat split; intros;
+  intro Hfv; apply fv_under_renaming in Hfv; congruence.
+Qed.
+
+Corollary nfv_01_swap :
+  forall P, ~ 1 ∈ P -> ~ 0 ∈ (rename_process P swap01).
+Proof.
+  intros. replace 0 with (swap01 1) by reflexivity.
+  apply (proj1 nfv_under_renaming); auto. apply swap01_is_bijective.
+Qed.
+
+Corollary nfv_10_swap :
+  forall P, ~ 0 ∈ P -> ~ 1 ∈ (rename_process P swap01).
+Proof.
+  intros. replace 1 with (swap01 0) by reflexivity.
+  apply (proj1 nfv_under_renaming); auto. apply swap01_is_bijective.
+Qed.

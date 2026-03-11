@@ -29,6 +29,29 @@ Scheme process_rec_ind   := Induction for process Sort Prop
   with statement_rec_ind := Induction for statement Sort Prop.
 Combined Scheme syntax_ind from process_rec_ind, message_rec_ind, statement_rec_ind.
 
+Fixpoint depth (P : process) : nat :=
+  match P with
+  | link ml mr => S (Nat.max (depthM ml) (depthM mr))
+  | cut pl pr => S (Nat.max (depth pl) (depth pr))
+  | seq p s => S (Nat.max (depth p) (depthS s))
+  | stop => 0
+  end
+with depthM (M : message) : nat :=
+  match M with
+  | future _ => 0
+  | prefix s => S (depthS s)
+  end
+with depthS (s : statement) : nat :=
+  match s with
+  | choose_left p => S (depth p)
+  | choose_right p => S (depth p)
+  | offer_choice pl pr => S (Nat.max (depth pl) (depth pr))
+  | send pl pr => S (Nat.max (depth pl) (depth pr))
+  | receive p => S (depth p)
+  | close => 0
+  | wait p => S (depth p)
+  end.
+
 (******************************************************************************)
 (* Lifting                                                                    *)
 (******************************************************************************)
@@ -164,6 +187,21 @@ Scheme fv_process_ind   := Induction for occurs_free_process Sort Prop
   with fv_statement_ind := Induction for occurs_free_statement Sort Prop.
 Combined Scheme fv_ind from fv_process_ind, fv_message_ind, fv_statement_ind.
 
+Ltac free_var_econstructor :=
+  match goal with
+  | [ H : occurs_free_message   _ ?m |- _ ∈ link ?m _ ] => eapply fv_link_l
+  | [ H : occurs_free_message   _ ?m |- _ ∈ link _ ?m ] => eapply fv_link_r
+  | [ H : occurs_free_process   _ ?p |- _ ∈ cut ?p _ ]  => eapply fv_cut_l
+  | [ H : occurs_free_process   _ ?p |- _ ∈ cut _ ?p ]  => eapply fv_cut_r
+  | [ H : occurs_free_statement _ ?s |- _ ∈ Syntax.seq _ ?s ]  => eapply fv_seq_r
+  | [ H : occurs_free_process   _ ?p |- _ ∈ Syntax.seq ?p _ ]  => eapply fv_seq_l
+  | [ H : occurs_free_process   _ ?p |- occurs_free_statement _ (offer_choice ?p _) ] => eapply fv_choice_l
+  | [ H : occurs_free_process   _ ?p |- occurs_free_statement _ (offer_choice _ ?p) ] => eapply fv_choice_r
+  | [ H : occurs_free_process   _ ?p |- occurs_free_statement _ (send ?p _) ] => eapply fv_send_l
+  | [ H : occurs_free_process   _ ?p |- occurs_free_statement _ (send _ ?p) ] => eapply fv_send_r
+  | _ => econstructor
+  end.
+
 (******************************************************************************)
 (* Parallel Substitution                                                      *)
 (******************************************************************************)
@@ -285,6 +323,50 @@ Definition swap01 : nat -> nat :=
     | 1 => O
     | x => x
     end.
+
+(******************************************************************************)
+(* Renamings and Shifting preserves depth                                     *)
+(******************************************************************************)
+Lemma up_shifting_preserves_depth :
+  (forall (p : process),
+    forall k n, depth p = depth (lift_process p k n))
+  /\
+  (forall (m : message),
+    forall k n, depthM m = depthM (lift_message m k n))
+  /\
+  (forall (s : statement),
+    forall k n, depthS s = depthS (lift_statement s k n)).
+Proof.
+  apply syntax_ind; simpl; auto.
+Qed.
+
+Lemma down_shift_preserves_depth :
+  (forall (p : process),
+    forall n, depth p = depth (down1_process p n))
+  /\
+  (forall (m : message),
+    forall n, depthM m = depthM (down1_message m n))
+  /\
+  (forall (s : statement),
+    forall n, depthS s = depthS (down1_statement s n)).
+Proof.
+  apply syntax_ind; intros; simpl; auto.
+  destruct (Nat.ltb n0 n); auto.
+Qed.
+
+Lemma renaming_preserves_depth :
+  (forall (p : process),
+    forall r, depth p = depth (rename_process p r))
+  /\
+  (forall (m : message),
+    forall r, depthM m = depthM (rename_message m r))
+  /\
+  (forall (s : statement),
+    forall r, depthS s = depthS (rename_statement s r)).
+Proof.
+  apply syntax_ind; intros; simpl; auto.
+Qed.
+
 
 (******************************************************************************)
 (* Properties of bijections                                                   *)

@@ -8,3 +8,5 @@ FreeVars.v
 StructCong.v
 Reduction.v
 Substitution.v
+FinalProcess.v
+Progress.v

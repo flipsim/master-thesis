@@ -50,6 +50,15 @@ Definition ctx_eq {A} (Γ Δ : ctx A) : Prop :=
   forall n, lookup n Γ = lookup n Δ.
 
 (******************************************************************************)
+(* Tactics when dealing with contexts                                         *)
+(******************************************************************************)
+Ltac ctx_eq_contra :=
+  match goal with
+  | [ H : ctx_eq (_ .: _) empty_ctx |- _ ]
+      => exfalso; unfold ctx_eq in H; specialize H with 0; simpl in H; congruence (* unfold ctx_eq in H; specialize H with 0; congruence *)
+  end.
+
+(******************************************************************************)
 (* Properties about contexts                                                  *)
 (******************************************************************************)
 Lemma ctx_comm :

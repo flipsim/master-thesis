@@ -8,6 +8,8 @@ From FD Require Import FreeVars.
 Import List.ListNotations.
 Open Scope list_scope.
 
+From Stdlib Require Import Lia.
+
 Reserved Notation "P '≡' Q" (no associativity, at level 1).
 Reserved Notation "M '!≡' N" (no associativity, at level 1).
 Reserved Notation "s '$≡' r" (no associativity, at level 1).
@@ -33,12 +35,12 @@ Reserved Notation "s '$≡' r" (no associativity, at level 1).
 *)
 Inductive structural_congruence : process -> process -> Prop :=
   (* axioms for equivalence of processes *)
-  | c_link : forall x y,
-              (link (future x) (future y)) ≡ (link (future y) (future x))
+  | c_link : forall ml mr,
+              (link ml mr) ≡ (link mr ml)
   | c_cut_comm : forall P Q,
                   (cut P Q) ≡ (cut Q P)
   | c_cut_assoc : forall P Q R P' Q' R',
-                    ~ (1 ∈ P) /\ ~ (1 ∈ R') -> (* these premises guarantee that the typing judgements have the proper form *)
+                    ~ (1 ∈ P) -> (* this premise guarantee that the typing judgements have the proper form *)
                     P' = down (rename_process P swap01) ->
                     Q' = rename_process Q swap01 ->
                     R' = rename_process (up R) swap01 ->
@@ -106,11 +108,9 @@ Proof.
     try apply H; try apply H0; eauto
   ).
   (* c_link *)
-  + split; intros;
-    inversion H; subst;
-    apply ctx_comm in H2;
-    rewrite <- dual_involutive in H4;
-    econstructor; eauto.
+  + split; intros; inversion H; subst; apply ctx_comm in H2;
+    econstructor; eauto;
+    rewrite dual_involutive; eauto.
   (* c_cut_comm *)
   + split; intros;
     inversion H; subst;
@@ -128,7 +128,7 @@ Proof.
         destruct o.
         { exfalso.
           eapply ((proj1 formula_property) _ _ 1) in H10.
-          + destruct a; contradiction.
+          + contradiction.
           + simpl. reflexivity.
         }
         (* destruct free_var_in_ctx as [? [_ _]].
@@ -184,9 +184,7 @@ Proof.
         assert (~ (0 ∈ rename_process P swap01)).
         {
           change 0 with (swap01 1).
-          eapply (proj1 nfv_renaming).
-          + apply swap01_is_bijective.
-          + apply (proj1 a).
+          eapply (proj1 nfv_renaming); auto. apply swap01_is_bijective.
         }
 
         assert (None :: (A .: Γ1) ⊢ rename_process P swap01 :#).
@@ -248,10 +246,18 @@ Proof.
           * assumption.
         - eapply H_R.
       + exfalso.
-        destruct a.
-        apply H1.
-        eapply (proj1 formula_property); eauto.
-        reflexivity.
+        assert (~ 1 ∈ rename_process (up R) swap01).
+        {
+          replace 1 with (swap01 0) by auto.
+          apply nfv_under_renaming. apply swap01_is_bijective.
+          apply nfv_lift_n. lia.
+        }
+        assert (1 ∈ rename_process (up R) swap01).
+        {
+          eapply ((proj1 formula_property) _ _ 1 _ H8).
+          reflexivity.
+        }
+        congruence.
     }
   (* Commutativity *)
   + split; apply H.

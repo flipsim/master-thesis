@@ -6,6 +6,7 @@ From FD Require Import Contexts.
 From Stdlib Require Import ssreflect.
 From Stdlib Require Import List.
 From Stdlib Require Import Lia.
+Import List.ListNotations.
 
 (* use alternative rename ctx split lemma using strong induction *)
 Lemma rename_ctx_split' :
@@ -49,13 +50,13 @@ Proof.
       induction k.
       { intros.
         destruct (ctx_split_preserves_length _ Δ1 Δ2 H_ctx_n_Δ) as [H_len_Δ1 H_len_Δ2].
-        assert (length (firstn i Δ) = i).
-        { apply firstn_length_le. lia. }
+        assert (length (List.firstn i Δ) = i).
+        { apply List.firstn_length_le. lia. }
         rewrite H2 in H_len_Δ1, H_len_Δ2.
         destruct i.
         + symmetry in H_len_Δ1, H_len_Δ2.
-          apply length_zero_iff_nil in H_len_Δ1.
-          apply length_zero_iff_nil in H_len_Δ2.
+          apply List.length_zero_iff_nil in H_len_Δ1.
+          apply List.length_zero_iff_nil in H_len_Δ2.
           subst.
           destruct H0.
           rewrite H0 H3.
@@ -77,7 +78,7 @@ Proof.
             apply ctx_split_preserves_length in H_ctx_n_Δ.
             destruct H_ctx_n_Δ.
             rewrite <- H4.
-            rewrite firstn_length_le.
+            rewrite List.firstn_length_le.
             lia.
             reflexivity.
           }
@@ -86,7 +87,7 @@ Proof.
             apply ctx_split_preserves_length in H_ctx_n_Δ.
             destruct H_ctx_n_Δ.
             rewrite <- H6.
-            rewrite firstn_length_le.
+            rewrite List.firstn_length_le.
             lia.
             reflexivity.
           }
@@ -100,7 +101,7 @@ Proof.
             apply ctx_split_preserves_length in H_ctx_n_Δ.
             destruct H_ctx_n_Δ.
             rewrite <- H5.
-            rewrite firstn_length_le.
+            rewrite List.firstn_length_le.
             lia.
             reflexivity.
           }
@@ -110,7 +111,7 @@ Proof.
             apply ctx_split_preserves_length in H_ctx_n_Δ.
             destruct H_ctx_n_Δ.
             rewrite <- H7.
-            rewrite firstn_length_le.
+            rewrite List.firstn_length_le.
             lia.
             reflexivity.
           }
@@ -130,13 +131,13 @@ Proof.
       induction k.
       { intros.
         destruct (ctx_split_preserves_length _ Δ1 Δ2 H_ctx_n_Δ) as [H_len_Δ1 H_len_Δ2].
-        assert (length (firstn i Δ) = i).
-        { apply firstn_length_le. lia. }
+        assert (length (List.firstn i Δ) = i).
+        { apply List.firstn_length_le. lia. }
         rewrite H2 in H_len_Δ1, H_len_Δ2.
         destruct i.
         + symmetry in H_len_Δ1, H_len_Δ2.
-          apply length_zero_iff_nil in H_len_Δ1.
-          apply length_zero_iff_nil in H_len_Δ2.
+          apply List.length_zero_iff_nil in H_len_Δ1.
+          apply List.length_zero_iff_nil in H_len_Δ2.
           subst.
           destruct H0.
           rewrite H0 H3.
@@ -158,7 +159,7 @@ Proof.
             apply ctx_split_preserves_length in H_ctx_n_Δ.
             destruct H_ctx_n_Δ.
             rewrite <- H4.
-            rewrite firstn_length_le.
+            rewrite List.firstn_length_le.
             lia.
             reflexivity.
           }
@@ -167,7 +168,7 @@ Proof.
             apply ctx_split_preserves_length in H_ctx_n_Δ.
             destruct H_ctx_n_Δ.
             rewrite <- H6.
-            rewrite firstn_length_le.
+            rewrite List.firstn_length_le.
             lia.
             reflexivity.
           }
@@ -181,7 +182,7 @@ Proof.
             apply ctx_split_preserves_length in H_ctx_n_Δ.
             destruct H_ctx_n_Δ.
             rewrite <- H5.
-            rewrite firstn_length_le.
+            rewrite List.firstn_length_le.
             lia.
             reflexivity.
           }
@@ -191,7 +192,7 @@ Proof.
             apply ctx_split_preserves_length in H_ctx_n_Δ.
             destruct H_ctx_n_Δ.
             rewrite <- H7.
-            rewrite firstn_length_le.
+            rewrite List.firstn_length_le.
             lia.
             reflexivity.
           }
@@ -219,7 +220,7 @@ Proof.
   pose proof (H Ctx_split_Γ H_eq_Γ_Δ (length Δ) (le_n (length Δ))).
   destruct H0 as [Δ1 [Δ2 H0]].
   exists Δ1, Δ2.
-  rewrite firstn_all in H0. destruct H0.
+  rewrite List.firstn_all in H0. destruct H0.
   split; try assumption.
   split.
   + unfold "<" in H1.
@@ -525,6 +526,15 @@ Proof.
     try repeat apply up_shift_compose; auto.
 Qed.
 
+Corollary swap_swap_id :
+  forall P, rename_process (rename_process P swap01) swap01 = P.
+Proof.
+  intros.
+  rewrite ((proj1 renamings_compose) _ _ _ id).
+  + intros. destruct x; auto; destruct x; reflexivity.
+  + apply (proj1 rename_id); auto.
+Qed.
+
 (******************************************************************************)
 (* Properties of downshifting and upshifing wrt typing                        *)
 (******************************************************************************)
@@ -554,7 +564,7 @@ Proof.
       reflexivity.
     - destruct k.
       * assert (0 >= length Γ) by lia.
-        inversion H1. apply length_zero_iff_nil in H4; subst.
+        inversion H1. apply List.length_zero_iff_nil in H4; subst.
         reflexivity.
       * specialize H3 with k.
         destruct (PeanoNat.Nat.eq_dec k n).
@@ -591,7 +601,7 @@ Proof.
       reflexivity.
     - destruct k.
       * assert (0 >= length Γ) by lia.
-        inversion H1. apply length_zero_iff_nil in H4; subst.
+        inversion H1. apply List.length_zero_iff_nil in H4; subst.
         inversion H.
       * destruct (PeanoNat.Nat.eq_dec k n).
         ** subst.
@@ -717,13 +727,13 @@ Proof.
       eapply t_cut with (A := A); eauto; unfold ".:"; simpl.
       * rewrite H9.
         change (S (length Γ1')) with (length (Some A :: Γ1')).
-        rewrite app_comm_cons.
+        rewrite List.app_comm_cons.
         eapply H.
         ** intro Hfv. apply H1. constructor. rewrite H9; auto.
         ** rewrite H2 in H6. eassumption.
       * rewrite H10.
         change (S (length Γ1')) with (length (Some A :: Γ1')).
-        rewrite app_comm_cons.
+        rewrite List.app_comm_cons.
         eapply H0.
         ** intro Hfv. apply H1. apply fv_cut_r. rewrite H10; auto.
         ** rewrite H3 in H7. eassumption.
@@ -746,14 +756,14 @@ Proof.
         Γ ++ Δ ≜ Γ1' ++ Δ1' ∘ Γ2' ++ Δ2'
       ) by (eapply ctx_split_distribution; eauto).
       eapply t_cut with (A := A); eauto; unfold ".:"; simpl.
-      * rewrite app_comm_cons.
+      * rewrite List.app_comm_cons.
         apply H.
         ** intro Hfv. apply H1. constructor. rewrite H9; auto.
         ** simpl.
            rewrite H2 in H6.
            rewrite H9 in H6.
            assumption.
-      * rewrite app_comm_cons.
+      * rewrite List.app_comm_cons.
         apply H0.
         ** intro Hfv. apply H1. apply fv_cut_r. rewrite H10; auto.
         ** simpl.
@@ -790,7 +800,7 @@ Proof.
       eapply t_seq with (A := A); eauto; unfold ".:"; simpl.
       * rewrite H9.
         change (S (length Γ1')) with (length (Some A :: Γ1')).
-        rewrite app_comm_cons.
+        rewrite List.app_comm_cons.
         eapply H.
         ** intro Hfv. apply H1. constructor. rewrite H9; auto.
         ** rewrite H2 in H6. eassumption.
@@ -818,7 +828,7 @@ Proof.
         Γ ++ Δ ≜ Γ1' ++ Δ1' ∘ Γ2' ++ Δ2'
       ) by (eapply ctx_split_distribution; eauto).
       eapply t_seq with (A := A); eauto; unfold ".:"; simpl.
-      * rewrite app_comm_cons.
+      * rewrite List.app_comm_cons.
         apply H.
         ** intro Hfv. apply H1. constructor. rewrite H9; auto.
         ** simpl.
@@ -917,9 +927,9 @@ Proof.
         apply type_id_before_downshift; auto.
   + split; intros H_well_ty; inversion H_well_ty; subst; simpl.
     - econstructor.
-      * unfold ".:"; simpl; try repeat rewrite app_comm_cons. apply H; auto.
+      * unfold ".:"; simpl; try repeat rewrite List.app_comm_cons. apply H; auto.
         intro Hfv; simpl in Hfv. apply H1. econstructor. auto.
-      * unfold ".:"; simpl; try repeat rewrite app_comm_cons. apply H0; auto.
+      * unfold ".:"; simpl; try repeat rewrite List.app_comm_cons. apply H0; auto.
         intro Hfv; simpl in Hfv. apply H1.
         eapply fv_choice_r. assumption.
     - econstructor.
@@ -1307,3 +1317,60 @@ Proof.
     - econstructor.
       apply ctx_empty_insert_none; auto.
 Qed.
+
+(******************************************************************************)
+(* Up and Downshift cancel each other                                         *)
+(******************************************************************************)
+Lemma down_after_up_id :
+  (forall (p : process), forall (k : nat),
+    down1_process (lift_process p k 1) k = p)
+  /\
+  (forall (m : message), forall (k : nat),
+    down1_message (lift_message m k 1) k = m)
+  /\
+  (forall (s : statement), forall (k : nat),
+    down1_statement (lift_statement s k 1) k = s).
+Proof.
+  apply syntax_ind; intros; simpl;
+  try rewrite H; try rewrite H0; auto.
+  unfold relocate.
+  destruct (Nat.leb k n) eqn:E.
+  + apply PeanoNat.Nat.leb_le in E. simpl.
+    assert (k < S n) by lia.
+    apply PeanoNat.Nat.ltb_lt in H. rewrite H. reflexivity.
+  + apply PeanoNat.Nat.leb_gt in E. assert (~ (k < n)) by lia.
+    apply PeanoNat.Nat.ltb_nlt in H. rewrite H. reflexivity.
+Qed.
+
+Corollary down_after_up_process_id :
+  forall P, down (up P) = P.
+Proof. intros; unfold down, up; apply (proj1 down_after_up_id). Qed.
+
+Lemma up_after_down_id :
+  (forall (p : process), forall (k : nat),
+    ~ (k ∈ p) -> lift_process (down1_process p k) k 1 = p)
+  /\
+  (forall (m : message), forall (k : nat),
+    ~ (occurs_free_message k m) -> lift_message (down1_message m k) k 1 = m)
+  /\
+  (forall (s : statement), forall (k : nat),
+    ~ (occurs_free_statement k s) -> lift_statement (down1_statement s k) k 1 = s).
+Proof.
+  apply syntax_ind; intros; simpl; auto;
+  try rewrite H; try rewrite H0; auto; try intros Hfv;
+  try ( match goal with [ H : ~ _ |- _ ] => apply H; free_var_econstructor; eauto end ).
+  assert (k <> n).
+  { intro Heq. rewrite Heq in H. apply H. free_var_econstructor. }
+  destruct (Nat.ltb k n) eqn:E.
+  + apply PeanoNat.Nat.ltb_lt in E.
+    simpl. unfold relocate. assert (k <= (Nat.pred n)) by lia.
+    apply Compare_dec.leb_correct in H1. rewrite H1.
+    simpl. f_equal. lia.
+  + simpl. unfold relocate. apply PeanoNat.Nat.leb_gt in E.
+    assert (~ (k <= n)) by lia. apply PeanoNat.Nat.leb_nle in H1.
+    rewrite H1. reflexivity.
+Qed.
+
+Corollary up_after_down_process_id :
+  forall P, ~ 0 ∈ P -> up (down P) = P.
+Proof. intros; unfold up, down; apply up_after_down_id; auto. Qed.
