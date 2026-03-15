@@ -264,3 +264,319 @@ Proof.
   (* Transitivity *)
   + apply iff_trans with (Γ ⊢ Q :#); auto.
 Qed.
+
+(******************************************************************************)
+(* Structural Congruence (Depth Indexed)                                      *)
+(******************************************************************************)
+Inductive struct_cong_d : nat -> process -> process -> Prop :=
+  (* axioms for equivalence of processes *)
+  | c_link_d : forall ml mr,
+              struct_cong_d 0 (link ml mr) (link mr ml)
+  | c_cut_comm_d : forall P Q,
+                  struct_cong_d 0 (cut P Q) (cut Q P)
+  | c_cut_assoc_d : forall P Q R P' Q' R',
+                    ~ (1 ∈ P) ->
+                    P' = down (rename_process P swap01) ->
+                    Q' = rename_process Q swap01 ->
+                    R' = rename_process (up R) swap01 ->
+                    struct_cong_d 0 (cut (cut P Q) R) (cut P' (cut Q' R'))
+
+  (* rules to make the relation an equivalence *)
+  | c_refl_d : forall P, struct_cong_d 0 P P
+  | c_comm_d : forall n P Q, struct_cong_d n P Q -> struct_cong_d (S n) Q P
+  | c_trans_d : forall n1 n2 P Q R,
+                struct_cong_d n1 P Q ->
+                struct_cong_d n2 Q R ->
+                struct_cong_d (S (Nat.max n1 n2)) P R
+
+  (* rules to make the relation a congruence *)
+  | c_cong_link_d : forall n1 m1 m1' n2 m2 m2',
+                    struct_congM_d n1 m1 m1' ->
+                    struct_congM_d n2 m2 m2' ->
+                    struct_cong_d (S (Nat.max n1 n2)) (link m1 m2) (link m1' m2')
+  | c_cong_cut_d : forall n1 P P' n2 Q Q',
+                  struct_cong_d n1 P P' ->
+                  struct_cong_d n2 Q Q' ->
+                  struct_cong_d (S (Nat.max n1 n2)) (cut P Q) (cut P' Q')
+  | c_cong_seq_d : forall n1 P P' n2 s s',
+                  struct_cong_d n1 P P' ->
+                  struct_congS_d n2 s s' ->
+                  struct_cong_d (S (Nat.max n1 n2)) (seq P s) (seq P' s')
+
+with struct_congM_d : nat -> message -> message -> Prop :=
+  | c_cong_fut_d : forall n, struct_congM_d 0 (future n) (future n)
+  | c_cong_prefix_d : forall n s s', struct_congS_d n s s' -> struct_congM_d (S n) (prefix s) (prefix s')
+
+with struct_congS_d : nat -> statement -> statement -> Prop :=
+  | c_cong_choose_l_d : forall n P P',
+                        struct_cong_d n P P' ->
+                        struct_congS_d (S n) (choose_left P) (choose_left P')
+  | c_cong_choose_r_d : forall n P P',
+                        struct_cong_d n P P' ->
+                        struct_congS_d (S n) (choose_right P) (choose_right P')
+  | c_cong_choice_d : forall n1 P P' n2 Q Q',
+                      struct_cong_d n1 P P' ->
+                      struct_cong_d n2 Q Q' ->
+                      struct_congS_d (S (Nat.max n1 n2)) (offer_choice P Q) (offer_choice P' Q')
+  | c_cong_send_d : forall n1 P P' n2 Q Q',
+                    struct_cong_d n1 P P' ->
+                    struct_cong_d n2 Q Q' ->
+                    struct_congS_d (S (Nat.max n1 n2)) (send P Q) (send P' Q')
+  | c_cong_receive_d : forall n P P', struct_cong_d n P P' -> struct_congS_d (S n) (receive P) (receive P')
+  | c_cong_close_d : struct_congS_d 0 close close
+  | c_cong_wait_d : forall n P P', struct_cong_d n P P' -> struct_congS_d (S n) (wait P) (wait P').
+
+Scheme struct_congP_depth_ind := Induction for struct_cong_d Sort Prop
+  with struct_congM_depth_ind := Induction for struct_congM_d Sort Prop
+  with struct_congS_depth_ind := Induction for struct_congS_d Sort Prop.
+Combined Scheme struct_cong_depth_ind from struct_congP_depth_ind, struct_congM_depth_ind, struct_congS_depth_ind.
+
+Lemma struct_cong_d_from_struct_cong :
+  (forall P P', P ≡ P' -> exists k, struct_cong_d k P P') /\
+  (forall M M', M !≡ M' -> exists k, struct_congM_d k M M') /\
+  (forall s s', s $≡ s' -> exists k, struct_congS_d k s s').
+Proof.
+  apply struct_cong_ind; intros;
+    try (now (exists 0; econstructor; eauto));
+    try (now (destruct H; exists (S x); econstructor; eauto)).
+  + destruct H; destruct H0. exists (S (Nat.max x x0)).
+    eapply c_trans_d; eauto.
+  + destruct H; destruct H0. exists (S (Nat.max x x0)).
+    eapply c_cong_link_d; eauto.
+  + destruct H; destruct H0. exists (S (Nat.max x x0)).
+    eapply c_cong_cut_d; eauto.
+  + destruct H; destruct H0. exists (S (Nat.max x x0)).
+    eapply c_cong_seq_d; eauto.
+  + destruct H; destruct H0. exists (S (Nat.max x x0)).
+    eapply c_cong_choice_d; eauto.
+  + destruct H; destruct H0. exists (S (Nat.max x x0)).
+    eapply c_cong_send_d; eauto.
+Qed.
+
+(* reflexivitiy is derivable for messages and statements *)
+Lemma struct_cong_d_refl :
+  (forall P, exists k, struct_cong_d k P P) /\
+  (forall M, exists k, struct_congM_d k M M) /\
+  (forall s, exists k, struct_congS_d k s s).
+Proof.
+  apply syntax_ind; intros;
+  try destruct H; try destruct H0; eexists; econstructor; eauto.
+Qed.
+
+(* transitivity is derivable for messages and statements *)
+Lemma struct_cong_d_trans :
+  forall n1 n2,
+    forall k1 k2,
+      k1 <= n1 -> k2 <= n2 ->
+        (forall M1 M M2,
+          struct_congM_d k1 M1 M -> struct_congM_d k2 M M2 ->
+            exists k, struct_congM_d k M1 M2) /\
+        (forall s1 s s2,
+          struct_congS_d k1 s1 s -> struct_congS_d k2 s s2 ->
+            exists k, struct_congS_d k s1 s2).
+Proof.
+  induction n1; induction n2; intros.
+  + assert (k1 = 0) by lia; assert (k2 = 0) by lia; subst.
+    split; intros.
+    - inversion H0; subst. inversion H1; subst. eexists; eauto.
+    - inversion H0; subst. inversion H1; subst. eexists; eauto.
+  + assert (k1 = 0) by lia; subst. split; intros.
+    - inversion H1; subst; eauto.
+    - inversion H1; subst; eauto.
+  + assert (k2 = 0) by lia; subst. split; intros.
+    - inversion H2; subst; eauto.
+    - inversion H2; subst; eauto.
+  + split; intros.
+    - inversion H1; subst; inversion H2; subst; eauto.
+      assert (n <= n1) by lia; assert (n0 <= n2) by lia.
+      destruct ((proj2 (IHn1 _ _ _ H4 H5)) s s' s'0 H3 H6).
+      eexists. econstructor; eauto.
+    - inversion H1; subst; inversion H2; subst; eauto;
+      eexists; econstructor; eapply c_trans_d; eauto.
+Qed.
+
+Lemma struct_congM_d_trans :
+  forall M1 M M2 n1 n2,
+    struct_congM_d n1 M1 M -> struct_congM_d n2 M M2 ->
+    exists k, struct_congM_d k M1 M2.
+Proof.
+  intros.
+  apply ((proj1 (struct_cong_d_trans n1 n2 n1 n2 (PeanoNat.Nat.le_refl n1) (PeanoNat.Nat.le_refl n2))) M1 M M2);
+  auto.
+Qed.
+
+(* Symmetry is derivable for messages and statements *)
+Lemma struct_cong_d_symm :
+  forall n,
+    forall k,
+      k <= n ->
+        (forall M1 M2,
+          struct_congM_d k M1 M2 -> exists k', struct_congM_d k' M2 M1) /\
+        (forall s1 s2,
+          struct_congS_d k s1 s2 -> exists k', struct_congS_d k' s2 s1).
+Proof.
+  induction n; intros.
+  + assert (k = 0) by lia; subst; repeat split; intros; inversion H0; subst; eexists; eauto.
+  + split; intros; inversion H0; subst;
+    try (eexists; econstructor; eapply c_comm_d; eassumption).
+    assert (n0 <= n) by lia. destruct ((proj2 (IHn _ H2)) _ _ H1).
+    eexists. econstructor; eauto.
+Qed.
+
+Lemma struct_congM_d_symm :
+  forall M1 M2 n,
+    struct_congM_d n M1 M2 -> exists k, struct_congM_d k M2 M1.
+Proof. intros. apply (proj1 (struct_cong_d_symm n n (PeanoNat.Nat.le_refl n))); auto. Qed.
+
+(* A future is only congruent to itself *)
+Lemma future_equiv_future :
+  forall i n M,
+    (struct_congM_d n (future i) M) \/ (struct_congM_d n M (future i))
+      -> M = future i.
+Proof. intros. destruct H; inversion H; auto. Qed.
+
+(******************************************************************************)
+(* Inversions on Congruence                                                   *)
+(******************************************************************************)
+Lemma stop_equiv_stop_d :
+  forall P n, (forall k, k <= n -> struct_cong_d k stop P \/ struct_cong_d k P stop -> P = stop).
+Proof.
+  intros.
+  generalize dependent k.
+  generalize dependent P.
+  induction n; intros.
+  + inversion H; subst. destruct H0; inversion H0; auto.
+  + destruct H0.
+    - inversion H0; subst; auto.
+      * assert (n0 <= n) by lia.
+        apply (IHn _ _ H2).
+        right; auto.
+      * assert (Q = stop).
+        {
+          assert (n1 <= n) by lia.
+          apply (IHn _ _ H3).
+          left; auto.
+        }
+        subst.
+        assert (n2 <= n) by lia.
+        apply (IHn _ _ H3).
+        left; auto.
+    - inversion H0; subst; auto.
+      * assert (n0 <= n) by lia.
+        apply (IHn _ _ H2).
+        left; auto.
+      * assert (Q = stop).
+        {
+          assert (n2 <= n) by lia.
+          apply (IHn _ _ H3).
+          right; auto.
+        }
+        subst.
+        assert (n1 <= n) by lia.
+        apply (IHn _ _ H3).
+        right; auto.
+Qed.
+
+Lemma stop_equiv_stop : forall P, stop ≡ P -> P = stop.
+Proof.
+  intros. apply struct_cong_d_from_struct_cong in H.
+  destruct H.
+  apply (stop_equiv_stop_d P x x (PeanoNat.Nat.le_refl x)); left; auto.
+Qed.
+
+Lemma link_future_equiv_link_future_d :
+  forall n,
+    forall k i M P,
+    k <= n ->
+    struct_cong_d k (link (future i) M) P \/ struct_cong_d k P (link (future i) M) \/
+    struct_cong_d k (link M (future i)) P \/ struct_cong_d k P (link M (future i)) ->
+    exists M' n', struct_congM_d n' M' M /\ (P = (link (future i) M') \/ P = (link M' (future i))).
+Proof.
+  induction n; intros.
+  + assert (k = 0) by lia; subst. destruct H0 as [|[|[|]]];
+    inversion H0; subst; destruct ((proj1 (proj2 struct_cong_d_refl)) M);
+    eexists; eexists; split; eauto.
+  + destruct H0 as [|[|[|]]]; inversion H0; subst;
+    try (now (destruct ((proj1 (proj2 struct_cong_d_refl)) M); eexists; eexists; split; eauto)).
+    - assert (n0 <= n) by lia. apply (IHn n0 i M P H2); eauto.
+    - assert (n1 <= n) by lia.
+      destruct (IHn _ _ _ _ H3 (or_introl H1)) as [M' [n' [? [|]]]]; subst.
+      * assert (n2 <= n) by lia.
+        destruct (IHn _ _ _ _ H5 (or_introl H2)) as [M'' [n'' [? [|]]]]; subst.
+        ** destruct (struct_congM_d_trans _ _ _ _ _ H6 H4); eauto.
+        ** destruct (struct_congM_d_trans _ _ _ _ _ H6 H4); eauto.
+      * assert (n2 <= n) by lia.
+        assert (struct_cong_d n2 (link (future i) M') P \/ struct_cong_d n2 P (link (future i) M') \/ struct_cong_d n2 (link M' (future i)) P \/ struct_cong_d n2 P (link M' (future i))) by eauto.
+        destruct (IHn n2 i M' P H5 H6) as [M'' [n'' [? [|]]]]; subst.
+        ** destruct (struct_congM_d_trans _ _ _ _ _ H7 H4); eauto.
+        ** destruct (struct_congM_d_trans _ _ _ _ _ H7 H4); eauto.
+    - rewrite (future_equiv_future _ _ _ (or_introl H4)).
+      destruct (struct_congM_d_symm _ _ _ H6).
+      eexists; eexists; split; eauto.
+    - assert (n0 <= n) by lia. apply (IHn n0 i M P H2 (or_introl H1)).
+    - assert (n2 <= n) by lia.
+      assert (struct_cong_d n2 (link (future i) M) Q \/ struct_cong_d n2 Q (link (future i) M) \/ struct_cong_d n2 (link M (future i)) Q \/ struct_cong_d n2 Q (link M (future i))) by eauto.
+      destruct (IHn _ _ _ _ H3 H4) as [M' [n' [? [|]]]]; subst.
+      * assert (n1 <= n) by lia.
+        assert (struct_cong_d n1 (link (future i) M') P \/ struct_cong_d n1 P (link (future i) M') \/ struct_cong_d n1 (link M' (future i)) P \/ struct_cong_d n1 P (link M' (future i))) by eauto.
+        destruct (IHn _ _ _ _ H6 H7) as [M'' [n'' [? [|]]]]; subst.
+        ** destruct (struct_congM_d_trans _ _ _ _ _ H8 H5); eauto.
+        ** destruct (struct_congM_d_trans _ _ _ _ _ H8 H5); eauto.
+      * assert (n1 <= n) by lia.
+        assert (struct_cong_d n1 (link (future i) M') P \/ struct_cong_d n1 P (link (future i) M') \/ struct_cong_d n1 (link M' (future i)) P \/ struct_cong_d n1 P (link M' (future i))) by eauto.
+        destruct (IHn _ _ _ _ H6 H7) as [M'' [n'' [? [|]]]]; subst.
+        ** destruct (struct_congM_d_trans _ _ _ _ _ H8 H5); eauto.
+        ** destruct (struct_congM_d_trans _ _ _ _ _ H8 H5); eauto.
+    - rewrite (future_equiv_future _ _ _ (or_intror H5)).
+      eexists; eexists; split; eauto.
+    - assert (n0 <= n) by lia.
+      assert (struct_cong_d n0 (link (future i) M) P \/ struct_cong_d n0 P (link (future i) M) \/ struct_cong_d n0 (link M (future i)) P \/ struct_cong_d n0 P (link M (future i))) by eauto.
+      apply (IHn n0 i M P H2 H3).
+    - assert (n1 <= n) by lia.
+      assert (struct_cong_d n1 (link (future i) M) Q \/ struct_cong_d n1 Q (link (future i) M) \/ struct_cong_d n1 (link M (future i)) Q \/ struct_cong_d n1 Q (link M (future i))) by eauto.
+      destruct (IHn _ _ _ _ H3 H4) as [M' [n' [? [|]]]]; subst.
+      * assert (n2 <= n) by lia.
+        assert (struct_cong_d n2 (link (future i) M') P \/ struct_cong_d n2 P (link (future i) M') \/ struct_cong_d n2 (link M' (future i)) P \/ struct_cong_d n2 P (link M' (future i))) by eauto.
+        destruct (IHn _ _ _ _ H6 H7) as [M'' [n'' [? [|]]]]; subst.
+        ** destruct (struct_congM_d_trans _ _ _ _ _ H8 H5); eauto.
+        ** destruct (struct_congM_d_trans _ _ _ _ _ H8 H5); eauto.
+      * assert (n2 <= n) by lia.
+        assert (struct_cong_d n2 (link (future i) M') P \/ struct_cong_d n2 P (link (future i) M') \/ struct_cong_d n2 (link M' (future i)) P \/ struct_cong_d n2 P (link M' (future i))) by eauto.
+        destruct (IHn _ _ _ _ H6 H7) as [M'' [n'' [? [|]]]]; subst.
+        ** destruct (struct_congM_d_trans _ _ _ _ _ H8 H5); eauto.
+        ** destruct (struct_congM_d_trans _ _ _ _ _ H8 H5); eauto.
+    - rewrite (future_equiv_future _ _ _ (or_introl H6)).
+      destruct (struct_congM_d_symm _ _ _ H4);
+      eexists; eexists; split; eauto.
+    - assert (n0 <= n) by lia.
+      assert (struct_cong_d n0 (link (future i) M) P \/ struct_cong_d n0 P (link (future i) M) \/ struct_cong_d n0 (link M (future i)) P \/ struct_cong_d n0 P (link M (future i))) by eauto.
+      apply (IHn n0 i M P H2 H3).
+    - assert (n2 <= n) by lia.
+      assert (struct_cong_d n2 (link (future i) M) Q \/ struct_cong_d n2 Q (link (future i) M) \/ struct_cong_d n2 (link M (future i)) Q \/ struct_cong_d n2 Q (link M (future i))) by eauto.
+      destruct (IHn _ _ _ _ H3 H4) as [M' [n' [? [|]]]]; subst.
+      * assert (n1 <= n) by lia.
+        assert (struct_cong_d n1 (link (future i) M') P \/ struct_cong_d n1 P (link (future i) M') \/ struct_cong_d n1 (link M' (future i)) P \/ struct_cong_d n1 P (link M' (future i))) by eauto.
+        destruct (IHn _ _ _ _ H6 H7) as [M'' [n'' [? [|]]]]; subst.
+        ** destruct (struct_congM_d_trans _ _ _ _ _ H8 H5); eauto.
+        ** destruct (struct_congM_d_trans _ _ _ _ _ H8 H5); eauto.
+      * assert (n1 <= n) by lia.
+        assert (struct_cong_d n1 (link (future i) M') P \/ struct_cong_d n1 P (link (future i) M') \/ struct_cong_d n1 (link M' (future i)) P \/ struct_cong_d n1 P (link M' (future i))) by eauto.
+        destruct (IHn _ _ _ _ H6 H7) as [M'' [n'' [? [|]]]]; subst.
+        ** destruct (struct_congM_d_trans _ _ _ _ _ H8 H5); eauto.
+        ** destruct (struct_congM_d_trans _ _ _ _ _ H8 H5); eauto.
+    - rewrite (future_equiv_future _ _ _ (or_intror H6)).
+      eexists; eexists; split; eauto.
+Qed.
+
+Lemma link_future_equiv_link_future :
+  forall i M P,
+    (link (future i) M) ≡ P \/ P ≡ (link (future i) M) ->
+    exists M' n', struct_congM_d n' M' M /\ (P = (link (future i) M') \/ P = (link M' (future i))).
+Proof.
+  intros. destruct H.
+  + apply (proj1 struct_cong_d_from_struct_cong) in H. destruct H.
+    apply (link_future_equiv_link_future_d x _ _ _ _ (PeanoNat.Nat.le_refl x) (or_introl H)).
+  + apply (proj1 struct_cong_d_from_struct_cong) in H. destruct H.
+    assert (struct_cong_d x (link (future i) M) P \/ struct_cong_d x P (link (future i) M) \/ struct_cong_d x (link M (future i)) P \/ struct_cong_d x P (link M (future i))) by eauto.
+    apply (link_future_equiv_link_future_d x _ _ _ _ (PeanoNat.Nat.le_refl x) H0).
+Qed.

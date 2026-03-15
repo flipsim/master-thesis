@@ -15,7 +15,6 @@ From FD Require Import Progress.
    then P is well-typed under context Γ (Γ ⊢ P :#) iff P' is well-typed
    under context Γ (Γ ⊢ P' :#).
 *)
-
 Theorem preservation_for_structural_congruence :
   forall P P' Γ, P ≡ P' -> Γ ⊢ P :# <-> Γ ⊢ P' :#.
 Proof. intros ? ? Γ H. exact (proj1 struct_cong_preserves_typing _ _ H Γ). Qed.

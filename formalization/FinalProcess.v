@@ -31,31 +31,34 @@ Inductive cut_list : process -> Prop :=
 (******************************************************************************)
 (* Final Processes                                                            *)
 (******************************************************************************)
-Inductive link_list : list nat -> process -> Prop :=
-  | link_cut_ll : forall i1 i2 M1 M2,
-                    link_list [i1; i2] (cut (link (future i1) M1) (link (future i2) M2))
-  | link_cut_lr : forall i1 i2 M1 M2,
-                    link_list [i1; i2] (cut (link (future i1) M1) (link M2 (future i2)))
-  | link_cut_rl : forall i1 i2 M1 M2,
-                    link_list [i1; i2] (cut (link M1 (future i1)) (link (future i2) M2))
-  | link_cut_rr : forall i1 i2 M1 M2,
-                    link_list [i1; i2] (cut (link M1 (future i1)) (link M2 (future i2)))
-  | link_cons_l   : forall i M xs P,
-                      link_list (List.map S xs) P ->
-                      link_list (i :: xs) (cut (link (future i) M) P)
-  | link_cons_r   : forall i M xs P,
-                      link_list (List.map S xs) P ->
-                      link_list (i :: xs) (cut (link M (future i)) P).
+Definition no_future (M : message) :=
+  forall i, M <> future i.
 
-(* Inductive link_list : list nat -> process -> Prop :=
-  | link_single_l : forall i M, link_list [i] (link (future i) M)
-  | link_single_r : forall i M, link_list [i] (link M (future i))
-  | link_cons_l   : forall i M xs P,
+Inductive link_list : list nat -> process -> Prop :=
+  | link_cut_nn : forall i1 i2 M1 M2 P1 P2,
+                    no_future M1 -> no_future M2 ->
+                    P1 ≡ (link (future i1) M1) ->
+                    P2 ≡ (link (future i2) M2) ->
+                    link_list [i1; i2] (cut P1 P2)
+  | link_cut_nf : forall i1 i2 i3 M P,
+                    no_future M ->
+                    P ≡ (link (future i3) M) ->
+                    link_list [i1; i2; i3] (cut (link (future i1) (future i2)) P)
+  | link_cut_fn : forall i1 i2 i3 M P,
+                    no_future M ->
+                    P ≡ (link (future i1) M) ->
+                    link_list [i1; i2; i3] (cut P (link (future i2) (future i3)))
+  | link_cut_ff : forall i1 i2 i3 i4,
+                    link_list [i1; i2; i3; i4] (cut (link (future i1) (future i2))
+                                                    (link (future i3) (future i4)))
+  | link_cons_n   : forall i M xs P L,
                       link_list (List.map S xs) P ->
-                      link_list (i :: xs) (cut (link (future i) M) P)
-  | link_cons_r   : forall i M xs P,
+                      no_future M ->
+                      L ≡ (link (future i) M) ->
+                      link_list (i :: xs) (cut L P)
+  | link_cons_f   : forall i1 i2 xs P,
                       link_list (List.map S xs) P ->
-                      link_list (i :: xs) (cut (link M (future i)) P). *)
+                      link_list (i1 :: i2 :: xs) (cut (link (future i1) (future i2)) P).
 
 Inductive final : process -> Prop :=
   | final_stop : final stop
@@ -63,7 +66,6 @@ Inductive final : process -> Prop :=
   | final_future_r : forall i M, final (link M (future i))
   | final_list : forall xs P P',
                   ~ (List.In 0 xs) ->
-                  (* (forall x, List.In x xs -> x <> 0) -> *)
                   link_list xs P' ->
                   P ≡ P' ->
                   final P.
@@ -386,21 +388,20 @@ Qed.
 (******************************************************************************)
 (* Relation between Cut List and Link List                                    *)
 (******************************************************************************)
-(* useful lemmas for below
-   if x in xs and x > 0 and link_list xs P then pred x free in P
-*)
 Lemma link_list_with_0_at_0_reduces :
   forall P xs,
     link_list (0 :: xs) P -> exists Q, P ⊳ Q.
 Proof.
-  intros P xs H. inversion H;
-  try match goal with
-  | [ H : cut (link (future 0) ?M1) ?P2 = P |- _ ]
-      => exists (subst_process P2 ((downM M1) ⋅ id_subst)); econstructor; eauto
-  | [ H : cut (link ?M1 (future 0)) ?P2 = P |- _ ]
-      => exists (subst_process P2 ((downM M1) ⋅ id_subst));
-         econstructor; [ eapply c_cong_cut; [eapply c_link | eapply c_refl] | econstructor | apply c_refl ]
-  end.
+  intros P xs H. inversion H.
+  + eexists; eapply r_struct; [ eapply c_cong_cut; eauto | econstructor | apply c_refl ].
+  + eexists; econstructor.
+  + eexists; eapply r_struct; [ eapply c_cong_cut; [eauto | apply c_refl] | econstructor | apply c_refl ].
+  + eexists; econstructor.
+  + eexists; eapply r_struct.
+    - eapply c_cong_cut; [eauto | apply c_refl].
+    - econstructor.
+    - apply c_refl.
+  + eexists; econstructor.
 Qed.
 
 Local Hint Rewrite
@@ -413,96 +414,106 @@ Lemma link_list_with_0_at_1_reduces :
   forall Γ P xs n0,
     Γ ⊢ P :# -> link_list (n0 :: 0 :: xs) P -> exists Q, P ⊳ Q.
 Proof.
-  intros. inversion H0; subst;
-  try match goal with
-    | [ H : _ ⊢ cut ?P1 (link (future 0) ?M) :# |- _]
-        => exists (subst_process P1 ((downM M) ⋅ id_subst));
-           eapply r_struct; [ eapply c_cut_comm | econstructor | apply c_refl]
-    | [ H : _ ⊢ cut ?P1 (link ?M (future 0)) :# |- _]
-        => exists (subst_process P1 ((downM M) ⋅ id_subst));
-           eapply r_struct;
-           [eapply c_trans; [eapply c_cut_comm | eapply c_cong_cut; [eapply c_link | eapply c_refl]]
-                             | econstructor | apply c_refl ]
+  intros. inversion H0; subst.
+  try
+  match goal with
+  | [ H : ?P ≡ (link (future 0) ?M) |- _ ]
+      => destruct (link_future_equiv_link_future _ _ _ (or_intror H)) as [? [? [? [? | ?]]]]; subst
+  end.
+  + eexists; eapply r_struct; [ apply c_cut_comm | econstructor | apply c_refl ].
+  + eexists; eapply r_struct; [ eapply c_trans; [ eapply c_cut_comm | apply c_cong_cut; [ apply c_link | apply c_refl ] ] | econstructor | apply c_refl ].
+  + eexists; eapply r_struct; [ eapply c_cong_cut; [ apply c_link | apply c_refl ] | econstructor | apply c_refl ].
+  + eexists; eapply r_struct; [ eapply c_cut_comm | econstructor | apply c_refl ].
+  + eexists; eapply r_struct; [ eapply c_cong_cut; [ apply c_link | apply c_refl ] | econstructor | apply c_refl ].
+  + simpl in H3; inversion H3; subst; try
+    match goal with
+    | [ H : ?P ≡ (link (future 1) ?M) |- _ ]
+      => destruct (link_future_equiv_link_future _ _ _ (or_intror H)) as [? [? [? [? | ?]]]]; subst
     end;
-  simpl in H4; inversion H4; subst;
-  try match goal with
-    | [ H   : link_list _ (cut ?L ((cut (link (future 1) ?M)) ?P)),
+    try match goal with
+      | [ H   : link_list _ (cut ?L ((cut (link (future 1) ?M)) ?P)),
         Hwt : _ ⊢ (cut ?L ((cut (link (future 1) ?M)) ?P)) :#
         |- _ ]
-      => eexists; eapply r_struct;
-          [
-            eapply c_comm; eapply (c_cut_assoc
+        => eexists; eapply r_struct;
+           [
+             eapply c_comm; eapply (c_cut_assoc
               (rename_process (up L) swap01)
               (rename_process (link (future 1) M) swap01)
               (down (rename_process P swap01))
-            ); autorewrite with up_down_rename_rewrites; auto;
-            [ apply nfv_10_swap; apply nfv_lift_n; lia
-            | apply nfv_01_swap; intro Hfv; inversion Hwt; subst;
-              match goal with
-              | [ Hwt1 : _ ⊢ cut (link (future 1) ?M) ?P :# |- _ ]
-                => inversion Hwt1; subst;
-                   match goal with
-                   | [ HwtM : (_ .: ?Γ1) ⊢ link (future 1) M :#,
-                       HwtP : (_ .: ?Γ2) ⊢ P :#,
-                       Hsplit : _ ≜ ?Γ1 ∘ ?Γ2
-                       |- _ ]
-                      => inversion Hsplit; subst;
-                         assert (1 ∈ (link (future 1) M)) as Hfv1link by repeat econstructor;
-                         destruct ((proj1 free_vars_decidable) P 1); auto;
-                         apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in HwtM;
-                         apply ((proj1 free_var_in_ctx) _ _ H1) in HwtP;
-                         destruct HwtM, HwtP; simpl in *; subst;
-                         match goal with
-                         | [ Hsplitentry : split_entry _ _ _ |- _ ] => inversion Hsplitentry
-                         end
-                   end
-              end
-            ]
-          | eapply r_cong_cut; eapply r_struct;
+              ); autorewrite with up_down_rename_rewrites; auto;
+              [ apply nfv_10_swap; apply nfv_lift_n; lia
+              | apply nfv_01_swap; intro Hfv; inversion Hwt; subst;
+                match goal with
+                | [ Hwt1 : _ ⊢ cut (link (future 1) ?M) ?P :# |- _ ]
+                  => inversion Hwt1; subst;
+                     match goal with
+                     | [ HwtM : (_ .: ?Γ1) ⊢ link (future 1) M :#,
+                         HwtP : (_ .: ?Γ2) ⊢ P :#,
+                         Hsplit : _ ≜ ?Γ1 ∘ ?Γ2
+                         |- _ ]
+                        => inversion Hsplit; subst;
+                           assert (1 ∈ (link (future 1) M)) as Hfv1link by repeat econstructor;
+                           destruct ((proj1 free_vars_decidable) P 1); auto;
+                           apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in HwtM;
+                           match goal with
+                           | [ H : 1 ∈ P |- _ ] =>
+                              apply ((proj1 free_var_in_ctx) _ _ H) in HwtP
+                           end;
+                           destruct HwtM, HwtP; simpl in *; subst;
+                           match goal with
+                           | [ Hsplitentry : split_entry _ _ _ |- _ ] => inversion Hsplitentry
+                           end
+                     end
+                end
+              ]
+           | eapply r_cong_cut; eapply r_struct;
             [ apply c_cut_comm | simpl; econstructor | eapply c_refl ]
-          | eapply c_refl
-          ]
-    end;
-  try match goal with
-    | [ H   : link_list _ (cut ?L ((cut (link ?M (future 1))) ?P)),
-        Hwt : _ ⊢ (cut ?L ((cut (link ?M (future 1))) ?P)) :#
-        |- _ ]
-      => eexists ; eapply r_struct;
-          [
-            eapply c_comm; eapply (c_cut_assoc
-              (rename_process (up L) swap01)
-              (rename_process (link M (future 1)) swap01)
-              (down (rename_process P swap01))
-            ); autorewrite with up_down_rename_rewrites; auto;
-            [ apply nfv_10_swap; apply nfv_lift_n; lia
-            | apply nfv_01_swap; intro Hfv; inversion Hwt; subst;
-              match goal with
-              | [ Hwt1 : _ ⊢ cut (link ?M (future 1)) ?P :# |- _ ]
-                => inversion Hwt1; subst;
-                   match goal with
-                   | [ HwtM : (_ .: ?Γ1) ⊢ link M (future 1) :#,
-                       HwtP : (_ .: ?Γ2) ⊢ P :#,
-                       Hsplit : _ ≜ ?Γ1 ∘ ?Γ2
-                       |- _ ]
-                      => inversion Hsplit; subst;
-                         assert (1 ∈ (link M (future 1))) as Hfv1link by repeat econstructor;
-                         destruct ((proj1 free_vars_decidable) P 1); auto;
-                         apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in HwtM;
-                         apply ((proj1 free_var_in_ctx) _ _ H1) in HwtP;
-                         destruct HwtM, HwtP; simpl in *; subst;
-                         match goal with
-                         | [ Hsplitentry : split_entry _ _ _ |- _ ] => inversion Hsplitentry
-                         end
-                   end
-              end
+           | eapply c_refl
+           ]
+      | [ H   : link_list _ (cut ?L ((cut (link ?M (future 1))) ?P)),
+          Hwt : _ ⊢ (cut ?L ((cut (link ?M (future 1))) ?P)) :#
+          |- _ ]
+        => eexists ; eapply r_struct;
+            [
+              eapply c_comm; eapply (c_cut_assoc
+                (rename_process (up L) swap01)
+                (rename_process (link M (future 1)) swap01)
+                (down (rename_process P swap01))
+              ); autorewrite with up_down_rename_rewrites; auto;
+              [ apply nfv_10_swap; apply nfv_lift_n; lia
+              | apply nfv_01_swap; intro Hfv; inversion Hwt; subst;
+                match goal with
+                | [ Hwt1 : _ ⊢ cut (link ?M (future 1)) ?P :# |- _ ]
+                  => inversion Hwt1; subst;
+                     match goal with
+                     | [ HwtM : (_ .: ?Γ1) ⊢ link M (future 1) :#,
+                         HwtP : (_ .: ?Γ2) ⊢ P :#,
+                         Hsplit : _ ≜ ?Γ1 ∘ ?Γ2
+                         |- _ ]
+                        => inversion Hsplit; subst;
+                           assert (1 ∈ (link M (future 1))) as Hfv1link by repeat econstructor;
+                           destruct ((proj1 free_vars_decidable) P 1); auto;
+                           apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in HwtM;
+                           match goal with
+                           | [ H : 1 ∈ P |- _ ] =>
+                              apply ((proj1 free_var_in_ctx) _ _ H) in HwtP
+                           end;
+                           destruct HwtM, HwtP; simpl in *; subst;
+                           match goal with
+                           | [ Hsplitentry : split_entry _ _ _ |- _ ] => inversion Hsplitentry
+                           end
+                     end
+                end
+              ]
+            | simpl; eapply r_cong_cut; eapply r_struct;
+              [eapply c_trans; [eapply c_cut_comm | eapply c_cong_cut; [eapply c_link | eapply c_refl]]
+              | econstructor
+              | eapply c_refl
+              ]
+            | apply c_refl
             ]
-          | eapply r_cong_cut; eapply r_struct;
-            [ eapply c_trans; [ eapply c_cut_comm | eapply c_cong_cut; simpl; apply c_link; eapply c_refl ]
-            | simpl; econstructor
-            | eapply c_refl ]
-          | eapply c_refl
-          ]
-    end.
+      end.
+  + eexists. eapply r_struct; [eapply c_cong_cut; [eapply c_link | eapply c_refl] | econstructor | eapply c_refl].
 Qed.
 
 Lemma link_list_rename :
@@ -512,13 +523,95 @@ Lemma link_list_rename :
 Proof.
   intros.
   generalize dependent r.
-  induction H1; intros;
-  try destruct i1, i2; try (specialize H with 0; simpl in H; exfalso; lia); try (simpl; econstructor).
-  + destruct i; try (specialize H with 0; simpl in H; exfalso; lia).
-    simpl. econstructor.
+  induction H1; intros.
+  + destruct (link_future_equiv_link_future _ _  _ (or_intror H2)) as [? [? [? ?]]].
+    destruct (link_future_equiv_link_future _ _  _ (or_intror H3)) as [? [? [? ?]]].
+    destruct H6, H8; subst; destruct M1, M2; try congruence;
+    inversion H5; inversion H7; subst;
+    destruct i1, i2; try (specialize H with 0; simpl in H; exfalso; lia); simpl;
+    match goal with
+    | [ |- link_list [?n1; ?n2] (cut (link (future ?n1) (prefix ?s1))
+                                       (link (future ?n2) (prefix ?s2))) ]
+        => apply link_cut_nn with (prefix s1) (prefix s2)
+    | [ |- link_list [?n1; ?n2] (cut (link (future ?n1) (prefix ?s1))
+                                       (link (prefix ?s2) (future ?n2))) ]
+        => apply link_cut_nn with (prefix s1) (prefix s2)
+    | [ |- link_list [?n1; ?n2] (cut (link (prefix ?s1) (future ?n1))
+                                       (link (future ?n2) (prefix ?s2))) ]
+        => apply link_cut_nn with (prefix s1) (prefix s2)
+    | [ |- link_list [?n1; ?n2] (cut (link (prefix ?s1) (future ?n1))
+                                       (link (prefix ?s2) (future ?n2))) ]
+        => apply link_cut_nn with (prefix s1) (prefix s2)
+    end;
+    try congruence; try apply c_refl; try apply c_link.
+  + destruct (link_future_equiv_link_future _ _  _ (or_intror H1)) as [? [? [? ?]]].
+    destruct H4; subst; simpl;
+    destruct i1, i2, i3; try (specialize H with 0; simpl in H; exfalso; lia); simpl.
+    - destruct x, M; try congruence; simpl.
+      * inversion H3.
+      * apply link_cut_nf with (prefix (rename_statement s (up_ren r))); try congruence. apply c_refl.
+    - destruct x, M; try congruence; simpl.
+      * inversion H3.
+      * apply link_cut_nf with (prefix (rename_statement s (up_ren r))); try congruence. apply c_link.
+  + destruct (link_future_equiv_link_future _ _  _ (or_intror H1)) as [? [? [? ?]]].
+    destruct H4; subst; simpl;
+    destruct i1, i2, i3; try (specialize H with 0; simpl in H; exfalso; lia); simpl.
+    - destruct x, M; try congruence; simpl.
+      * inversion H3.
+      * apply link_cut_fn with (prefix (rename_statement s (up_ren r))); try congruence. apply c_refl.
+    - destruct x, M; try congruence; simpl.
+      * inversion H3.
+      * apply link_cut_fn with (prefix (rename_statement s (up_ren r))); try congruence. apply c_link.
+  + destruct i1, i2, i3, i4; try (specialize H with 0; simpl in H; exfalso; lia); simpl; econstructor.
+  + destruct i; try (specialize H with 0; simpl in H; exfalso; lia); simpl.
+    destruct (link_future_equiv_link_future _ _  _ (or_intror H2)) as [? [? [? [? | ?]]]]; subst.
+    - simpl.
+      destruct x, M; try congruence; simpl. inversion H4.
+      apply link_cons_n with (prefix (rename_statement s (up_ren r))).
+      * assert (bijective (up_ren r)). { apply shift_preserves_bijection; auto. }
+        assert (forall x : nat, List.In x (ListDef.map S xs) -> x > 0).
+        { intros. apply List.in_map_iff in H6. destruct H6 as [x' []]. lia. }
+        pose proof (IHlink_list H6 _ H5).
+        clear - H H7.
+        repeat rewrite List.map_map in *.
+        assert (
+          ListDef.map (fun x : nat => S (up_ren r (Nat.pred (S x)))) xs
+            = ListDef.map (fun x : nat => S (S (r (Nat.pred x)))) xs
+        ).
+        {
+          apply List.map_ext_in. intros. specialize H with a.
+          simpl in H. assert (S i = a \/ List.In a xs) by auto.
+          apply H in H1. destruct a; auto. exfalso; lia.
+        }
+        rewrite <- H0. auto.
+      * congruence.
+      * apply c_refl.
+    - simpl.
+      destruct x, M; try congruence; simpl. inversion H4.
+      apply link_cons_n with (prefix (rename_statement s (up_ren r))).
+      * assert (bijective (up_ren r)). { apply shift_preserves_bijection; auto. }
+        assert (forall x : nat, List.In x (ListDef.map S xs) -> x > 0).
+        { intros. apply List.in_map_iff in H6. destruct H6 as [x' []]. lia. }
+        pose proof (IHlink_list H6 _ H5).
+        clear - H H7.
+        repeat rewrite List.map_map in *.
+        assert (
+          ListDef.map (fun x : nat => S (up_ren r (Nat.pred (S x)))) xs
+            = ListDef.map (fun x : nat => S (S (r (Nat.pred x)))) xs
+        ).
+        {
+          apply List.map_ext_in. intros. specialize H with a.
+          simpl in H. assert (S i = a \/ List.In a xs) by auto.
+          apply H in H1. destruct a; auto. exfalso; lia.
+        }
+        rewrite <- H0. auto.
+      * congruence.
+      * apply c_link.
+  + destruct i1, i2; try (specialize H with 0; simpl in H; exfalso; lia); simpl.
+    apply link_cons_f.
     assert (bijective (up_ren r)). { apply shift_preserves_bijection; auto. }
     assert (forall x : nat, List.In x (ListDef.map S xs) -> x > 0).
-    { intros. apply List.in_map_iff in H3. destruct H3 as [x0 []]. lia. }
+    { intros. apply List.in_map_iff in H3. destruct H3 as [x' []]. lia. }
     pose proof (IHlink_list H3 _ H2).
     clear - H H4.
     repeat rewrite List.map_map in *.
@@ -528,25 +621,7 @@ Proof.
     ).
     {
       apply List.map_ext_in. intros. specialize H with a.
-      simpl in H. assert (S i = a \/ List.In a xs) by auto.
-      apply H in H1. destruct a; auto. exfalso; lia.
-    }
-    rewrite <- H0. auto.
-  + destruct i; try (specialize H with 0; simpl in H; exfalso; lia).
-    simpl. econstructor.
-    assert (bijective (up_ren r)). { apply shift_preserves_bijection; auto. }
-    assert (forall x : nat, List.In x (ListDef.map S xs) -> x > 0).
-    { intros. apply List.in_map_iff in H3. destruct H3 as [x0 []]. lia. }
-    pose proof (IHlink_list H3 _ H2).
-    clear - H H4.
-    repeat rewrite List.map_map in *.
-    assert (
-      ListDef.map (fun x : nat => S (up_ren r (Nat.pred (S x)))) xs
-        = ListDef.map (fun x : nat => S (S (r (Nat.pred x)))) xs
-    ).
-    {
-      apply List.map_ext_in. intros. specialize H with a.
-      simpl in H. assert (S i = a \/ List.In a xs) by auto.
+      simpl in H. assert (S i1 = a \/ S i2 = a \/ List.In a xs) by auto.
       apply H in H1. destruct a; auto. exfalso; lia.
     }
     rewrite <- H0. auto.
@@ -561,55 +636,81 @@ Proof.
   intros.
   generalize dependent x.
   induction H0; intros.
-  + simpl in H1. destruct H1; subst.
+  + simpl in H4. destruct H4; subst.
+    - destruct (link_future_equiv_link_future _ _ _ (or_intror H2)) as [? [? [? [? | ?]]]]; subst.
+      * apply fv_cut_l. simpl in H; specialize H with x.
+        replace (S (Nat.pred x)) with x by lia.
+        repeat econstructor.
+      * apply fv_cut_l. simpl in H; specialize H with x.
+        replace (S (Nat.pred x)) with x by lia.
+        apply fv_link_r; econstructor.
+    - destruct H4; try contradiction; subst.
+      destruct (link_future_equiv_link_future _ _ _ (or_intror H3)) as [? [? [? [? | ?]]]]; subst.
+      * apply fv_cut_r; simpl in H; specialize H with x.
+        replace (S (Nat.pred x)) with x by lia.
+        repeat econstructor.
+      * apply fv_cut_r; simpl in H; specialize H with x.
+        replace (S (Nat.pred x)) with x by lia.
+        apply fv_link_r; econstructor.
+  + simpl in H2. destruct H2 as [? | [? | [? | ?]]]; try contradiction; subst.
     - apply fv_cut_l. simpl in H; specialize H with x.
       replace (S (Nat.pred x)) with x by lia.
       repeat econstructor.
-    - destruct H0; try contradiction; subst.
-      apply fv_cut_r; simpl in H; specialize H with x.
-      replace (S (Nat.pred x)) with x by lia.
-      repeat econstructor.
-  + simpl in H1. destruct H1; subst.
-    - apply fv_cut_l. simpl in H; specialize H with x.
-      replace (S (Nat.pred x)) with x by lia.
-      repeat econstructor.
-    - destruct H0; try contradiction; subst.
-      apply fv_cut_r; simpl in H; specialize H with x.
-      replace (S (Nat.pred x)) with x by lia.
-      apply fv_link_r; econstructor.
-  + simpl in H1. destruct H1; subst.
     - apply fv_cut_l. simpl in H; specialize H with x.
       replace (S (Nat.pred x)) with x by lia.
       apply fv_link_r; econstructor.
-    - destruct H0; try contradiction; subst.
-      apply fv_cut_r; simpl in H; specialize H with x.
+    - apply fv_cut_r. simpl in H; specialize H with x.
+      replace (S (Nat.pred x)) with x by lia.
+      destruct (link_future_equiv_link_future _ _ _ (or_intror H1)) as [? [? [? [? | ?]]]]; subst.
+      * apply fv_link_l; econstructor.
+      * apply fv_link_r; econstructor.
+  + simpl in H2. destruct H2 as [? | [? | [? | ?]]]; try contradiction; subst.
+    - apply fv_cut_l. simpl in H; specialize H with x.
+      replace (S (Nat.pred x)) with x by lia.
+      destruct (link_future_equiv_link_future _ _ _ (or_intror H1)) as [? [? [? [? | ?]]]]; subst.
+      * apply fv_link_l; econstructor.
+      * apply fv_link_r; econstructor.
+    - apply fv_cut_r. simpl in H; specialize H with x.
       replace (S (Nat.pred x)) with x by lia.
       repeat econstructor.
-  + simpl in H1. destruct H1; subst.
+    - apply fv_cut_r. simpl in H; specialize H with x.
+      replace (S (Nat.pred x)) with x by lia.
+      apply fv_link_r; econstructor.
+  + simpl in H1. destruct H1 as [? | [? | [? | [? | ?]]]]; try contradiction; subst.
+    - apply fv_cut_l. simpl in H; specialize H with x.
+      replace (S (Nat.pred x)) with x by lia.
+      repeat econstructor.
     - apply fv_cut_l. simpl in H; specialize H with x.
       replace (S (Nat.pred x)) with x by lia.
       apply fv_link_r; econstructor.
-    - destruct H0; try contradiction; subst.
-      apply fv_cut_r; simpl in H; specialize H with x.
+    - apply fv_cut_r. simpl in H; specialize H with x.
+      replace (S (Nat.pred x)) with x by lia.
+      repeat econstructor.
+    - apply fv_cut_r. simpl in H; specialize H with x.
       replace (S (Nat.pred x)) with x by lia.
       apply fv_link_r; econstructor.
-  + simpl in H1. destruct H1; subst.
+  + simpl in H3. destruct H3; subst.
+    - apply fv_cut_l. specialize H with x.
+      simpl in H. replace (S (Nat.pred x)) with x by lia.
+      destruct (link_future_equiv_link_future _ _ _ (or_intror H2)) as [? [? [? [? | ?]]]]; subst.
+      * repeat econstructor.
+      * apply fv_link_r; econstructor.
+    - apply fv_cut_r. simpl in H. specialize H with x.
+      pose proof (H (or_intror H3)).
+      replace (S (Nat.pred x)) with x by lia.
+      assert (forall x : nat, List.In x (ListDef.map S xs) -> x > 0).
+      { intros. apply List.in_map_iff in H5; destruct H5. lia. }
+      apply (IHlink_list H5 (S x)).
+      apply List.in_map_iff. exists x; auto.
+  + simpl in H1. destruct H1 as [? | [? | ?]]; subst.
     - apply fv_cut_l. specialize H with x.
       simpl in H. replace (S (Nat.pred x)) with x by lia.
       repeat econstructor.
-    - apply fv_cut_r. simpl in H. specialize H with x.
-      pose proof (H (or_intror H1)).
-      replace (S (Nat.pred x)) with x by lia.
-      assert (forall x : nat, List.In x (ListDef.map S xs) -> x > 0).
-      { intros. apply List.in_map_iff in H3; destruct H3. lia. }
-      apply (IHlink_list H3 (S x)).
-      apply List.in_map_iff. exists x; auto.
-  + simpl in H1. destruct H1; subst.
     - apply fv_cut_l. specialize H with x.
       simpl in H. replace (S (Nat.pred x)) with x by lia.
       apply fv_link_r. econstructor.
     - apply fv_cut_r. simpl in H. specialize H with x.
-      pose proof (H (or_intror H1)).
+      pose proof (H (or_intror (or_intror H1))).
       replace (S (Nat.pred x)) with x by lia.
       assert (forall x : nat, List.In x (ListDef.map S xs) -> x > 0).
       { intros. apply List.in_map_iff in H3; destruct H3. lia. }
@@ -617,453 +718,1395 @@ Proof.
       apply List.in_map_iff. exists x; auto.
 Qed.
 
-Lemma link_list_swap_0_1 :
-  forall Γ P n0 n1 xs,
-    0 <> n0 ->
-    0 <> n1 ->
-    Γ ⊢ P :# -> List.In 0 xs -> link_list (n0 :: n1 :: xs) P ->
-    exists Q Q' xs', P ≡ (cut Q Q') /\ link_list xs' Q' /\ List.In 0 xs' /\ length xs' <= S (length xs).
+Lemma link_list_with_0_at_2_reduces_or_swap :
+  forall Γ P xs n0 n1,
+    Γ ⊢ P :# -> link_list (n0 :: n1 :: 0 :: xs) P ->
+      (exists Q, P ⊳ Q) \/
+      (exists Q Q' xs', P ≡ (cut Q Q') /\
+                        link_list xs' Q' /\
+                        List.In 0 xs' /\
+                        length xs' <= S (S (length xs))).
 Proof.
   intros.
-  inversion H3; subst; try now inversion H2.
-  + simpl in H7. inversion H7; subst.
-    - assert (xs = [0]).
-      {
-        destruct xs.
-        + simpl in H6; congruence.
-        + destruct xs.
-          - simpl in H6. simpl in H2. destruct H2.
-            * subst. auto.
-            * contradiction.
-          - simpl in H6. inversion H6.
-      }
-      assert (i2 = 1).
-      { rewrite H4 in H6. inversion H6; subst; auto. }
-      subst.
-      eexists; eexists. exists [S n0; 0].
-      repeat split.
+  inversion H0; subst.
+  + left. destruct (link_future_equiv_link_future _ _ _ (or_intror H7)) as [M' [? [? ?]]].
+    destruct H2; subst.
+    - eexists. eapply r_struct; [apply c_cut_comm | econstructor | apply c_refl].
+    - eexists. eapply r_struct.
       * eapply c_trans.
-        ** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
-        ** eapply c_trans.
-           *** eapply c_comm. eapply (c_cut_assoc
-                (rename_process (up (link (future n0) M)) swap01)
-                (rename_process (link (future 1) M2) swap01)
-                (down (rename_process (link (future (S n1)) M1) swap01))
-               ); autorewrite with up_down_rename_rewrites; auto;
-                [ apply nfv_10_swap; apply nfv_lift_n; lia
-                | apply nfv_01_swap; intro Hfv; inversion H1; subst
-                ].
-                assert (1 ∈ (link (future 1) M2)) as Hfv1link by repeat econstructor.
-                inversion H11; subst. inversion H9; subst.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv) in H13.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H14.
-                destruct H13, H14; simpl in *; subst. inversion H9. inversion H14.
-           *** eapply c_cut_comm.
-      * simpl. destruct n0; try congruence. econstructor.
-      * simpl. right; left; auto.
-      * simpl; lia.
-    - assert (xs = [0]).
+        ** apply c_cut_comm.
+        ** apply c_cong_cut; [apply c_link | apply c_refl].
+      * econstructor.
+      * apply c_refl.
+  + left. eexists. eapply r_struct.
+    - eapply c_trans.
+      * apply c_cut_comm.
+      * apply c_cong_cut; [apply c_link | apply c_refl].
+    - econstructor.
+    - apply c_refl.
+  + left. eexists. eapply r_struct; [apply c_cut_comm | econstructor | apply c_refl].
+  + inversion H3; subst.
+    - left. destruct (link_future_equiv_link_future _ _ _ (or_intror H11)) as [M' [? [? ?]]].
+      destruct H2; subst.
       {
-        destruct xs.
-        + simpl in H6; congruence.
-        + destruct xs.
-          - simpl in H6. simpl in H2. destruct H2.
-            * subst. auto.
-            * contradiction.
-          - simpl in H6. inversion H6.
+        eexists. eapply r_struct.
+        + eapply c_trans. { apply c_cong_cut. apply c_refl. apply c_cut_comm. }
+          eapply c_comm.
+          eapply (c_cut_assoc
+            (rename_process (up L) swap01)
+            (rename_process (link (future 1) M') swap01)
+            (down (rename_process P1 swap01))
+          ); autorewrite with up_down_rename_rewrites; auto.
+          - apply nfv_10_swap; apply nfv_lift_n; lia.
+          - apply nfv_01_swap; intro Hfv.
+            assert (1 ∈ (link (future 1) M')) as Hfv1link by repeat econstructor.
+            inversion H; subst. inversion H15; subst.
+            apply ((proj1 free_var_in_ctx) _ _ Hfv) in H17.
+            apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H18.
+            destruct H17, H18; simpl in *; subst.
+            inversion H13; subst. subst. inversion H18.
+        + simpl. eapply r_cong_cut. eapply r_struct.
+          - eapply c_cut_comm.
+          - econstructor.
+          - apply c_refl.
+        + apply c_refl.
       }
-      assert (i2 = 1).
-      { rewrite H4 in H6. inversion H6; subst; auto. }
-      subst.
-      eexists; eexists. exists [S n0; 0].
-      repeat split.
-      * eapply c_trans.
-        ** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
-        ** eapply c_trans.
-           *** eapply c_comm. eapply (c_cut_assoc
-                (rename_process (up (link (future n0) M)) swap01)
-                (rename_process (link M2 (future 1)) swap01)
-                (down (rename_process (link (future (S n1)) M1) swap01))
-               ); autorewrite with up_down_rename_rewrites; auto;
-                [ apply nfv_10_swap; apply nfv_lift_n; lia
-                | apply nfv_01_swap; intro Hfv; inversion H1; subst
-                ].
-                assert (1 ∈ (link M2 (future 1))) as Hfv1link by repeat econstructor.
-                inversion H11; subst. inversion H9; subst.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv) in H13.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H14.
-                destruct H13, H14; simpl in *; subst. inversion H9. inversion H14.
-           *** eapply c_cut_comm.
-      * simpl. destruct n0; try congruence. econstructor.
-      * simpl. right; left; auto.
-      * simpl; lia.
-    - assert (xs = [0]).
       {
-        destruct xs.
-        + simpl in H6; congruence.
-        + destruct xs.
-          - simpl in H6. simpl in H2. destruct H2.
-            * subst. auto.
-            * contradiction.
-          - simpl in H6. inversion H6.
+        eexists. eapply r_struct.
+        + eapply c_trans. { apply c_cong_cut. apply c_refl. apply c_cut_comm. }
+          eapply c_comm.
+          eapply (c_cut_assoc
+            (rename_process (up L) swap01)
+            (rename_process (link M' (future 1)) swap01)
+            (down (rename_process P1 swap01))
+          ); autorewrite with up_down_rename_rewrites; auto.
+          - apply nfv_10_swap; apply nfv_lift_n; lia.
+          - apply nfv_01_swap; intro Hfv.
+            assert (1 ∈ (link M' (future 1))) as Hfv1link by repeat econstructor.
+            inversion H; subst. inversion H15; subst.
+            apply ((proj1 free_var_in_ctx) _ _ Hfv) in H17.
+            apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H18.
+            destruct H17, H18; simpl in *; subst.
+            inversion H13; subst. subst. inversion H18.
+        + simpl. eapply r_cong_cut. eapply r_struct.
+          - eapply c_trans; [eapply c_cut_comm | eapply c_cong_cut; [eapply c_link | apply c_refl]].
+          - econstructor.
+          - apply c_refl.
+        + apply c_refl.
       }
-      assert (i2 = 1).
-      { rewrite H4 in H6. inversion H6; subst; auto. }
-      subst.
-      eexists; eexists. exists [S n0; 0].
-      repeat split.
-      * eapply c_trans.
-        ** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
-        ** eapply c_trans.
-           *** eapply c_comm. eapply (c_cut_assoc
-                (rename_process (up (link (future n0) M)) swap01)
-                (rename_process (link (future 1) M2) swap01)
-                (down (rename_process (link M1 (future (S n1))) swap01))
-               ); autorewrite with up_down_rename_rewrites; auto;
-                [ apply nfv_10_swap; apply nfv_lift_n; lia
-                | apply nfv_01_swap; intro Hfv; inversion H1; subst
-                ].
-                assert (1 ∈ (link (future 1) M2)) as Hfv1link by repeat econstructor.
-                inversion H11; subst. inversion H9; subst.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv) in H13.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H14.
-                destruct H13, H14; simpl in *; subst. inversion H9. inversion H14.
-           *** eapply c_cut_comm.
-      * simpl. destruct n0; try congruence. econstructor.
-      * simpl. right; left; auto.
-      * simpl; lia.
-    - assert (xs = [0]).
-      {
-        destruct xs.
-        + simpl in H6; congruence.
-        + destruct xs.
-          - simpl in H6. simpl in H2. destruct H2.
-            * subst. auto.
-            * contradiction.
-          - simpl in H6. inversion H6.
-      }
-      assert (i2 = 1).
-      { rewrite H4 in H6. inversion H6; subst; auto. }
-      subst.
-      eexists; eexists. exists [S n0; 0].
-      repeat split.
-      * eapply c_trans.
-        ** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
-        ** eapply c_trans.
-           *** eapply c_comm. eapply (c_cut_assoc
-                (rename_process (up (link (future n0) M)) swap01)
-                (rename_process (link M2 (future 1)) swap01)
-                (down (rename_process (link M1 (future (S n1))) swap01))
-               ); autorewrite with up_down_rename_rewrites; auto;
-                [ apply nfv_10_swap; apply nfv_lift_n; lia
-                | apply nfv_01_swap; intro Hfv; inversion H1; subst
-                ].
-                assert (1 ∈ (link M2 (future 1))) as Hfv1link by repeat econstructor.
-                inversion H11; subst. inversion H9; subst.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv) in H13.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H14.
-                destruct H13, H14; simpl in *; subst. inversion H9. inversion H14.
-           *** eapply c_cut_comm.
-      * simpl. destruct n0; try congruence. econstructor.
-      * simpl. right; left; auto.
-      * simpl; lia.
-    - assert (forall x, List.In x (List.map S (List.map S xs)) -> x > 0).
-      { intros. apply List.in_map_iff in H4; destruct H4. lia. }
-      pose proof (link_list_rename _ _ _ H4 swap01_is_bijective H8).
-      rewrite (List.map_map S Nat.pred _) in H5.
-      simpl in H5.
-      rewrite List.map_id in H5.
+    - left. eexists. eapply r_struct.
+      * eapply c_trans. { apply c_cong_cut. apply c_refl. apply c_cong_cut. apply c_link. apply c_refl. }
+        eapply c_comm.
+        eapply (c_cut_assoc
+          (rename_process (up L) swap01)
+          (rename_process (link (future 1) (future (S n1))) swap01)
+          (down (rename_process P swap01))
+        ); autorewrite with up_down_rename_rewrites; auto.
+        ** apply nfv_10_swap; apply nfv_lift_n; lia.
+        ** apply nfv_01_swap; intro Hfv.
+           assert (1 ∈ (link (future (S n1)) (future 1))) as Hfv1link by repeat econstructor.
+           inversion H; subst. inversion H12; subst.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv) in H15.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H14.
+           destruct H14, H15; simpl in *; subst.
+           inversion H10; subst. subst. inversion H15.
+      * simpl. eapply r_cong_cut. eapply r_struct.
+        ** apply c_cut_comm.
+        ** econstructor.
+        ** apply c_refl.
+      * apply c_refl.
+    - left. eexists. eapply r_struct.
+      * eapply c_trans. { apply c_cong_cut. apply c_refl. apply c_cut_comm. }
+        eapply c_comm.
+        eapply (c_cut_assoc
+          (rename_process (up L) swap01)
+          (rename_process (link (future 1) (future i3)) swap01)
+          (down (rename_process P swap01))
+        ); autorewrite with up_down_rename_rewrites; auto.
+        ** apply nfv_10_swap; apply nfv_lift_n; lia.
+        ** apply nfv_01_swap; intro Hfv.
+           assert (1 ∈ (link (future 1) (future i3))) as Hfv1link by repeat econstructor.
+           inversion H; subst. inversion H12; subst.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv) in H14.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H15.
+           destruct H14, H15; simpl in *; subst.
+           inversion H10; subst. subst. inversion H15.
+      * simpl. eapply r_cong_cut. eapply r_struct.
+        ** apply c_cut_comm.
+        ** econstructor.
+        ** apply c_refl.
+      * apply c_refl.
+    - left. eexists. eapply r_struct.
+      * eapply c_trans. { apply c_cong_cut. apply c_refl. apply c_cong_cut. apply c_link. apply c_refl. }
+        eapply c_comm.
+        eapply (c_cut_assoc
+          (rename_process (up L) swap01)
+          (rename_process (link (future 1) (future (S n1))) swap01)
+          (down (rename_process (link (future i3) (future i4)) swap01))
+        ); autorewrite with up_down_rename_rewrites; auto.
+        ** apply nfv_10_swap; apply nfv_lift_n; lia.
+        ** apply nfv_01_swap; intro Hfv.
+           assert (1 ∈ (link (future (S n1)) (future 1))) as Hfv1link by repeat econstructor.
+           inversion H; subst. inversion H10; subst.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv) in H13.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H12.
+           destruct H12, H13; simpl in *; subst.
+           inversion H8; subst. subst. inversion H13.
+      * simpl. eapply r_cong_cut. eapply r_struct.
+        ** apply c_cut_comm.
+        ** econstructor.
+        ** apply c_refl.
+      * apply c_refl.
+    - destruct n0.
+      { left. eapply link_list_with_0_at_0_reduces in H0; eauto. }
+      right.
       eexists; eexists.
-      exists ((S n0) :: (List.map swap01 (List.map S xs))).
+      exists ((S (S n0)) :: (List.map swap01 (List.map S (0 :: xs)))).
       repeat split.
       * eapply c_trans.
         ** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
         ** eapply c_trans.
            *** eapply c_comm. eapply (c_cut_assoc
-                (rename_process (up (link (future n0) M)) swap01)
+                (rename_process (up L) swap01)
                 (rename_process P swap01)
-                (down (rename_process (link (future (S n1)) M0) swap01))
-               ); autorewrite with up_down_rename_rewrites; auto;
-                [ apply nfv_10_swap; apply nfv_lift_n; lia
-                | apply nfv_01_swap; intro Hfv; inversion H1; subst
-                ].
-                assert (1 ∈ P).
-                {
-                  replace 1 with (Nat.pred 2) by auto.
-                  assert (List.In 2 (List.map S (List.map S xs))).
-                  { rewrite List.map_map. apply List.in_map_iff. exists 0; auto. }
-                  apply (link_list_free_vars _ _ H4 H8 2 H6).
-                }
-                inversion H13; subst. inversion H14; subst.
-                destruct ((proj1 free_vars_decidable) (link (future (S n1)) M0) 1); auto.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv) in H16.
-                apply ((proj1 free_var_in_ctx) _ _ H6) in H17.
-                destruct H16, H17; simpl in *; subst. inversion H14. inversion H18.
+                (down (rename_process L0 swap01))
+               ); autorewrite with up_down_rename_rewrites; auto.
+                -- apply nfv_10_swap; apply nfv_lift_n; lia.
+                -- apply nfv_01_swap; intro Hfv.
+                   assert (1 ∈ P) as Hfv1P. {
+                      simpl in H5. replace 1 with (Nat.pred 2) by auto.
+                      eapply link_list_free_vars; eauto.
+                      + intros. simpl in H1. destruct H1 as [? | ?]; try lia.
+                        apply List.in_map_iff in H1. destruct H1; lia.
+                      + simpl; eauto.
+                   }
+                   inversion H; subst. inversion H12; subst.
+                   apply ((proj1 free_var_in_ctx) _ _ Hfv) in H14.
+                   apply ((proj1 free_var_in_ctx) _ _ Hfv1P) in H15.
+                   destruct H14, H15; simpl in *; subst.
+                   inversion H10. subst. subst. inversion H15.
            *** eapply c_cut_comm.
-      * destruct n0; try congruence. simpl. unfold relocate. simpl.
-        econstructor; eauto.
-      * simpl. right.
-        rewrite List.map_map.
-        apply List.in_map_iff. exists 0; split; auto.
-      * simpl. repeat rewrite List.length_map. lia.
-    - assert (forall x, List.In x (List.map S (List.map S xs)) -> x > 0).
-      { intros. apply List.in_map_iff in H4; destruct H4. lia. }
-      pose proof (link_list_rename _ _ _ H4 swap01_is_bijective H8).
-      rewrite (List.map_map S Nat.pred _) in H5.
-      simpl in H5.
-      rewrite List.map_id in H5.
+      * destruct (link_future_equiv_link_future _ _ _ (or_intror H6)) as [? [? [? [? | ?]]]]; subst.
+         ** simpl; try congruence. unfold relocate; simpl.
+            eapply link_cons_n; try apply c_refl.
+            {
+              assert (forall x, List.In x (List.map S (1 :: List.map S xs)) -> x > 0).
+              { intros. simpl in H2. destruct H2 as [? | ?]; try lia.
+                apply List.in_map_iff in H2. destruct H2; lia. }
+              pose proof (link_list_rename _ _ _ H2 swap01_is_bijective H5).
+              rewrite (List.map_map S Nat.pred _) in H8.
+              rewrite List.map_id in H8.
+              simpl in H8; auto.
+            }
+            destruct M; try congruence. inversion H1; subst. simpl. congruence.
+         ** simpl; try congruence. unfold relocate; simpl.
+            eapply link_cons_n; try apply c_link.
+            {
+              assert (forall x, List.In x (List.map S (1 :: List.map S xs)) -> x > 0).
+              { intros. simpl in H2. destruct H2 as [? | ?]; try lia.
+                apply List.in_map_iff in H2. destruct H2; lia. }
+              pose proof (link_list_rename _ _ _ H2 swap01_is_bijective H5).
+              rewrite (List.map_map S Nat.pred _) in H8.
+              rewrite List.map_id in H8.
+              simpl in H8; auto.
+            }
+            destruct M; try congruence. inversion H1; subst. simpl. congruence.
+      * simpl; auto.
+      * simpl. repeat rewrite List.length_map; lia.
+    - left. eexists. eapply r_struct.
+      * eapply c_trans. { apply c_cong_cut. apply c_refl. apply c_cong_cut. apply c_link. apply c_refl. }
+        eapply c_comm.
+        eapply (c_cut_assoc
+          (rename_process (up L) swap01)
+          (rename_process (link (future 1) (future (S n1))) swap01)
+          (down (rename_process P swap01))
+        ); autorewrite with up_down_rename_rewrites; auto.
+        ** apply nfv_10_swap; apply nfv_lift_n; lia.
+        ** apply nfv_01_swap; intro Hfv.
+           assert (1 ∈ (link (future (S n1)) (future 1))) as Hfv1link by repeat econstructor.
+           inversion H; subst. inversion H10; subst.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv) in H13.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H12.
+           destruct H12, H13; simpl in *; subst.
+           inversion H7; subst. subst. inversion H13.
+      * simpl. eapply r_cong_cut. eapply r_struct.
+        ** apply c_cut_comm.
+        ** econstructor.
+        ** apply c_refl.
+      * apply c_refl.
+  + inversion H5; subst; left.
+    - destruct (link_future_equiv_link_future _ _ _ (or_intror H6)) as [M' [? [? [? | ?]]]]; subst.
+      {
+        eexists. eapply r_struct.
+        * eapply c_comm.
+          eapply (c_cut_assoc
+            (rename_process (up (link (future n0) (future n1))) swap01)
+            (rename_process (link (future 1) M') swap01)
+            (down (rename_process P2 swap01))
+          ); autorewrite with up_down_rename_rewrites; auto.
+          ** apply nfv_10_swap; apply nfv_lift_n; lia.
+          ** apply nfv_01_swap; intro Hfv.
+             assert (1 ∈ (link (future 1) M')) as Hfv1link by repeat econstructor.
+             inversion H; subst. inversion H13; subst.
+             apply ((proj1 free_var_in_ctx) _ _ Hfv) in H16.
+             apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H15.
+             destruct H15, H16; simpl in *; subst.
+             inversion H11; subst. subst. inversion H16.
+        * simpl. eapply r_cong_cut. eapply r_struct.
+          ** apply c_cut_comm.
+          ** econstructor.
+          ** apply c_refl.
+        * apply c_refl.
+      }
+      {
+        eexists. eapply r_struct.
+        * eapply c_trans. { eapply c_cong_cut. apply c_refl. apply c_cong_cut. apply c_link. apply c_refl. }
+          eapply c_comm.
+          eapply (c_cut_assoc
+            (rename_process (up (link (future n0) (future n1))) swap01)
+            (rename_process (link (future 1) M') swap01)
+            (down (rename_process P2 swap01))
+          ); autorewrite with up_down_rename_rewrites; auto.
+          ** apply nfv_10_swap; apply nfv_lift_n; lia.
+          ** apply nfv_01_swap; intro Hfv.
+             assert (1 ∈ (link M' (future 1))) as Hfv1link by repeat econstructor.
+             inversion H; subst. inversion H13; subst.
+             apply ((proj1 free_var_in_ctx) _ _ Hfv) in H16.
+             apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H15.
+             destruct H15, H16; simpl in *; subst.
+             inversion H11; subst. subst. inversion H16.
+        * simpl. eapply r_cong_cut. eapply r_struct.
+          ** apply c_cut_comm.
+          ** econstructor.
+          ** apply c_refl.
+        * apply c_refl.
+      }
+    - eexists. eapply r_struct.
+      * eapply c_comm.
+        eapply (c_cut_assoc
+          (rename_process (up (link (future n0) (future n1))) swap01)
+          (rename_process (link (future 1) (future i2)) swap01)
+          (down (rename_process P swap01))
+        ); autorewrite with up_down_rename_rewrites; auto.
+        ** apply nfv_10_swap; apply nfv_lift_n; lia.
+        ** apply nfv_01_swap; intro Hfv.
+           assert (1 ∈ (link (future 1) (future i2))) as Hfv1link by repeat econstructor.
+           inversion H; subst. inversion H10; subst.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv) in H13.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H12.
+           destruct H12, H13; simpl in *; subst.
+           inversion H8; subst. subst. inversion H13.
+      * simpl. eapply r_cong_cut. eapply r_struct.
+        ** apply c_cut_comm.
+        ** econstructor.
+        ** apply c_refl.
+      * apply c_refl.
+    - destruct (link_future_equiv_link_future _ _ _ (or_intror H6)) as [M' [? [? [? | ?]]]]; subst.
+      {
+        eexists. eapply r_struct.
+        * eapply c_comm.
+          eapply (c_cut_assoc
+            (rename_process (up (link (future n0) (future n1))) swap01)
+            (rename_process (link (future 1) M') swap01)
+            (down (rename_process (link (future i2) (future i3)) swap01))
+          ); autorewrite with up_down_rename_rewrites; auto.
+          ** apply nfv_10_swap; apply nfv_lift_n; lia.
+          ** apply nfv_01_swap; intro Hfv.
+             assert (1 ∈ (link (future 1) M')) as Hfv1link by repeat econstructor.
+             inversion H; subst. inversion H11; subst.
+             apply ((proj1 free_var_in_ctx) _ _ Hfv) in H14.
+             apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H13.
+             destruct H13, H14; simpl in *; subst.
+             inversion H9; subst. subst. inversion H14.
+        * simpl. eapply r_cong_cut. eapply r_struct.
+          ** apply c_cut_comm.
+          ** econstructor.
+          ** apply c_refl.
+        * apply c_refl.
+      }
+      {
+        eexists. eapply r_struct.
+        * eapply c_trans. { eapply c_cong_cut. apply c_refl. apply c_cong_cut. apply c_link. apply c_refl. }
+          eapply c_comm.
+          eapply (c_cut_assoc
+            (rename_process (up (link (future n0) (future n1))) swap01)
+            (rename_process (link (future 1) M') swap01)
+            (down (rename_process (link (future i2) (future i3)) swap01))
+          ); autorewrite with up_down_rename_rewrites; auto.
+          ** apply nfv_10_swap; apply nfv_lift_n; lia.
+          ** apply nfv_01_swap; intro Hfv.
+             assert (1 ∈ (link M' (future 1))) as Hfv1link by repeat econstructor.
+             inversion H; subst. inversion H11; subst.
+             apply ((proj1 free_var_in_ctx) _ _ Hfv) in H14.
+             apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H13.
+             destruct H13, H14; simpl in *; subst.
+             inversion H9; subst. subst. inversion H14.
+        * simpl. eapply r_cong_cut. eapply r_struct.
+          ** apply c_cut_comm.
+          ** econstructor.
+          ** apply c_refl.
+        * apply c_refl.
+      }
+    - eexists. eapply r_struct.
+      * eapply c_comm.
+        eapply (c_cut_assoc
+          (rename_process (up (link (future n0) (future n1))) swap01)
+          (rename_process (link (future 1) (future i2)) swap01)
+          (down (rename_process (link (future i3) (future i4)) swap01))
+        ); autorewrite with up_down_rename_rewrites; auto.
+        ** apply nfv_10_swap; apply nfv_lift_n; lia.
+        ** apply nfv_01_swap; intro Hfv.
+           assert (1 ∈ (link (future 1) (future i2))) as Hfv1link by repeat econstructor.
+           inversion H; subst. inversion H8; subst.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv) in H11.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H10.
+           destruct H10, H11; simpl in *; subst.
+           inversion H6; subst. subst. inversion H11.
+      * simpl. eapply r_cong_cut. eapply r_struct.
+        ** apply c_cut_comm.
+        ** econstructor.
+        ** apply c_refl.
+      * apply c_refl.
+    - destruct (link_future_equiv_link_future _ _ _ (or_intror H7)) as [M' [? [? [? | ?]]]]; subst.
+      {
+        eexists. eapply r_struct.
+        * eapply c_comm.
+          eapply (c_cut_assoc
+            (rename_process (up (link (future n0) (future n1))) swap01)
+            (rename_process (link (future 1) M') swap01)
+            (down (rename_process P swap01))
+          ); autorewrite with up_down_rename_rewrites; auto.
+          ** apply nfv_10_swap; apply nfv_lift_n; lia.
+          ** apply nfv_01_swap; intro Hfv.
+             assert (1 ∈ (link (future 1) M')) as Hfv1link by repeat econstructor.
+             inversion H; subst. inversion H11; subst.
+             apply ((proj1 free_var_in_ctx) _ _ Hfv) in H14.
+             apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H13.
+             destruct H13, H14; simpl in *; subst.
+             inversion H9; subst. subst. inversion H14.
+        * simpl. eapply r_cong_cut. eapply r_struct.
+          ** apply c_cut_comm.
+          ** econstructor.
+          ** apply c_refl.
+        * apply c_refl.
+      }
+      {
+        eexists. eapply r_struct.
+        * eapply c_trans. { eapply c_cong_cut. apply c_refl. apply c_cong_cut. apply c_link. apply c_refl. }
+          eapply c_comm.
+          eapply (c_cut_assoc
+            (rename_process (up (link (future n0) (future n1))) swap01)
+            (rename_process (link (future 1) M') swap01)
+            (down (rename_process P swap01))
+          ); autorewrite with up_down_rename_rewrites; auto.
+          ** apply nfv_10_swap; apply nfv_lift_n; lia.
+          ** apply nfv_01_swap; intro Hfv.
+             assert (1 ∈ (link M' (future 1))) as Hfv1link by repeat econstructor.
+             inversion H; subst. inversion H11; subst.
+             apply ((proj1 free_var_in_ctx) _ _ Hfv) in H14.
+             apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H13.
+             destruct H13, H14; simpl in *; subst.
+             inversion H9; subst. subst. inversion H14.
+        * simpl. eapply r_cong_cut. eapply r_struct.
+          ** apply c_cut_comm.
+          ** econstructor.
+          ** apply c_refl.
+        * apply c_refl.
+      }
+    - eexists. eapply r_struct.
+      * eapply c_comm.
+        eapply (c_cut_assoc
+          (rename_process (up (link (future n0) (future n1))) swap01)
+          (rename_process (link (future 1) (future i2)) swap01)
+          (down (rename_process P swap01))
+        ); autorewrite with up_down_rename_rewrites; auto.
+        ** apply nfv_10_swap; apply nfv_lift_n; lia.
+        ** apply nfv_01_swap; intro Hfv.
+           assert (1 ∈ (link (future 1) (future i2))) as Hfv1link by repeat econstructor.
+           inversion H; subst. inversion H9; subst.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv) in H12.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H11.
+           destruct H11, H12; simpl in *; subst.
+           inversion H7; subst. subst. inversion H12.
+      * simpl. eapply r_cong_cut. eapply r_struct.
+        ** apply c_cut_comm.
+        ** econstructor.
+        ** apply c_refl.
+      * apply c_refl.
+Qed.
+
+Lemma link_list_with_0_at_3_reduces_or_swap :
+  forall Γ P xs n0 n1 n2,
+    Γ ⊢ P :# -> link_list (n0 :: n1 :: n2 :: 0 :: xs) P ->
+      (exists Q, P ⊳ Q) \/
+      (exists Q Q' xs', P ≡ (cut Q Q') /\
+                        link_list xs' Q' /\
+                        List.In 0 xs' /\
+                        length xs' <= S (S (S (length xs)))).
+Proof.
+  intros.
+  inversion H0; subst.
+  + inversion H0; subst; left; eexists.
+    - eapply r_struct.
+      * eapply c_trans. eapply c_cut_comm. eapply c_cong_cut. apply c_link. apply c_refl.
+      * econstructor.
+      * apply c_refl.
+    - eapply r_struct.
+      * eapply c_trans. eapply c_cut_comm. eapply c_cong_cut. apply c_link. apply c_refl.
+      * econstructor.
+      * apply c_refl.
+    - eapply r_struct.
+      * eapply c_trans. eapply c_cut_comm. eapply c_cong_cut. apply c_link. apply c_refl.
+      * econstructor.
+      * apply c_refl.
+  + simpl in H3. inversion H3; subst.
+    - left.
+      destruct (link_future_equiv_link_future _ _ _ (or_intror H10)) as [M' [? [? ?]]].
+      destruct H2; subst.
+      {
+        eexists. eapply r_struct.
+        + eapply c_trans. { apply c_cong_cut. apply c_refl. apply c_cut_comm. }
+          eapply c_comm.
+          eapply (c_cut_assoc
+            (rename_process (up L) swap01)
+            (rename_process (link (future 1) M') swap01)
+            (down (rename_process (link (future (S n1)) (future (S n2))) swap01))
+          ); autorewrite with up_down_rename_rewrites; auto.
+          - apply nfv_10_swap; apply nfv_lift_n; lia.
+          - apply nfv_01_swap; intro Hfv.
+            assert (1 ∈ (link (future 1) M')) as Hfv1link by repeat econstructor.
+            inversion H; subst. inversion H13; subst.
+            apply ((proj1 free_var_in_ctx) _ _ Hfv) in H15.
+            apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H16.
+            destruct H15, H16; simpl in *; subst.
+            inversion H11; subst. subst. inversion H16.
+        + simpl. eapply r_cong_cut. eapply r_struct.
+          - eapply c_cut_comm.
+          - econstructor.
+          - apply c_refl.
+        + apply c_refl.
+      }
+      {
+        eexists. eapply r_struct.
+        + eapply c_trans. { apply c_cong_cut. apply c_refl. apply c_cut_comm. }
+          eapply c_comm.
+          eapply (c_cut_assoc
+            (rename_process (up L) swap01)
+            (rename_process (link M' (future 1)) swap01)
+            (down (rename_process (link (future (S n1)) (future (S n2))) swap01))
+          ); autorewrite with up_down_rename_rewrites; auto.
+          - apply nfv_10_swap; apply nfv_lift_n; lia.
+          - apply nfv_01_swap; intro Hfv.
+            assert (1 ∈ (link M' (future 1))) as Hfv1link by repeat econstructor.
+            inversion H; subst. inversion H13; subst.
+            apply ((proj1 free_var_in_ctx) _ _ Hfv) in H15.
+            apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H16.
+            destruct H15, H16; simpl in *; subst.
+            inversion H11; subst. subst. inversion H16.
+        + simpl. eapply r_cong_cut. eapply r_struct.
+          - eapply c_trans; [eapply c_cut_comm | eapply c_cong_cut; [eapply c_link | apply c_refl]].
+          - econstructor.
+          - apply c_refl.
+        + apply c_refl.
+      }
+    - left.
+      eexists. eapply r_struct.
+      * eapply c_trans. { apply c_cong_cut. apply c_refl. eapply c_trans. eapply c_cut_comm. eapply c_cong_cut. apply c_link. apply c_refl. }
+        eapply c_comm.
+        eapply (c_cut_assoc
+          (rename_process (up L) swap01)
+          (rename_process (link (future 1) (future (S n2))) swap01)
+          (down (rename_process P swap01))
+        ); autorewrite with up_down_rename_rewrites; auto.
+        ** apply nfv_10_swap; apply nfv_lift_n; lia.
+        ** apply nfv_01_swap; intro Hfv.
+           assert (1 ∈ (link (future (S n2)) (future 1))) as Hfv1link by repeat econstructor.
+           inversion H; subst. inversion H12; subst.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv) in H14.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H15.
+           destruct H14, H15; simpl in *; subst.
+           inversion H7; subst. subst. inversion H15.
+      * simpl. eapply r_cong_cut. eapply r_struct.
+        ** eapply c_cut_comm.
+        ** econstructor.
+        ** apply c_refl.
+      * apply c_refl.
+    - left.
+      eexists. eapply r_struct.
+      * eapply c_trans. { apply c_cong_cut. apply c_refl. apply c_cut_comm. }
+        eapply c_comm.
+        eapply (c_cut_assoc
+          (rename_process (up L) swap01)
+          (rename_process (link (future 1) (future i4)) swap01)
+          (down (rename_process (link (future (S n1)) (future (S n2))) swap01))
+        ); autorewrite with up_down_rename_rewrites; auto.
+        ** apply nfv_10_swap; apply nfv_lift_n; lia.
+        ** apply nfv_01_swap; intro Hfv.
+           assert (1 ∈ (link (future 1) (future i4))) as Hfv1link by repeat econstructor.
+           inversion H; subst. inversion H10; subst.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv) in H12.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H13.
+           destruct H12, H13; simpl in *; subst.
+           inversion H7; subst. subst. inversion H13.
+      * simpl. eapply r_cong_cut. eapply r_struct.
+        ** eapply c_cut_comm.
+        ** econstructor.
+        ** apply c_refl.
+      * apply c_refl.
+    - destruct n0.
+      { left. eapply link_list_with_0_at_0_reduces in H0; eauto. }
+      right.
       eexists; eexists.
-      exists ((S n0) :: (List.map swap01 (List.map S xs))).
+      exists ((S (S n0)) :: (List.map swap01 (List.map S (n2 :: 0 :: xs)))).
       repeat split.
       * eapply c_trans.
         ** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
         ** eapply c_trans.
            *** eapply c_comm. eapply (c_cut_assoc
-                (rename_process (up (link (future n0) M)) swap01)
+                (rename_process (up L) swap01)
                 (rename_process P swap01)
-                (down (rename_process (link M0 (future (S n1))) swap01))
-               ); autorewrite with up_down_rename_rewrites; auto;
-                [ apply nfv_10_swap; apply nfv_lift_n; lia
-                | apply nfv_01_swap; intro Hfv; inversion H1; subst
-                ].
-                assert (1 ∈ P).
-                {
-                  replace 1 with (Nat.pred 2) by auto.
-                  assert (List.In 2 (List.map S (List.map S xs))).
-                  { rewrite List.map_map. apply List.in_map_iff. exists 0; auto. }
-                  apply (link_list_free_vars _ _ H4 H8 2 H6).
-                }
-                inversion H13; subst. inversion H14; subst.
-                destruct ((proj1 free_vars_decidable) (link M0 (future (S n1))) 1); auto.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv) in H16.
-                apply ((proj1 free_var_in_ctx) _ _ H6) in H17.
-                destruct H16, H17; simpl in *; subst. inversion H14. inversion H18.
+                (down (rename_process L0 swap01))
+               ); autorewrite with up_down_rename_rewrites; auto.
+                -- apply nfv_10_swap; apply nfv_lift_n; lia.
+                -- apply nfv_01_swap; intro Hfv.
+                   assert (1 ∈ P) as Hfv1P. {
+                      simpl in H5. replace 1 with (Nat.pred 2) by auto.
+                      eapply link_list_free_vars; eauto.
+                      + intros. simpl in H1. destruct H1 as [? | [? | ?]]; try lia.
+                        apply List.in_map_iff in H1. destruct H1; lia.
+                      + simpl; eauto.
+                   }
+                   inversion H; subst. inversion H12; subst.
+                   apply ((proj1 free_var_in_ctx) _ _ Hfv) in H14.
+                   apply ((proj1 free_var_in_ctx) _ _ Hfv1P) in H15.
+                   destruct H14, H15; simpl in *; subst.
+                   inversion H10. subst. subst. inversion H15.
            *** eapply c_cut_comm.
-      * destruct n0; try congruence. simpl. unfold relocate. simpl.
-        econstructor; eauto.
-      * simpl. right.
-        rewrite List.map_map.
-        apply List.in_map_iff. exists 0; split; auto.
-      * simpl. repeat rewrite List.length_map. lia.
-  + simpl in H7. inversion H7; subst.
-    - assert (xs = [0]).
-      {
-        destruct xs.
-        + simpl in H6; congruence.
-        + destruct xs.
-          - simpl in H6. simpl in H2. destruct H2.
-            * subst. auto.
-            * contradiction.
-          - simpl in H6. inversion H6.
-      }
-      assert (i2 = 1).
-      { rewrite H4 in H6. inversion H6; subst; auto. }
-      subst.
-      eexists; eexists. exists [S n0; 0].
-      repeat split.
-      * eapply c_trans.
-        ** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
-        ** eapply c_trans.
-           *** eapply c_comm. eapply (c_cut_assoc
-                (rename_process (up (link M (future n0))) swap01)
-                (rename_process (link (future 1) M2) swap01)
-                (down (rename_process (link (future (S n1)) M1) swap01))
-               ); autorewrite with up_down_rename_rewrites; auto;
-                [ apply nfv_10_swap; apply nfv_lift_n; lia
-                | apply nfv_01_swap; intro Hfv; inversion H1; subst
-                ].
-                assert (1 ∈ (link (future 1) M2)) as Hfv1link by repeat econstructor.
-                inversion H11; subst. inversion H9; subst.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv) in H13.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H14.
-                destruct H13, H14; simpl in *; subst. inversion H9. inversion H14.
-           *** eapply c_cut_comm.
-      * simpl. destruct n0; try congruence. econstructor.
-      * simpl. right; left; auto.
-      * simpl; lia.
-    - assert (xs = [0]).
-      {
-        destruct xs.
-        + simpl in H6; congruence.
-        + destruct xs.
-          - simpl in H6. simpl in H2. destruct H2.
-            * subst. auto.
-            * contradiction.
-          - simpl in H6. inversion H6.
-      }
-      assert (i2 = 1).
-      { rewrite H4 in H6. inversion H6; subst; auto. }
-      subst.
-      eexists; eexists. exists [S n0; 0].
-      repeat split.
-      * eapply c_trans.
-        ** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
-        ** eapply c_trans.
-           *** eapply c_comm. eapply (c_cut_assoc
-                (rename_process (up (link M (future n0))) swap01)
-                (rename_process (link M2 (future 1)) swap01)
-                (down (rename_process (link (future (S n1)) M1) swap01))
-               ); autorewrite with up_down_rename_rewrites; auto;
-                [ apply nfv_10_swap; apply nfv_lift_n; lia
-                | apply nfv_01_swap; intro Hfv; inversion H1; subst
-                ].
-                assert (1 ∈ (link M2 (future 1))) as Hfv1link by repeat econstructor.
-                inversion H11; subst. inversion H9; subst.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv) in H13.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H14.
-                destruct H13, H14; simpl in *; subst. inversion H9. inversion H14.
-           *** eapply c_cut_comm.
-      * simpl. destruct n0; try congruence. econstructor.
-      * simpl. right; left; auto.
-      * simpl; lia.
-    - assert (xs = [0]).
-      {
-        destruct xs.
-        + simpl in H6; congruence.
-        + destruct xs.
-          - simpl in H6. simpl in H2. destruct H2.
-            * subst. auto.
-            * contradiction.
-          - simpl in H6. inversion H6.
-      }
-      assert (i2 = 1).
-      { rewrite H4 in H6. inversion H6; subst; auto. }
-      subst.
-      eexists; eexists. exists [S n0; 0].
-      repeat split.
-      * eapply c_trans.
-        ** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
-        ** eapply c_trans.
-           *** eapply c_comm. eapply (c_cut_assoc
-                (rename_process (up (link M (future n0))) swap01)
-                (rename_process (link (future 1) M2) swap01)
-                (down (rename_process (link M1 (future (S n1))) swap01))
-               ); autorewrite with up_down_rename_rewrites; auto;
-                [ apply nfv_10_swap; apply nfv_lift_n; lia
-                | apply nfv_01_swap; intro Hfv; inversion H1; subst
-                ].
-                assert (1 ∈ (link (future 1) M2)) as Hfv1link by repeat econstructor.
-                inversion H11; subst. inversion H9; subst.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv) in H13.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H14.
-                destruct H13, H14; simpl in *; subst. inversion H9. inversion H14.
-           *** eapply c_cut_comm.
-      * simpl. destruct n0; try congruence. econstructor.
-      * simpl. right; left; auto.
-      * simpl; lia.
-    - assert (xs = [0]).
-      {
-        destruct xs.
-        + simpl in H6; congruence.
-        + destruct xs.
-          - simpl in H6. simpl in H2. destruct H2.
-            * subst. auto.
-            * contradiction.
-          - simpl in H6. inversion H6.
-      }
-      assert (i2 = 1).
-      { rewrite H4 in H6. inversion H6; subst; auto. }
-      subst.
-      eexists; eexists. exists [S n0; 0].
-      repeat split.
-      * eapply c_trans.
-        ** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
-        ** eapply c_trans.
-           *** eapply c_comm. eapply (c_cut_assoc
-                (rename_process (up (link M (future n0))) swap01)
-                (rename_process (link M2 (future 1)) swap01)
-                (down (rename_process (link M1 (future (S n1))) swap01))
-               ); autorewrite with up_down_rename_rewrites; auto;
-                [ apply nfv_10_swap; apply nfv_lift_n; lia
-                | apply nfv_01_swap; intro Hfv; inversion H1; subst
-                ].
-                assert (1 ∈ (link M2 (future 1))) as Hfv1link by repeat econstructor.
-                inversion H11; subst. inversion H9; subst.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv) in H13.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H14.
-                destruct H13, H14; simpl in *; subst. inversion H9. inversion H14.
-           *** eapply c_cut_comm.
-      * simpl. destruct n0; try congruence. econstructor.
-      * simpl. right; left; auto.
-      * simpl; lia.
-    - assert (forall x, List.In x (List.map S (List.map S xs)) -> x > 0).
-      { intros. apply List.in_map_iff in H4; destruct H4. lia. }
-      pose proof (link_list_rename _ _ _ H4 swap01_is_bijective H8).
-      rewrite (List.map_map S Nat.pred _) in H5.
-      simpl in H5.
-      rewrite List.map_id in H5.
+      * destruct (link_future_equiv_link_future _ _ _ (or_intror H6)) as [? [? [? [? | ?]]]]; subst.
+         ** simpl; try congruence. unfold relocate; simpl.
+            eapply link_cons_n; try apply c_refl.
+            {
+              assert (forall x, List.In x (List.map S ((S n2) :: 1 :: List.map S xs)) -> x > 0).
+              { intros. simpl in H2. destruct H2 as [? | [? | ?]]; try lia.
+                apply List.in_map_iff in H2. destruct H2; lia. }
+              pose proof (link_list_rename _ _ _ H2 swap01_is_bijective H5).
+              rewrite (List.map_map S Nat.pred _) in H8.
+              rewrite List.map_id in H8.
+              simpl in H8; auto.
+            }
+            destruct M; try congruence. inversion H1; subst. simpl. congruence.
+         ** simpl; try congruence. unfold relocate; simpl.
+            eapply link_cons_n; try apply c_link.
+            {
+              assert (forall x, List.In x (List.map S ((S n2) :: 1 :: List.map S xs)) -> x > 0).
+              { intros. simpl in H2. destruct H2 as [? | [? | ?]]; try lia.
+                apply List.in_map_iff in H2. destruct H2; lia. }
+              pose proof (link_list_rename _ _ _ H2 swap01_is_bijective H5).
+              rewrite (List.map_map S Nat.pred _) in H8.
+              rewrite List.map_id in H8.
+              simpl in H8; auto.
+            }
+            destruct M; try congruence. inversion H1; subst. simpl. congruence.
+      * simpl; auto.
+      * simpl. repeat rewrite List.length_map; lia.
+    - destruct n0.
+      { left. eapply link_list_with_0_at_0_reduces in H0; eauto. }
+      right.
       eexists; eexists.
-      exists ((S n0) :: (List.map swap01 (List.map S xs))).
+      exists ((S (S n0)) :: (List.map swap01 (List.map S (0 :: xs)))).
       repeat split.
       * eapply c_trans.
         ** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
         ** eapply c_trans.
            *** eapply c_comm. eapply (c_cut_assoc
-                (rename_process (up (link M (future n0))) swap01)
+                (rename_process (up L) swap01)
                 (rename_process P swap01)
-                (down (rename_process (link (future (S n1)) M0) swap01))
-               ); autorewrite with up_down_rename_rewrites; auto;
-                [ apply nfv_10_swap; apply nfv_lift_n; lia
-                | apply nfv_01_swap; intro Hfv; inversion H1; subst
-                ].
-                assert (1 ∈ P).
-                {
-                  replace 1 with (Nat.pred 2) by auto.
-                  assert (List.In 2 (List.map S (List.map S xs))).
-                  { rewrite List.map_map. apply List.in_map_iff. exists 0; auto. }
-                  apply (link_list_free_vars _ _ H4 H8 2 H6).
-                }
-                inversion H13; subst. inversion H14; subst.
-                destruct ((proj1 free_vars_decidable) (link (future (S n1)) M0) 1); auto.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv) in H16.
-                apply ((proj1 free_var_in_ctx) _ _ H6) in H17.
-                destruct H16, H17; simpl in *; subst. inversion H14. inversion H18.
+                (down (rename_process (link (future (S n1)) (future (S n2))) swap01))
+               ); autorewrite with up_down_rename_rewrites; auto.
+                -- apply nfv_10_swap; apply nfv_lift_n; lia.
+                -- apply nfv_01_swap; intro Hfv.
+                   assert (1 ∈ P) as Hfv1P. {
+                      replace 1 with (Nat.pred 2) by auto.
+                      eapply link_list_free_vars; eauto.
+                      + intros. simpl in H1. destruct H1 as [? | ?]; try lia.
+                        apply List.in_map_iff in H1. destruct H1; lia.
+                      + simpl; eauto.
+                   }
+                   inversion H; subst. inversion H10; subst.
+                   apply ((proj1 free_var_in_ctx) _ _ Hfv) in H12.
+                   apply ((proj1 free_var_in_ctx) _ _ Hfv1P) in H13.
+                   destruct H12, H13; simpl in *; subst.
+                   inversion H7. subst. subst. inversion H13.
            *** eapply c_cut_comm.
-      * destruct n0; try congruence. simpl. unfold relocate. simpl.
-        econstructor; eauto.
-      * simpl. right.
-        rewrite List.map_map.
-        apply List.in_map_iff. exists 0; split; auto.
-      * simpl. repeat rewrite List.length_map. lia.
-    - assert (forall x, List.In x (List.map S (List.map S xs)) -> x > 0).
-      { intros. apply List.in_map_iff in H4; destruct H4. lia. }
-      pose proof (link_list_rename _ _ _ H4 swap01_is_bijective H8).
-      rewrite (List.map_map S Nat.pred _) in H5.
-      simpl in H5.
-      rewrite List.map_id in H5.
+      * destruct (link_future_equiv_link_future _ _ _ (or_intror H6)) as [? [? [? [? | ?]]]]; subst.
+         ** simpl; try congruence. unfold relocate; simpl.
+            eapply link_cons_n; try apply c_refl.
+            {
+              assert (forall x, List.In x (List.map S (1 :: List.map S xs)) -> x > 0).
+              { intros. simpl in H2. destruct H2 as [? | ?]; try lia.
+                apply List.in_map_iff in H2. destruct H2; lia. }
+              pose proof (link_list_rename _ _ _ H2 swap01_is_bijective H8).
+              rewrite (List.map_map S Nat.pred _) in H5.
+              rewrite List.map_id in H5.
+              simpl in H5; auto.
+            }
+            destruct M; try congruence. inversion H1; subst. simpl. congruence.
+         ** simpl; try congruence. unfold relocate; simpl.
+            eapply link_cons_n; try apply c_link.
+            {
+              assert (forall x, List.In x (List.map S (1 :: List.map S xs)) -> x > 0).
+              { intros. simpl in H2. destruct H2 as [? | ?]; try lia.
+                apply List.in_map_iff in H2. destruct H2; lia. }
+              pose proof (link_list_rename _ _ _ H2 swap01_is_bijective H8).
+              rewrite (List.map_map S Nat.pred _) in H5.
+              rewrite List.map_id in H5.
+              simpl in H5; auto.
+            }
+            destruct M; try congruence. inversion H1; subst. simpl. congruence.
+      * simpl; auto.
+      * simpl. repeat rewrite List.length_map; lia.
+  + simpl in H5; inversion H5; subst.
+    - left.
+      assert (xs = []). { destruct xs; simpl in H3; auto. congruence. } subst.
+      destruct (link_future_equiv_link_future _ _ _ (or_intror H9)) as [M' [? [? ?]]].
+      destruct H2; subst.
+      {
+        eexists. eapply r_struct.
+        + eapply c_trans. { apply c_cong_cut. apply c_refl. apply c_cut_comm. }
+          eapply c_comm.
+          eapply (c_cut_assoc
+            (rename_process (up (link (future n0) (future n1))) swap01)
+            (rename_process (link (future 1) M') swap01)
+            (down (rename_process P1 swap01))
+          ); autorewrite with up_down_rename_rewrites; auto.
+          - apply nfv_10_swap; apply nfv_lift_n; lia.
+          - apply nfv_01_swap; intro Hfv.
+            assert (1 ∈ (link (future 1) M')) as Hfv1link by repeat econstructor.
+            inversion H; subst. inversion H13; subst.
+            apply ((proj1 free_var_in_ctx) _ _ Hfv) in H15.
+            apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H16.
+            destruct H15, H16; simpl in *; subst.
+            inversion H11; subst. subst. inversion H16.
+        + simpl. eapply r_cong_cut. eapply r_struct.
+          - eapply c_cut_comm.
+          - econstructor.
+          - apply c_refl.
+        + apply c_refl.
+      }
+      {
+        eexists. eapply r_struct.
+        + eapply c_trans. { apply c_cong_cut. apply c_refl. apply c_cut_comm. }
+          eapply c_comm.
+          eapply (c_cut_assoc
+            (rename_process (up (link (future n0) (future n1))) swap01)
+            (rename_process (link M' (future 1)) swap01)
+            (down (rename_process P1 swap01))
+          ); autorewrite with up_down_rename_rewrites; auto.
+          - apply nfv_10_swap; apply nfv_lift_n; lia.
+          - apply nfv_01_swap; intro Hfv.
+            assert (1 ∈ (link M' (future 1))) as Hfv1link by repeat econstructor.
+            inversion H; subst. inversion H13; subst.
+            apply ((proj1 free_var_in_ctx) _ _ Hfv) in H15.
+            apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H16.
+            destruct H15, H16; simpl in *; subst.
+            inversion H11; subst. subst. inversion H16.
+        + simpl. eapply r_cong_cut. eapply r_struct.
+          - eapply c_trans; [eapply c_cut_comm | eapply c_cong_cut; [eapply c_link | apply c_refl]].
+          - econstructor.
+          - apply c_refl.
+        + apply c_refl.
+      }
+    - left.
+      eexists. eapply r_struct.
+      * eapply c_trans. { apply c_cong_cut. apply c_refl. apply c_cong_cut. apply c_link. apply c_refl. }
+        eapply c_comm.
+        eapply (c_cut_assoc
+          (rename_process (up (link (future n0) (future n1))) swap01)
+          (rename_process (link (future 1) (future (S n2))) swap01)
+          (down (rename_process P swap01))
+        ); autorewrite with up_down_rename_rewrites; auto.
+        ** apply nfv_10_swap; apply nfv_lift_n; lia.
+        ** apply nfv_01_swap; intro Hfv.
+           assert (1 ∈ (link (future (S n2)) (future 1))) as Hfv1link by repeat econstructor.
+           inversion H; subst. inversion H10; subst.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv) in H13.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H12.
+           destruct H12, H13; simpl in *; subst.
+           inversion H8; subst. subst. inversion H13.
+      * simpl. eapply r_cong_cut. eapply r_struct.
+        ** eapply c_cut_comm.
+        ** econstructor.
+        ** apply c_refl.
+      * apply c_refl.
+    - left.
+      eexists. eapply r_struct.
+      * eapply c_trans. { apply c_cong_cut. apply c_refl. apply c_cut_comm. }
+        eapply c_comm.
+        eapply (c_cut_assoc
+          (rename_process (up (link (future n0) (future n1))) swap01)
+          (rename_process (link (future 1) (future i3)) swap01)
+          (down (rename_process P swap01))
+        ); autorewrite with up_down_rename_rewrites; auto.
+        ** apply nfv_10_swap; apply nfv_lift_n; lia.
+        ** apply nfv_01_swap; intro Hfv.
+           assert (1 ∈ (link (future 1) (future i3))) as Hfv1link by repeat econstructor.
+           inversion H; subst. inversion H10; subst.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv) in H12.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H13.
+           destruct H12, H13; simpl in *; subst.
+           inversion H8; subst. subst. inversion H13.
+      * simpl. eapply r_cong_cut. eapply r_struct.
+        ** eapply c_cut_comm.
+        ** econstructor.
+        ** apply c_refl.
+      * apply c_refl.
+    - left.
+      eexists. eapply r_struct.
+      * eapply c_trans. { apply c_cong_cut. apply c_refl. apply c_cong_cut. apply c_link. apply c_refl. }
+        eapply c_comm.
+        eapply (c_cut_assoc
+          (rename_process (up (link (future n0) (future n1))) swap01)
+          (rename_process (link (future 1) (future (S n2))) swap01)
+          (down (rename_process (link (future i3) (future i4)) swap01))
+        ); autorewrite with up_down_rename_rewrites; auto.
+        ** apply nfv_10_swap; apply nfv_lift_n; lia.
+        ** apply nfv_01_swap; intro Hfv.
+           assert (1 ∈ (link (future (S n2)) (future 1))) as Hfv1link by repeat econstructor.
+           inversion H; subst. inversion H8; subst.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv) in H11.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H10.
+           destruct H10, H11; simpl in *; subst.
+           inversion H6; subst. subst. inversion H11.
+      * simpl. eapply r_cong_cut. eapply r_struct.
+        ** eapply c_cut_comm.
+        ** econstructor.
+        ** apply c_refl.
+      * apply c_refl.
+    - destruct n0.
+      { left. eapply link_list_with_0_at_0_reduces in H0; eauto. }
+      destruct n1.
+      { left. eapply link_list_with_0_at_1_reduces in H0; eauto. }
+      right.
       eexists; eexists.
-      exists ((S n0) :: (List.map swap01 (List.map S xs))).
+      exists ((S (S n0)) :: (S (S n1)) :: (List.map swap01 (List.map S (0 :: xs)))).
       repeat split.
       * eapply c_trans.
         ** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
         ** eapply c_trans.
            *** eapply c_comm. eapply (c_cut_assoc
-                (rename_process (up (link M (future n0))) swap01)
+                (rename_process (up (link (future (S n0)) (future (S n1)))) swap01)
                 (rename_process P swap01)
-                (down (rename_process (link M0 (future (S n1))) swap01))
-               ); autorewrite with up_down_rename_rewrites; auto;
-                [ apply nfv_10_swap; apply nfv_lift_n; lia
-                | apply nfv_01_swap; intro Hfv; inversion H1; subst
-                ].
-                assert (1 ∈ P).
-                {
-                  replace 1 with (Nat.pred 2) by auto.
-                  assert (List.In 2 (List.map S (List.map S xs))).
-                  { rewrite List.map_map. apply List.in_map_iff. exists 0; auto. }
-                  apply (link_list_free_vars _ _ H4 H8 2 H6).
-                }
-                inversion H13; subst. inversion H14; subst.
-                destruct ((proj1 free_vars_decidable) (link M0 (future (S n1))) 1); auto.
-                apply ((proj1 free_var_in_ctx) _ _ Hfv) in H16.
-                apply ((proj1 free_var_in_ctx) _ _ H6) in H17.
-                destruct H16, H17; simpl in *; subst. inversion H14. inversion H18.
+                (down (rename_process L swap01))
+               ); autorewrite with up_down_rename_rewrites; auto.
+                -- apply nfv_10_swap; apply nfv_lift_n; lia.
+                -- apply nfv_01_swap; intro Hfv.
+                   assert (1 ∈ P) as Hfv1P. {
+                      replace 1 with (Nat.pred 2) by auto.
+                      eapply link_list_free_vars; eauto.
+                      + intros. simpl in H1. destruct H1 as [? | ?]; try lia.
+                        apply List.in_map_iff in H1. destruct H1; lia.
+                      + simpl; eauto.
+                   }
+                   inversion H; subst. inversion H10; subst.
+                   apply ((proj1 free_var_in_ctx) _ _ Hfv) in H12.
+                   apply ((proj1 free_var_in_ctx) _ _ Hfv1P) in H13.
+                   destruct H12, H13; simpl in *; subst.
+                   inversion H8. subst. subst. inversion H13.
            *** eapply c_cut_comm.
-      * destruct n0; try congruence. simpl. unfold relocate. simpl.
-        econstructor; eauto.
-      * simpl. right.
-        rewrite List.map_map.
-        apply List.in_map_iff. exists 0; split; auto.
-      * simpl. repeat rewrite List.length_map. lia.
+      * simpl; unfold relocate; simpl.
+        eapply link_cons_f; try apply c_refl.
+        assert (forall x, List.In x (List.map S (1 :: List.map S xs)) -> x > 0).
+        { intros. simpl in H1. destruct H1 as [? | ?]; try lia.
+          apply List.in_map_iff in H1. destruct H1; lia. }
+        pose proof (link_list_rename _ _ _ H1 swap01_is_bijective H3).
+        rewrite (List.map_map S Nat.pred _) in H2.
+        rewrite List.map_id in H2.
+        simpl in H2; auto.
+      * simpl; auto.
+      * simpl. repeat rewrite List.length_map; lia.
+    - left.
+      eexists. eapply r_struct.
+      * eapply c_trans. { apply c_cong_cut. apply c_refl. apply c_cong_cut. apply c_link. apply c_refl. }
+        eapply c_comm.
+        eapply (c_cut_assoc
+          (rename_process (up (link (future n0) (future n1))) swap01)
+          (rename_process (link (future 1) (future (S n2))) swap01)
+          (down (rename_process P swap01))
+        ); autorewrite with up_down_rename_rewrites; auto.
+        ** apply nfv_10_swap; apply nfv_lift_n; lia.
+        ** apply nfv_01_swap; intro Hfv.
+           assert (1 ∈ (link (future (S n2)) (future 1))) as Hfv1link by repeat econstructor.
+           inversion H; subst. inversion H8; subst.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv) in H11.
+           apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H10.
+           destruct H10, H11; simpl in *; subst.
+           inversion H4; subst. subst. inversion H11.
+      * simpl. eapply r_cong_cut. eapply r_struct.
+        ** eapply c_cut_comm.
+        ** econstructor.
+        ** apply c_refl.
+      * apply c_refl.
+Qed.
+
+Lemma link_list_swap_0_1 :
+  forall Γ P n0 n1 n2 n3 xs,
+    0 <> n0 ->
+    0 <> n1 ->
+    0 <> n2 ->
+    0 <> n3 ->
+    Γ ⊢ P :# -> length xs > 0 -> List.In 0 xs -> link_list (n0 :: n1 :: n2 :: n3 :: xs) P ->
+    exists Q Q' xs', P ≡ (cut Q Q') /\ link_list xs' Q' /\ List.In 0 xs' /\ length xs' <= S (S (S (length xs))).
+Proof.
+  intros.
+  inversion H4; subst.
+  + assert (xs = [0]).
+    {
+      destruct xs.
+      + simpl in H8; congruence.
+      + destruct xs.
+        - simpl in H5. f_equal. destruct H5; auto. contradiction.
+        - simpl in H8; congruence.
+    }
+    subst. clear H4 H5 H8.
+    inversion H6; subst.
+    - simpl in H7. inversion H7; subst.
+      * eexists; eexists. exists [S n0; S n3; 0].
+        repeat split.
+        ** eapply c_trans.
+          *** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
+          *** eapply c_trans.
+             **** eapply c_comm. eapply (c_cut_assoc
+                  (rename_process (up L) swap01)
+                  (rename_process (link (future (S n3)) (future 1)) swap01)
+                  (down (rename_process (link (future (S n1)) (future (S n2))) swap01))
+                 ); autorewrite with up_down_rename_rewrites; auto.
+                  -- apply nfv_10_swap; apply nfv_lift_n; lia.
+                  -- apply nfv_01_swap; intro Hfv. inversion Hfv; subst.
+                     --- inversion H9; subst. congruence.
+                     --- inversion H9; subst. congruence.
+             **** eapply c_cut_comm.
+        ** destruct (link_future_equiv_link_future _ _ _ (or_intror H10)) as [? [? [? [? | ?]]]]; subst.
+           *** destruct n0, n3; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cut_fn; try eapply c_refl.
+               destruct M; try congruence. inversion H4; subst.
+               simpl. congruence.
+           *** destruct n0, n3; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cut_fn; try eapply c_link.
+               destruct M; try congruence. inversion H4; subst.
+               simpl. congruence.
+        ** simpl. auto.
+        ** simpl; lia.
+      * eexists; eexists. exists [S n0; S n2; S n3; 0].
+        repeat split.
+        ** eapply c_trans.
+          *** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
+          *** eapply c_trans.
+             **** eapply c_comm. eapply (c_cut_assoc
+                  (rename_process (up L) swap01)
+                  (rename_process P swap01)
+                  (down (rename_process L0 swap01))
+                 ); autorewrite with up_down_rename_rewrites; auto.
+                  -- apply nfv_10_swap; apply nfv_lift_n; lia.
+                  -- apply nfv_01_swap; intro Hfv.
+                     assert (1 ∈ P) as Hfv1P. {
+                        simpl in H9. replace 1 with (Nat.pred 2) by auto.
+                        eapply link_list_free_vars; eauto.
+                        + intro; simpl. lia.
+                        + simpl; auto.
+                      }
+                     inversion H3; subst. inversion H16; subst.
+                     apply ((proj1 free_var_in_ctx) _ _ Hfv) in H18.
+                     apply ((proj1 free_var_in_ctx) _ _ Hfv1P) in H19.
+                     destruct H18, H19; simpl in *; subst. inversion H14. subst. subst. inversion H19.
+             **** eapply c_cut_comm.
+        ** destruct (link_future_equiv_link_future _ _ _ (or_intror H10)) as [? [? [? [? | ?]]]]; subst.
+           *** destruct n0, n3; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cons_n; try eapply c_refl.
+               { simpl.
+                assert (forall x, List.In x (List.map S [S n2; S (S n3); 1]) -> x > 0).
+                { intros. simpl in H5. lia. }
+                pose proof (link_list_rename _ _ _ H5 swap01_is_bijective H9).
+                rewrite (List.map_map S Nat.pred _) in H12.
+                simpl in H12. destruct n2; try congruence.
+               }
+               destruct M; try congruence. inversion H4; subst.
+               simpl. congruence.
+           *** destruct n0, n3; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cons_n; try eapply c_link.
+               { simpl.
+                assert (forall x, List.In x (List.map S [S n2; S (S n3); 1]) -> x > 0).
+                { intros. simpl in H5. lia. }
+                pose proof (link_list_rename _ _ _ H5 swap01_is_bijective H9).
+                rewrite (List.map_map S Nat.pred _) in H12.
+                simpl in H12. destruct n2; try congruence.
+               }
+               destruct M; try congruence. inversion H4; subst.
+               simpl. congruence.
+        ** simpl. auto.
+        ** simpl; lia.
+      * eexists; eexists. exists [S n0; S n3; 0].
+        repeat split.
+        ** eapply c_trans.
+          *** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
+          *** eapply c_trans.
+             **** eapply c_comm. eapply (c_cut_assoc
+                  (rename_process (up L) swap01)
+                  (rename_process P swap01)
+                  (down (rename_process (link (future (S n1)) (future (S n2))) swap01))
+                 ); autorewrite with up_down_rename_rewrites; auto.
+                  -- apply nfv_10_swap; apply nfv_lift_n; lia.
+                  -- apply nfv_01_swap; intro Hfv.
+                     assert (1 ∈ P) as Hfv1P. {
+                        simpl in H12. replace 1 with (Nat.pred 2) by auto.
+                        eapply link_list_free_vars; eauto.
+                        + intro; simpl. lia.
+                        + simpl; auto.
+                      }
+                     inversion H3; subst. inversion H14; subst.
+                     apply ((proj1 free_var_in_ctx) _ _ Hfv) in H16.
+                     apply ((proj1 free_var_in_ctx) _ _ Hfv1P) in H17.
+                     destruct H16, H17; simpl in *; subst. inversion H11. subst. subst. inversion H17.
+             **** eapply c_cut_comm.
+        ** destruct (link_future_equiv_link_future _ _ _ (or_intror H10)) as [? [? [? [? | ?]]]]; subst.
+           *** destruct n0, n3; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cons_n; try eapply c_refl.
+               { simpl.
+                assert (forall x, List.In x (List.map S [S (S n3); 1]) -> x > 0).
+                { intros. simpl in H5. lia. }
+                pose proof (link_list_rename _ _ _ H5 swap01_is_bijective H12).
+                rewrite (List.map_map S Nat.pred _) in H9.
+                simpl in H9; auto.
+               }
+               destruct M; try congruence. inversion H4; subst.
+               simpl. congruence.
+           *** destruct n0, n3; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cons_n; try eapply c_link.
+               { simpl.
+                assert (forall x, List.In x (List.map S [S (S n3); 1]) -> x > 0).
+                { intros. simpl in H5. lia. }
+                pose proof (link_list_rename _ _ _ H5 swap01_is_bijective H12).
+                rewrite (List.map_map S Nat.pred _) in H9.
+                simpl in H9; auto.
+               }
+               destruct M; try congruence. inversion H4; subst.
+               simpl. congruence.
+        ** simpl. auto.
+        ** simpl; lia.
+    - simpl in H9. inversion H9; subst.
+      * eexists; eexists. exists [S n0; S n1; 0].
+        repeat split.
+        ** eapply c_trans.
+          *** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
+          *** eapply c_trans.
+             **** eapply c_comm. eapply (c_cut_assoc
+                  (rename_process (up (link (future n0) (future n1))) swap01)
+                  (rename_process P swap01)
+                  (down (rename_process (link (future (S n2)) (future (S n3))) swap01))
+                 ); autorewrite with up_down_rename_rewrites; auto.
+                  -- apply nfv_10_swap; apply nfv_lift_n; lia.
+                  -- apply nfv_01_swap; intro Hfv. inversion Hfv; subst;
+                     inversion H7; subst; congruence.
+             **** eapply c_cut_comm.
+        ** destruct (link_future_equiv_link_future _ _ _ (or_intror H11)) as [? [? [? [? | ?]]]]; subst.
+           *** destruct n0, n1; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cut_nf; try eapply c_refl.
+               destruct M; try congruence. inversion H4; subst.
+               simpl. congruence.
+           *** destruct n0, n1; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cut_nf; try eapply c_link.
+               destruct M; try congruence. inversion H4; subst.
+               simpl. congruence.
+        ** simpl. auto.
+        ** simpl; lia.
+      * eexists; eexists. exists [S n0; S n1; S n3; 0].
+        repeat split.
+        ** eapply c_trans.
+          *** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
+          *** eapply c_trans.
+             **** eapply c_comm. eapply (c_cut_assoc
+                  (rename_process (up (link (future n0) (future n1))) swap01)
+                  (rename_process (link (future (S n3)) (future 1)) swap01)
+                  (down (rename_process P swap01))
+                 ); autorewrite with up_down_rename_rewrites; auto.
+                  -- apply nfv_10_swap; apply nfv_lift_n; lia.
+                  -- apply nfv_01_swap; intro Hfv.
+                     assert (1 ∈ (link (future (S n3)) (future 1))) as Hfv1link. {
+                        apply fv_link_r; econstructor.
+                      }
+                     inversion H3; subst. inversion H13; subst.
+                     apply ((proj1 free_var_in_ctx) _ _ Hfv) in H15.
+                     apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H16.
+                     destruct H15, H16; simpl in *; subst. inversion H8. subst. subst. inversion H16.
+             **** eapply c_cut_comm.
+        ** destruct (link_future_equiv_link_future _ _ _ (or_intror H11)) as [? [? [? [? | ?]]]]; subst.
+           *** destruct n0, n1, n3; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cut_ff.
+           *** destruct n0, n1, n3; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cut_ff.
+        ** simpl. auto.
+        ** simpl; lia.
+      * eexists; eexists. exists [S n0; S n1; S n3; 0].
+        repeat split.
+        ** eapply c_trans.
+          *** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
+          *** eapply c_trans.
+             **** eapply c_comm. eapply (c_cut_assoc
+                  (rename_process (up (link (future n0) (future n1))) swap01)
+                  (rename_process P swap01)
+                  (down (rename_process L swap01))
+                 ); autorewrite with up_down_rename_rewrites; auto.
+                  -- apply nfv_10_swap; apply nfv_lift_n; lia.
+                  -- apply nfv_01_swap; intro Hfv.
+                     assert (1 ∈ P) as Hfv1P. {
+                        simpl in H7. replace 1 with (Nat.pred 2) by auto.
+                        eapply link_list_free_vars; eauto.
+                        + intro; simpl. lia.
+                        + simpl; auto.
+                      }
+                     inversion H3; subst. inversion H14; subst.
+                     apply ((proj1 free_var_in_ctx) _ _ Hfv) in H16.
+                     apply ((proj1 free_var_in_ctx) _ _ Hfv1P) in H17.
+                     destruct H16, H17; simpl in *; subst. inversion H12. subst. subst. inversion H17.
+             **** eapply c_cut_comm.
+        ** destruct (link_future_equiv_link_future _ _ _ (or_intror H11)) as [? [? [? [? | ?]]]]; subst.
+           *** destruct n0, n1, n3; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cons_f; try eapply c_refl.
+               simpl.
+               assert (forall x, List.In x (List.map S [S (S n3); 1]) -> x > 0).
+               { intros. simpl in H5. lia. }
+               pose proof (link_list_rename _ _ _ H5 swap01_is_bijective H7).
+               rewrite (List.map_map S Nat.pred _) in H10.
+               simpl in H9; auto.
+           *** destruct n0, n1, n3; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cons_f; try eapply c_link.
+               simpl.
+               assert (forall x, List.In x (List.map S [S (S n3); 1]) -> x > 0).
+               { intros. simpl in H5. lia. }
+               pose proof (link_list_rename _ _ _ H5 swap01_is_bijective H7).
+               rewrite (List.map_map S Nat.pred _) in H10.
+               simpl in H10; auto.
+        ** simpl; auto.
+        ** simpl; lia.
+      * simpl in H10. inversion H10. simpl in H7. inversion H7.
+  + destruct xs. inversion H7.
+    inversion H6; subst.
+    - simpl in H11. inversion H11; subst.
+      * assert (xs = []). { destruct xs; simpl in H17; auto. congruence. } subst.
+        assert (n = 0). { simpl in H5; destruct H5; auto; contradiction. } subst.
+        eexists; eexists. exists [S n0; S n3; 0].
+        repeat split.
+        ** eapply c_trans.
+          *** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
+          *** eapply c_trans.
+             **** eapply c_comm. eapply (c_cut_assoc
+                  (rename_process (up L) swap01)
+                  (rename_process (link (future (S n3)) (future 1)) swap01)
+                  (down (rename_process (link (future (S n1)) (future (S n2))) swap01))
+                 ); autorewrite with up_down_rename_rewrites; auto.
+                  -- apply nfv_10_swap; apply nfv_lift_n; lia.
+                  -- apply nfv_01_swap; intro Hfv.
+                     inversion Hfv; subst; inversion H13; subst; congruence.
+             **** eapply c_cut_comm.
+        ** destruct (link_future_equiv_link_future _ _ _ (or_intror H14)) as [? [? [? [? | ?]]]]; subst.
+           *** destruct n0, n3; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cut_fn; try eapply c_refl.
+               destruct M; try congruence. inversion H9; subst.
+               simpl. congruence.
+           *** destruct n0, n3; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cut_fn; try eapply c_link.
+               destruct M; try congruence. inversion H9; subst.
+               simpl. congruence.
+        ** simpl. auto.
+        ** simpl; lia.
+      * eexists; eexists.
+        exists ((S n0) :: (S n2) :: (S n3) :: (List.map swap01 (List.map S (n :: xs)))).
+        repeat split.
+        ** eapply c_trans.
+          *** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
+          *** eapply c_trans.
+             **** eapply c_comm. eapply (c_cut_assoc
+                  (rename_process (up L) swap01)
+                  (rename_process P swap01)
+                  (down (rename_process L0 swap01))
+                 ); autorewrite with up_down_rename_rewrites; auto.
+                  -- apply nfv_10_swap; apply nfv_lift_n; lia.
+                  -- apply nfv_01_swap; intro Hfv.
+                     assert (1 ∈ P) as Hfv1P. {
+                        simpl in H13. replace 1 with (Nat.pred 2) by auto.
+                        eapply link_list_free_vars; eauto.
+                        + intros. simpl in H9. destruct H9 as [? | [? | [? | ?]]]; try lia.
+                          apply List.in_map_iff in H9. destruct H9; lia.
+                        + simpl in H5; destruct H5; subst; simpl; auto.
+                          right. right. right.
+                          rewrite List.map_map. apply List.in_map_iff. exists 0; auto.
+                     }
+                     inversion H3; subst. inversion H20; subst.
+                     apply ((proj1 free_var_in_ctx) _ _ Hfv) in H22.
+                     apply ((proj1 free_var_in_ctx) _ _ Hfv1P) in H23.
+                     destruct H22, H23; simpl in *; subst. inversion H18. subst. subst. inversion H23.
+             **** eapply c_cut_comm.
+        ** destruct (link_future_equiv_link_future _ _ _ (or_intror H14)) as [? [? [? [? | ?]]]]; subst.
+           *** destruct n0; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cons_n; try eapply c_refl.
+               { simpl.
+                assert (forall x, List.In x (List.map S (S n2 :: S n3 :: S n :: List.map S xs)) -> x > 0).
+                { intros. intros. simpl in H10. destruct H10 as [? | [? | [? | ?]]]; try lia.
+                  apply List.in_map_iff in H10. destruct H10; lia. }
+                pose proof (link_list_rename _ _ _ H10 swap01_is_bijective H13).
+                rewrite (List.map_map S Nat.pred _) in H16.
+                rewrite List.map_id in H16.
+                simpl in H16; auto. destruct n2, n3; try congruence.
+               }
+               destruct M; try congruence. inversion H9; subst.
+               simpl. congruence.
+           *** destruct n0; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cons_n; try eapply c_link.
+               { simpl.
+                assert (forall x, List.In x (List.map S (S n2 :: S n3 :: S n :: List.map S xs)) -> x > 0).
+                { intros. intros. simpl in H10. destruct H10 as [? | [? | [? | ?]]]; try lia.
+                  apply List.in_map_iff in H10. destruct H10; lia. }
+                pose proof (link_list_rename _ _ _ H10 swap01_is_bijective H13).
+                rewrite (List.map_map S Nat.pred _) in H16.
+                rewrite List.map_id in H16.
+                simpl in H16; auto. destruct n2, n3; try congruence.
+               }
+               destruct M; try congruence. inversion H9; subst.
+               simpl. congruence.
+        ** simpl. right. right. right. destruct n; auto.
+           simpl in H5. destruct H5; try congruence. right.
+           rewrite List.map_map. apply List.in_map_iff. exists 0; auto.
+        ** simpl. repeat rewrite List.length_map.
+           simpl in *; lia.
+      * eexists; eexists.
+        exists ((S n0) :: (S n3) :: (List.map swap01 (List.map S (n :: xs)))).
+        repeat split.
+        ** eapply c_trans.
+          *** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
+          *** eapply c_trans.
+             **** eapply c_comm. eapply (c_cut_assoc
+                  (rename_process (up L) swap01)
+                  (rename_process P swap01)
+                  (down (rename_process (link (future (S n1)) (future (S n2))) swap01))
+                 ); autorewrite with up_down_rename_rewrites; auto.
+                  -- apply nfv_10_swap; apply nfv_lift_n; lia.
+                  -- apply nfv_01_swap; intro Hfv.
+                     inversion Hfv; subst; inversion H13; subst; congruence.
+             **** eapply c_cut_comm.
+        ** destruct (link_future_equiv_link_future _ _ _ (or_intror H14)) as [? [? [? [? | ?]]]]; subst.
+           *** destruct n0; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cons_n; try eapply c_refl.
+               { simpl.
+                assert (forall x, List.In x (List.map S (S n3 :: S n :: List.map S xs)) -> x > 0).
+                { intros. intros. simpl in H10. destruct H10 as [? | [? | ?]]; try lia.
+                  apply List.in_map_iff in H10. destruct H10; lia. }
+                pose proof (link_list_rename _ _ _ H10 swap01_is_bijective H16).
+                rewrite (List.map_map S Nat.pred _) in H13.
+                rewrite List.map_id in H13.
+                simpl in H13. destruct n3; try congruence.
+               }
+               destruct M; try congruence. inversion H9; subst.
+               simpl. congruence.
+           *** destruct n0; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cons_n; try eapply c_link.
+               { simpl.
+                assert (forall x, List.In x (List.map S (S n3 :: S n :: List.map S xs)) -> x > 0).
+                { intros. intros. simpl in H10. destruct H10 as [? | [? | ?]]; try lia.
+                  apply List.in_map_iff in H10. destruct H10; lia. }
+                pose proof (link_list_rename _ _ _ H10 swap01_is_bijective H16).
+                rewrite (List.map_map S Nat.pred _) in H13.
+                rewrite List.map_id in H13.
+                simpl in H13. destruct n3; try congruence.
+               }
+               destruct M; try congruence. inversion H9; subst.
+               simpl. congruence.
+        ** simpl. right. right. destruct n; auto.
+           simpl in H5. destruct H5; try congruence. right.
+           rewrite List.map_map. apply List.in_map_iff. exists 0; auto.
+        ** simpl. repeat rewrite List.length_map.
+           simpl in *; lia.
+    - simpl in H13. inversion H13; subst.
+      * assert (xs = []). { destruct xs; simpl in H14; auto. congruence. } subst.
+        assert (n = 0). { simpl in H5; destruct H5; auto; contradiction. } subst.
+        eexists; eexists. exists [S n0; S n1; 0].
+        repeat split.
+        ** eapply c_trans.
+          *** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
+          *** eapply c_trans.
+             **** eapply c_comm. eapply (c_cut_assoc
+                  (rename_process (up (link (future n0) (future n1))) swap01)
+                  (rename_process P swap01)
+                  (down (rename_process (link (future (S n2)) (future (S n3))) swap01))
+                 ); autorewrite with up_down_rename_rewrites; auto.
+                  -- apply nfv_10_swap; apply nfv_lift_n; lia.
+                  -- apply nfv_01_swap; intro Hfv.
+                     inversion Hfv; subst; inversion H11; subst; congruence.
+             **** eapply c_cut_comm.
+        ** destruct (link_future_equiv_link_future _ _ _ (or_intror H16)) as [? [? [? [? | ?]]]]; subst.
+           *** destruct n0, n1; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cut_nf; try eapply c_refl.
+               destruct M; try congruence. inversion H9; subst.
+               simpl. congruence.
+           *** destruct n0, n1; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cut_nf; try eapply c_link.
+               destruct M; try congruence. inversion H9; subst.
+               simpl. congruence.
+        ** simpl. auto.
+        ** simpl; lia.
+      * assert (xs = []). { destruct xs; simpl in H14; auto. congruence. } subst.
+        assert (n = 0). { simpl in H5; destruct H5; auto; contradiction. } subst.
+        eexists; eexists. exists [S n0; S n1; S n3; 0].
+        repeat split.
+        ** eapply c_trans.
+          *** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
+          *** eapply c_trans.
+             **** eapply c_comm. eapply (c_cut_assoc
+                  (rename_process (up (link (future n0) (future n1))) swap01)
+                  (rename_process (link (future (S n3)) (future 1)) swap01)
+                  (down (rename_process P swap01))
+                 ); autorewrite with up_down_rename_rewrites; auto.
+                  -- apply nfv_10_swap; apply nfv_lift_n; lia.
+                  -- apply nfv_01_swap; intro Hfv.
+                     assert (1 ∈ (link (future (S n3)) (future 1))) as Hfv1link. {
+                        apply fv_link_r; econstructor.
+                     }
+                     inversion H3; subst. inversion H18; subst.
+                     apply ((proj1 free_var_in_ctx) _ _ Hfv) in H20.
+                     apply ((proj1 free_var_in_ctx) _ _ Hfv1link) in H21.
+                     destruct H20, H21; simpl in *; subst. inversion H12. subst. subst. inversion H21.
+             **** eapply c_cut_comm.
+        ** destruct (link_future_equiv_link_future _ _ _ (or_intror H16)) as [? [? [? [? | ?]]]]; subst.
+           *** destruct n0, n1, n3; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cut_ff.
+           *** destruct n0, n1, n3; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cut_ff.
+        ** simpl. auto.
+        ** simpl; lia.
+      * eexists; eexists.
+        exists ((S n0) :: (S n1) :: (List.map swap01 (List.map S (n :: xs)))).
+        repeat split.
+        ** eapply c_trans.
+          *** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
+          *** eapply c_trans.
+             **** eapply c_comm. eapply (c_cut_assoc
+                  (rename_process (up (link (future n0) (future n1))) swap01)
+                  (rename_process (link (future (S n)) (future i4)) swap01)
+                  (down (rename_process (link (future (S n2)) (future (S n3))) swap01))
+                 ); autorewrite with up_down_rename_rewrites; auto.
+                  -- apply nfv_10_swap; apply nfv_lift_n; lia.
+                  -- apply nfv_01_swap; intro Hfv.
+                     inversion Hfv; subst; inversion H11; subst; congruence.
+             **** eapply c_cut_comm.
+        ** simpl. rewrite <- H14.
+           destruct n0, n1; try congruence; unfold relocate; simpl.
+           apply link_cut_ff.
+        ** simpl. right. right. destruct n; auto. right.
+           simpl in H5. destruct H5; try congruence.
+           rewrite List.map_map. apply List.in_map_iff. exists 0; auto.
+        ** simpl. repeat rewrite List.length_map.
+           simpl in *; lia.
+      * eexists; eexists.
+        exists ((S n0) :: (S n1) :: (S n3) :: (List.map swap01 (List.map S (n :: xs)))).
+        repeat split.
+        ** eapply c_trans.
+          *** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
+          *** eapply c_trans.
+             **** eapply c_comm. eapply (c_cut_assoc
+                  (rename_process (up (link (future n0) (future n1))) swap01)
+                  (rename_process P swap01)
+                  (down (rename_process L swap01))
+                 ); autorewrite with up_down_rename_rewrites; auto.
+                  -- apply nfv_10_swap; apply nfv_lift_n; lia.
+                  -- apply nfv_01_swap; intro Hfv.
+                     assert (1 ∈ P) as Hfv1P. {
+                        simpl in H13. replace 1 with (Nat.pred 2) by auto.
+                        eapply link_list_free_vars; eauto.
+                        + intros. simpl in H9. destruct H9 as [? | [? | ?]]; try lia.
+                          apply List.in_map_iff in H9. destruct H9; lia.
+                        + simpl in H5; destruct H5; subst; simpl; auto.
+                          right. right.
+                          rewrite List.map_map. apply List.in_map_iff. exists 0; auto.
+                     }
+                     inversion H3; subst. inversion H18; subst.
+                     apply ((proj1 free_var_in_ctx) _ _ Hfv) in H20.
+                     apply ((proj1 free_var_in_ctx) _ _ Hfv1P) in H21.
+                     destruct H20, H21; simpl in *; subst. inversion H16. subst. subst. inversion H21.
+             **** eapply c_cut_comm.
+        ** destruct (link_future_equiv_link_future _ _ _ (or_intror H15)) as [? [? [? [? | ?]]]]; subst.
+           *** destruct n0, n1, n3; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cons_f; try eapply c_refl. simpl.
+               assert (forall x, List.In x (List.map S (S (S n3) :: S n :: List.map S xs)) -> x > 0).
+               { intros. intros. simpl in H10. destruct H10 as [? | [? | ?]]; try lia.
+                 apply List.in_map_iff in H10. destruct H10; lia. }
+               pose proof (link_list_rename _ _ _ H10 swap01_is_bijective H11).
+               rewrite (List.map_map S Nat.pred _) in H14.
+               rewrite List.map_id in H14.
+               simpl in H14; auto.
+           *** destruct n0, n1, n3; simpl; try congruence.
+               unfold relocate. simpl.
+               eapply link_cons_f; try eapply c_link. simpl.
+               assert (forall x, List.In x (List.map S (S (S n3) :: S n :: List.map S xs)) -> x > 0).
+               { intros. intros. simpl in H10. destruct H10 as [? | [? | ?]]; try lia.
+                 apply List.in_map_iff in H10. destruct H10; lia. }
+               pose proof (link_list_rename _ _ _ H10 swap01_is_bijective H11).
+               rewrite (List.map_map S Nat.pred _) in H14.
+               rewrite List.map_id in H14.
+               simpl in H14; auto.
+        ** simpl. right. right. right. destruct n; auto.
+           simpl in H5. destruct H5; try congruence. right.
+           rewrite List.map_map. apply List.in_map_iff. exists 0; auto.
+        ** simpl. repeat rewrite List.length_map.
+           simpl in *; lia.
+      * eexists; eexists.
+        exists ((S n0) :: (S n1) :: (List.map swap01 (List.map S (n :: xs)))).
+        repeat split.
+        ** eapply c_trans.
+          *** eapply c_cong_cut; [ eapply c_refl | eapply c_cut_comm ].
+          *** eapply c_trans.
+             **** eapply c_comm. eapply (c_cut_assoc
+                  (rename_process (up (link (future n0) (future n1))) swap01)
+                  (rename_process P swap01)
+                  (down (rename_process (link (future (S n2)) (future (S n3))) swap01))
+                 ); autorewrite with up_down_rename_rewrites; auto.
+                  -- apply nfv_10_swap; apply nfv_lift_n; lia.
+                  -- apply nfv_01_swap; intro Hfv; inversion Hfv; inversion H11; subst; congruence.
+             **** eapply c_cut_comm.
+        ** destruct n0, n1, n3; try congruence; simpl. unfold relocate; simpl.
+           apply link_cons_f.
+           assert (forall x, List.In x (List.map S (S n :: List.map S xs)) -> x > 0).
+           { intros. intros. simpl in H9. destruct H9 as [? | ?]; try lia.
+             apply List.in_map_iff in H9. destruct H9; lia. }
+           pose proof (link_list_rename _ _ _ H9 swap01_is_bijective H14).
+           rewrite (List.map_map S Nat.pred _) in H10.
+           rewrite List.map_id in H10.
+           simpl in H10; auto.
+        ** simpl. right. right. destruct n; auto. right.
+           simpl in H5. destruct H5; try congruence.
+           rewrite List.map_map. apply List.in_map_iff. exists 0; auto.
+        ** simpl. repeat rewrite List.length_map.
+           simpl in *; lia.
 Qed.
 
 (* Idea: If zero is in the list, then let the left most ν bubble upwards
@@ -1077,31 +2120,113 @@ Lemma link_list_with_0_reduces' :
 Proof.
   induction n; intros.
   + assert (k = 0) by lia; subst. rewrite List.length_zero_iff_nil in H4; subst. inversion H2.
-  + destruct xs. inversion H3.
-    destruct xs.
-    - inversion H3; simpl in H7; inversion H7.
-    - destruct (PeanoNat.Nat.eq_dec 0 n0).
-      { eapply link_list_with_0_at_0_reduces; rewrite <- e in H3; eauto. }
+  + destruct xs. inversion H2.
+    destruct xs. { inversion H3; simpl in H6; inversion H6. }
+    destruct xs. {
+      simpl in H2; destruct H2 as [? | [? | ?]]; subst;
+      [eapply link_list_with_0_at_0_reduces in H3 | eapply link_list_with_0_at_1_reduces in H3 | contradiction]; eauto.
+    }
+    destruct xs. {
+      simpl in H2; destruct H2 as [? | [? | [? | ?]]]; subst; try contradiction.
+      + eapply link_list_with_0_at_0_reduces; eauto.
+      + eapply link_list_with_0_at_1_reduces; eauto.
+      + eapply link_list_with_0_at_2_reduces_or_swap in H3; eauto; destruct H3; eauto.
+        destruct H0 as [Q [Q' [xs' [? [? [? ?]]]]]].
+        assert (length xs' <= n). { simpl in *; lia. }
+        assert (exists Γ', Γ' ⊢ Q' :#).
+        { apply ((proj1 struct_cong_preserves_typing) _ _ H0 _) in H1. inversion H1; eexists; eauto. }
+        destruct H6 as [Γ' ?].
+        destruct (IHn _ H5 xs' _ _ eq_refl H6 H3 H2) as [Q'' ?].
+        eexists. eapply r_struct.
+        * apply H0.
+        * eapply r_struct.
+          ** eapply c_cut_comm.
+          ** eapply r_cong_cut; eauto.
+          ** eapply c_cut_comm.
+        * apply c_refl.
+    }
+    simpl in H2. destruct H2 as [? | [? | [? | [? | ?]]]]; subst; try contradiction.
+    - eapply link_list_with_0_at_0_reduces; eauto.
+    - eapply link_list_with_0_at_1_reduces; eauto.
+    - eapply link_list_with_0_at_2_reduces_or_swap in H3; eauto; destruct H3; eauto.
+      destruct H0 as [Q [Q' [xs' [? [? [? ?]]]]]].
+      assert (length xs' <= n). { simpl in *; lia. }
+      assert (exists Γ', Γ' ⊢ Q' :#).
+      { apply ((proj1 struct_cong_preserves_typing) _ _ H0 _) in H1. inversion H1; eexists; eauto. }
+      destruct H6 as [Γ' ?].
+      destruct (IHn _ H5 xs' _ _ eq_refl H6 H3 H2) as [Q'' ?].
+      eexists. eapply r_struct.
+      * apply H0.
+      * eapply r_struct.
+        ** eapply c_cut_comm.
+        ** eapply r_cong_cut; eauto.
+        ** eapply c_cut_comm.
+      * apply c_refl.
+    - eapply link_list_with_0_at_3_reduces_or_swap in H3; destruct H3; eauto.
+      destruct H0 as [Q [Q' [xs' [? [? [? ?]]]]]].
+      assert (length xs' <= n). { simpl in *; lia. }
+      assert (exists Γ', Γ' ⊢ Q' :#).
+      { apply ((proj1 struct_cong_preserves_typing) _ _ H0 _) in H1. inversion H1; eexists; eauto. }
+      destruct H6 as [Γ' ?].
+      destruct (IHn _ H5 xs' _ _ eq_refl H6 H3 H2) as [Q'' ?].
+      eexists. eapply r_struct.
+      * apply H0.
+      * eapply r_struct.
+        ** eapply c_cut_comm.
+        ** eapply r_cong_cut; eauto.
+        ** eapply c_cut_comm.
+      * apply c_refl.
+    - destruct n0. eapply link_list_with_0_at_0_reduces; eauto.
+      destruct n1. eapply link_list_with_0_at_1_reduces; eauto.
+      destruct n2.
       {
-        destruct (PeanoNat.Nat.eq_dec 0 n1).
-        + (* n0 <> 0 /\ n1 = 0 *)
-          eapply link_list_with_0_at_1_reduces; eauto. rewrite <- e in H3; eauto.
-        + (* n0 <> 0 /\ n1 <> 0 *)
-          assert (List.In 0 xs). { simpl in H2; destruct H2 as [|[|]]; congruence. }
-          destruct (link_list_swap_0_1 _ _ _ _ _ n2 n3 H1 H4 H3) as [Q' [Q'' [xs' [? [? [? ?]]]]]].
-          assert (length xs' <= n). { simpl in *; lia. }
-          assert (exists Γ', Γ' ⊢ Q'' :#).
-          { apply ((proj1 struct_cong_preserves_typing) _ _ H5 _) in H1. inversion H1; eexists; eauto. }
-          destruct H10 as [Γ' ?].
-          destruct (IHn _ H9 xs' _ _ eq_refl H10 H7 H6) as [Q''' ?].
-          eexists. eapply r_struct.
-          - apply H5.
-          - eapply r_struct.
-            * eapply c_cut_comm.
-            * eapply r_cong_cut; eauto.
-            * eapply c_cut_comm.
-          - apply c_refl.
+        eapply link_list_with_0_at_2_reduces_or_swap in H3; eauto; destruct H3; eauto.
+        destruct H0 as [Q [Q' [xs' [? [? [? ?]]]]]].
+        assert (length xs' <= n). { simpl in *; lia. }
+        assert (exists Γ', Γ' ⊢ Q' :#).
+        { apply ((proj1 struct_cong_preserves_typing) _ _ H0 _) in H1. inversion H1; eexists; eauto. }
+        destruct H7 as [Γ' ?].
+        destruct (IHn _ H6 xs' _ _ eq_refl H7 H4 H3) as [Q'' ?].
+        eexists. eapply r_struct.
+        * apply H0.
+        * eapply r_struct.
+          ** eapply c_cut_comm.
+          ** eapply r_cong_cut; eauto.
+          ** eapply c_cut_comm.
+        * apply c_refl.
       }
+      destruct n3.
+      {
+        eapply link_list_with_0_at_3_reduces_or_swap in H3; destruct H3; eauto.
+        destruct H0 as [Q [Q' [xs' [? [? [? ?]]]]]].
+        assert (length xs' <= n). { simpl in *; lia. }
+        assert (exists Γ', Γ' ⊢ Q' :#).
+        { apply ((proj1 struct_cong_preserves_typing) _ _ H0 _) in H1. inversion H1; eexists; eauto. }
+        destruct H7 as [Γ' ?].
+        destruct (IHn _ H6 xs' _ _ eq_refl H7 H4 H3) as [Q'' ?].
+        eexists. eapply r_struct.
+        * apply H0.
+        * eapply r_struct.
+          ** eapply c_cut_comm.
+          ** eapply r_cong_cut; eauto.
+          ** eapply c_cut_comm.
+        * apply c_refl.
+      }
+      eapply link_list_swap_0_1 in H3; eauto.
+      * destruct H3 as [Q [Q' [xs' [? [? [? ?]]]]]].
+        assert (length xs' <= n). { simpl in *; lia. }
+          assert (exists Γ', Γ' ⊢ Q' :#).
+          { apply ((proj1 struct_cong_preserves_typing) _ _ H0 _) in H1. inversion H1; eexists; eauto. }
+          destruct H7 as [Γ' ?].
+          destruct (IHn _ H6 xs' _ _ eq_refl H7 H4 H3) as [Q'' ?].
+          eexists. eapply r_struct.
+          ** apply H0.
+          ** eapply r_struct.
+             *** eapply c_cut_comm.
+             *** eapply r_cong_cut; eauto.
+             *** eapply c_cut_comm.
+          ** apply c_refl.
+      * destruct xs. inversion H2. simpl; lia.
 Qed.
 
 Lemma link_list_with_0_reduces :
@@ -1134,7 +2259,31 @@ Proof.
            -- apply c_cut_comm.
            -- apply r_cong_cut; eauto.
            -- apply c_cut_comm.
-        ** left. destruct H2; destruct H3; subst; exists [i1; i2]; econstructor.
+        ** left. destruct H2, H3; subst.
+           -- destruct m0, m2; eexists.
+              ++ eapply link_cut_ff.
+              ++ apply link_cut_nf with (prefix s); [congruence | apply c_refl].
+              ++ apply link_cut_fn with (prefix s); [congruence | apply c_refl].
+              ++ apply link_cut_nn with (prefix s) (prefix s0);
+                  [ congruence | congruence | apply c_refl | apply c_refl ].
+           -- destruct m0, m1; eexists.
+              ++ eapply link_cut_ff.
+              ++ apply link_cut_nf with (prefix s); [congruence | apply c_link].
+              ++ apply link_cut_fn with (prefix s); [congruence | apply c_refl].
+              ++ apply link_cut_nn with (prefix s) (prefix s0);
+                  [ congruence | congruence | apply c_refl | apply c_link ].
+           -- destruct m, m2; eexists.
+              ++ eapply link_cut_ff.
+              ++ apply link_cut_nf with (prefix s); [congruence | apply c_refl].
+              ++ apply link_cut_fn with (prefix s); [congruence | apply c_link].
+              ++ apply link_cut_nn with (prefix s) (prefix s0);
+                  [ congruence | congruence | apply c_link | apply c_refl ].
+           -- destruct m, m1; eexists.
+              ++ eapply link_cut_ff.
+              ++ apply link_cut_nf with (prefix s); [congruence | apply c_link].
+              ++ apply link_cut_fn with (prefix s); [congruence | apply c_link].
+              ++ apply link_cut_nn with (prefix s) (prefix s0);
+                  [ congruence | congruence | apply c_link | apply c_link ].
     - right.
       exists (cut (link m m0) (subst_process R ((prefix s) ⋅ id_subst))).
       eapply r_struct.
@@ -1164,20 +2313,38 @@ Proof.
               + apply c_cut_comm.
            }
            { (* 0 ∉ xs', we use xs'' = pred xs' *)
-             left. exists (i :: (List.map pred xs')).
-             destruct H3; subst.
-             + apply link_cons_l.
+             left.
+             destruct H3, m0; subst.
+             + eexists (i :: n0 :: (List.map pred xs')).
+               apply link_cons_f.
                rewrite List.map_map.
                assert ( forall a, List.In a xs' -> (fun x : nat => S (Init.Nat.pred x)) a = id a ).
                { intros. destruct a; auto. congruence. }
                rewrite ((proj2 List.map_ext_in_iff) H3).
                rewrite List.map_id; auto.
-             + apply link_cons_r.
+             + eexists (i :: (List.map pred xs')).
+               apply link_cons_n with (prefix s); try congruence; try apply c_refl.
                rewrite List.map_map.
                assert ( forall a, List.In a xs' -> (fun x : nat => S (Init.Nat.pred x)) a = id a ).
                { intros. destruct a; auto. congruence. }
                rewrite ((proj2 List.map_ext_in_iff) H3).
                rewrite List.map_id; auto.
+             + destruct m.
+               - eexists (n1 :: n0 :: (List.map pred xs')).
+                 apply link_cons_f.
+                 rewrite List.map_map.
+                 assert ( forall a, List.In a xs' -> (fun x : nat => S (Init.Nat.pred x)) a = id a ).
+                 { intros. destruct a; auto. congruence. }
+                 rewrite ((proj2 List.map_ext_in_iff) H5).
+                 rewrite List.map_id; auto.
+               - eexists (n0 :: (List.map pred xs')).
+                 apply link_cons_n with (prefix s); try congruence; try apply c_link.
+                 rewrite List.map_map.
+                 assert ( forall a, List.In a xs' -> (fun x : nat => S (Init.Nat.pred x)) a = id a ).
+                 { intros. destruct a; auto. congruence. }
+                 rewrite ((proj2 List.map_ext_in_iff) H5).
+                 rewrite List.map_id; auto.
+             + discriminate.
            }
       * exfalso. unfold no_root_cut in H; try congruence.
       * right. exists (cut (subst_process L ((prefix s) ⋅ id_subst)) P).
@@ -1198,226 +2365,9 @@ Proof.
   destruct (decide_cut_list_link_list _ _ Hwt Hct).
   + destruct H as [xs H0].
     destruct xs. inversion H0. destruct xs.
-    - left. inversion H0; subst; inversion H3.
+    - left. inversion H0; subst; inversion H2.
     - destruct (List.in_dec PeanoNat.Nat.eq_dec 0 (n :: n0 :: xs)).
       * right. apply (link_list_with_0_reduces (n :: n0 :: xs) _ _ Hwt); auto.
       * left. eapply final_list; eauto. apply c_refl.
   + right; auto.
 Qed.
-
-(******************************************************************************)
-(* Properties about Irreducible Processes                                     *)
-(******************************************************************************)
-(* 
-Inductive struct_cong_d : nat -> process -> process -> Prop :=
-  (* axioms for equivalence of processes *)
-  | c_link_d : forall ml mr,
-              struct_cong_d 0 (link ml mr) (link mr ml)
-  | c_cut_comm_d : forall P Q,
-                  struct_cong_d 0 (cut P Q) (cut Q P)
-  | c_cut_assoc_d : forall P Q R P' Q' R',
-                    ~ (1 ∈ P) /\ ~ (1 ∈ R') -> (* these premises guarantee that the typing judgements have the proper form *)
-                    P' = down (rename_process P swap01) ->
-                    Q' = rename_process Q swap01 ->
-                    R' = rename_process (up R) swap01 ->
-                    struct_cong_d 0 (cut (cut P Q) R) (cut P' (cut Q' R'))
-
-  (* rules to make the relation an equivalence *)
-  | c_refl_d : forall P, struct_cong_d 0 P P
-  | c_comm_d : forall n P Q, struct_cong_d n P Q -> struct_cong_d (S n) Q P
-  | c_trans_d : forall n1 n2 P Q R,
-                struct_cong_d n1 P Q ->
-                struct_cong_d n2 Q R ->
-                struct_cong_d (S (Nat.max n1 n2)) P R
-
-  (* rules to make the relation a congruence *)
-  | c_cong_link_d : forall n1 m1 m1' n2 m2 m2',
-                    struct_congM_d n1 m1 m1' ->
-                    struct_congM_d n2 m2 m2' ->
-                    struct_cong_d (S (Nat.max n1 n2)) (link m1 m2) (link m1' m2')
-  | c_cong_cut_d : forall n1 P P' n2 Q Q',
-                  struct_cong_d n1 P P' ->
-                  struct_cong_d n2 Q Q' ->
-                  struct_cong_d (S (Nat.max n1 n2)) (cut P Q) (cut P' Q')
-  | c_cong_seq_d : forall n1 P P' n2 s s',
-                  struct_cong_d n1 P P' ->
-                  struct_congS_d n2 s s' ->
-                  struct_cong_d (S (Nat.max n1 n2)) (seq P s) (seq P' s')
-
-with struct_congM_d : nat -> message -> message -> Prop :=
-  | c_cong_fut_d : forall n, struct_congM_d 0 (future n) (future n)
-  | c_cong_prefix_d : forall n s s', struct_congS_d n s s' -> struct_congM_d (S n) (prefix s) (prefix s')
-
-with struct_congS_d : nat -> statement -> statement -> Prop :=
-  | c_cong_choose_l_d : forall n P P',
-                        struct_cong_d n P P' ->
-                        struct_congS_d (S n) (choose_left P) (choose_left P')
-  | c_cong_choose_r_d : forall n P P',
-                        struct_cong_d n P P' ->
-                        struct_congS_d (S n) (choose_right P) (choose_right P')
-  | c_cong_choice_d : forall n1 P P' n2 Q Q',
-                      struct_cong_d n1 P P' ->
-                      struct_cong_d n2 Q Q' ->
-                      struct_congS_d (S (Nat.max n1 n2)) (offer_choice P Q) (offer_choice P' Q')
-  | c_cong_send_d : forall n1 P P' n2 Q Q',
-                    struct_cong_d n1 P P' ->
-                    struct_cong_d n2 Q Q' ->
-                    struct_congS_d (S (Nat.max n1 n2)) (send P Q) (send P' Q')
-  | c_cong_receive_d : forall n P P', struct_cong_d n P P' -> struct_congS_d (S n) (receive P) (receive P')
-  | c_cong_close_d : struct_congS_d 0 close close
-  | c_cong_wait_d : forall n P P', struct_cong_d n P P' -> struct_congS_d (S n) (wait P) (wait P').
-
-Scheme struct_congP_depth_ind := Induction for struct_cong_d Sort Prop
-  with struct_congM_depth_ind := Induction for struct_congM_d Sort Prop
-  with struct_congS_depth_ind := Induction for struct_congS_d Sort Prop.
-Combined Scheme struct_cong_depth_ind from struct_congP_depth_ind, struct_congM_depth_ind, struct_congS_depth_ind.
-
-Lemma struct_cong_d_from_struct_cong :
-  (forall P P', P ≡ P' -> exists k, struct_cong_d k P P') /\
-  (forall M M', M !≡ M' -> exists k, struct_congM_d k M M') /\
-  (forall s s', s $≡ s' -> exists k, struct_congS_d k s s').
-Proof.
-  apply struct_cong_ind; intros;
-    try (now (exists 0; econstructor; eauto));
-    try (now (destruct H; exists (S x); econstructor; eauto)).
-  + destruct H; destruct H0. exists (S (Nat.max x x0)).
-    eapply c_trans_d; eauto.
-  + destruct H; destruct H0. exists (S (Nat.max x x0)).
-    eapply c_cong_link_d; eauto.
-  + destruct H; destruct H0. exists (S (Nat.max x x0)).
-    eapply c_cong_cut_d; eauto.
-  + destruct H; destruct H0. exists (S (Nat.max x x0)).
-    eapply c_cong_seq_d; eauto.
-  + destruct H; destruct H0. exists (S (Nat.max x x0)).
-    eapply c_cong_choice_d; eauto.
-  + destruct H; destruct H0. exists (S (Nat.max x x0)).
-    eapply c_cong_send_d; eauto.
-Qed.
-
-Definition irreducible P := forall Q, ~ (P ⊳ Q).
-
-Lemma stop_equiv_stop_d :
-  forall P n, (forall k, k <= n -> struct_cong_d k stop P \/ struct_cong_d k P stop -> P = stop).
-Proof.
-  intros.
-  generalize dependent k.
-  generalize dependent P.
-  induction n; intros.
-  + inversion H; subst. destruct H0; inversion H0; auto.
-  + destruct H0.
-    - inversion H0; subst; auto.
-      * assert (n0 <= n) by lia.
-        apply (IHn _ _ H2).
-        right; auto.
-      * assert (Q = stop).
-        {
-          assert (n1 <= n) by lia.
-          apply (IHn _ _ H3).
-          left; auto.
-        }
-        subst.
-        assert (n2 <= n) by lia.
-        apply (IHn _ _ H3).
-        left; auto.
-    - inversion H0; subst; auto.
-      * assert (n0 <= n) by lia.
-        apply (IHn _ _ H2).
-        left; auto.
-      * assert (Q = stop).
-        {
-          assert (n2 <= n) by lia.
-          apply (IHn _ _ H3).
-          right; auto.
-        }
-        subst.
-        assert (n1 <= n) by lia.
-        apply (IHn _ _ H3).
-        right; auto.
-Qed.
-
-Lemma stop_equiv_stop : forall P, stop ≡ P -> P = stop.
-Proof.
-  intros. apply struct_cong_d_from_struct_cong in H.
-  destruct H.
-  apply (stop_equiv_stop_d P x x (Nat.le_refl x)); left; auto.
-Qed.
-
-Lemma stop_irreducible : forall P, P = stop -> irreducible P.
-Proof.
-  intros P Hstop Q Hred.
-  induction Hred; try discriminate; subst.
-  apply IHHred.
-  apply stop_equiv_stop; auto.
-Qed.
-
-Lemma link_future_equiv_link_future :
-  forall i M P n,
-    struct_cong_d n (link (future i) M) P \/ struct_cong_d n P (link (future i) M) ->
-    exists M' n', struct_congM_d n' M' M /\ (P = (link (future i) M') \/ P = (link M' (future i))).
-Proof.
-  intros.
-  generalize dependent P.
-  generalize dependent M.
-  induction n; intros.
-  + destruct H.
-    - inversion H; subst.
-      * exists M. admit.
-      * exists M. admit.
-    - inversion H; subst.
-      * admit.
-      * admit.
-  + destruct H.
-    - inversion H; subst.
-Admitted.
-
-
-Lemma link_future_irreducible :
-  forall i M P,
-    P ≡ (link (future i) M) ->
-    irreducible P.
-Proof.
-Admitted.
-
-Lemma ax_cut_inversion_not_0 :
-  forall M P Q i,
-    i <> 0 ->
-    cut (link (future i) M) P ⊳ Q ->
-    exists P', P ⊳ P'.
-Proof.
-Admitted.
-
-
-Lemma link_chain_irreducible :
-  forall P xs,
-    (forall x, List.In x xs -> x <> 0) ->
-    link_chain xs P ->
-    irreducible P.
-Proof.
-  intros.
-  intros Q Hred.
-  induction H0.
-  + apply (stop_irreducible stop eq_refl Q); auto.
-  + assert (i <> 0). { specialize H with i; simpl in H; apply H; auto. }
-    inversion Hred; subst.
-    admit.
-  + admit.
-Admitted. *)
-
-(* argue as follows:
-   use link_tree (similar to link_list but all future of links are free by construction)
-   show that link_treenes is preserved under struct cong
-   then by induction on depth of red relation, show that every link_tree is irred
-   every link_list is a special case of a link_tree, thus irreducbile
-*)
-(* Lemma final_iff_irreducible :
-  forall Γ P, Γ ⊢ P :# -> (final P <-> irreducible P).
-Proof.
-  intros; split.
-  + intro Hfinal. destruct Hfinal as [xs P P' Hnzero Hchain Hequiv].
-    induction Hchain.
-    - apply stop_irreducible.
-      apply c_comm in Hequiv.
-      apply stop_equiv_stop; auto.
-    - admit.
-    - admit.
-  + intro Hirred. *)
