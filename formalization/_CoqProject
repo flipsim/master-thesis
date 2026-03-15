@@ -11,4 +11,5 @@ Substitution.v
 Preservation.v
 FinalProcess.v
 Progress.v
+Irreducibility.v
 Results.v

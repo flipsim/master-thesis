@@ -201,48 +201,38 @@ Lemma struct_cong_preserves_link_tree' :
           (struct_cong_d k P Q) \/ (struct_cong_d k Q P) ->
           link_tree j Q.
 Proof.
-  (* induction n; intros.
+  induction n; intros.
   + assert (k = 0) by lia; subst. destruct H1; inversion H1; subst.
     - inversion H0.
-    - inversion H0; subst; econstructor; eauto.
-    - inversion H0; subst.
-      * inversion H7; subst; simpl; econstructor; admit.
-      * inversion H7; subst; simpl; econstructor; admit.
-      * inversion H6; subst; admit.
+    - inversion H0; subst;
+      admit.
+    - inversion H0; subst;
+      admit.
     - auto.
     - inversion H0.
-    - inversion H0; subst; econstructor; eauto.
-    - inversion H0; subst.
-      * destruct P0; simpl in H3; try congruence.
-        inversion H3; subst.
-        admit.
-      * admit.
-      * admit.
+    - inversion H0; subst;
+      admit.
+    - inversion H0; subst;
+      admit.
     - auto.
   + destruct H1.
     - inversion H1; subst.
       * inversion H0.
-      * inversion H0; subst; econstructor; eauto.
+      * inversion H0; subst;
+        admit.
       * admit.
       * auto.
       * eapply (IHn n0); eauto. lia.
       * assert (link_tree j Q0). { eapply (IHn n1); eauto. lia. }
         eapply (IHn n2); eauto. lia.
       * inversion H0.
-      * inversion H0; subst.
-        ** admit.
-        ** admit.
-        ** admit.
-        ** admit.
-        ** admit.
-        ** admit.
-        ** admit.
-        ** admit.
-        ** admit.
+      * inversion H0; subst;
+        admit.
       * inversion H0.
     - inversion H1; subst.
       * inversion H0.
-      * inversion H0; subst; econstructor; eauto.
+      * inversion H0; subst;
+        admit.
       * admit.
       * auto.
       * eapply (IHn n0); eauto. lia.
@@ -250,7 +240,7 @@ Proof.
         eapply (IHn n1); eauto. lia.
       * inversion H0.
       * admit.
-      * inversion H0. *)
+      * inversion H0.
 Admitted.
 
 Lemma struct_cong_preserves_link_tree :

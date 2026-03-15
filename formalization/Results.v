@@ -5,6 +5,7 @@ From FD Require Import Reduction.
 From FD Require Import Preservation.
 From FD Require Import FinalProcess.
 From FD Require Import Progress.
+From FD Require Import Irreducibility.
 
 (******************************************************************************)
 (* Main Results                                                               *)
@@ -42,4 +43,13 @@ Theorem progress :
 Proof. exact progress. Qed.
 
 Print Assumptions progress.
+
+(* Given a well-typed process P under some context Γ (Γ ⊢ P :#),
+   then P is final iff P is irreducible.
+*)
+Theorem final_iff_irreducible :
+  forall Γ P, Γ ⊢ P :# -> final P <-> irreducible P.
+Proof. exact final_iff_irreducible. Qed.
+
+Print Assumptions final_iff_irreducible.
 
