@@ -1,6 +1,7 @@
 #import "@preview/diatypst:0.5.0": *
 #import "@preview/zebraw:0.5.5": *
 #import "@preview/curryst:0.5.1": rule, prooftree
+#import "@preview/cetz:0.4.2"
 #import "makros.typ": *
 
 #show: slides.with(
@@ -222,6 +223,29 @@ $]
 #align(center + horizon)[
   *What do elimination rules have to do with communication?*
 ]
+
+== Example: Ephemeral Booleans
+#zebraw(
+    numbering-separator: true,
+    lang: false,
+    ```haskell
+    type 𝔹 = 1 ⊕ 1
+    type co𝔹 = ⊥ & ⊥
+    type ServerProtocol = co𝔹 ⅋ 𝔹
+    type ClientProtocol = 𝔹 ⊗ co𝔹
+
+    true  = ◁ inl (z . z ⟷ ![])
+    false = ◁ inr (z . z ⟷ ![])
+
+    client : ClientProtocol ⊢ negation
+    negation =
+      (client : ClientProtocol) ⟷ (server : ServerProtocol);
+       server ? (b, c) . b ⟷ ▷ {
+         z . z ⟷ ?() . (c ⟷ false),
+         z . z ⟷ ?() . (c ⟷ true)
+       }
+    ```
+)
 
 == From Free Deduction to $pi$FD
 #box(
@@ -468,29 +492,6 @@ $
   )
   #v(0.2cm)
 ]
-
-== Example: Ephemeral Booleans
-#zebraw(
-    numbering-separator: true,
-    lang: false,
-    ```haskell
-    type 𝔹 = 1 ⊕ 1
-    type co𝔹 = ⊥ & ⊥
-    type ServerProto = co𝔹 ⅋ 𝔹
-    type ClientProto = 𝔹 ⊗ co𝔹
-
-    true  = ◁ inl (z . z ⟷ ![])
-    false = ◁ inr (z . z ⟷ ![])
-
-    client : ClientProto ⊢ serverProgram
-    serverProgram =
-      (client : ClientProto) ⟷ (server : ServerProto);
-       server ? (b, c) . b ⟷ ▷ {
-         z . z ⟷ ?() . (c ⟷ false),
-         z . z ⟷ ?() . (c ⟷ true)
-       }
-    ```
-)
 
 ==
 #grid(
@@ -992,6 +993,29 @@ $
 ]
 
 = Church-Rosser
+==
+\
+#align(center)[
+#cetz.canvas({
+  import cetz.draw: *
+
+  content(((0,0), 0, (0,0)), box(fill: white, $ (nu x y)( ![] arrow.l.r ?().P | y arrow.l.r M) $))
+  content(((5,-2.5), 0, (0,0)), box(fill: white, $ (nu x y)(P | y arrow.l.r M) $))
+  content(((-5,-2.5), 0, (0,0)), box(fill: white, $ ![] arrow.l.r ?().P{x := M} $))
+  content(((0,-5), 0, (0,0)), box(fill: white, $ P{x := M} $))
+
+  line((0.5,-0.5), (5, -2), name: "l1")
+  line((-0.5,-0.5), (-5, -2), name: "l2")
+  line((-5, -3), (-0.5, -4.5), name: "l3")
+  line((5, -3), (0.5, -4.5), name: "l4")
+
+  content(("l1.start", 50%, "l1.end"), box(fill: white, inset: 4pt, [$attach(gt.tri, br: 1 pi)$]))
+  content(("l2.start", 50%, "l2.end"), box(fill: white, inset: 4pt, [$attach(gt.tri, br: 1 pi)$]))
+  content(("l3.start", 50%, "l3.end"), box(fill: white, inset: 4pt, [$attach(gt.tri, br: 1 pi)$]))
+  content(("l4.start", 50%, "l4.end"), box(fill: white, inset: 4pt, [$attach(gt.tri, br: 1 pi)$]))
+})
+]
+
 == Church-Rosser
 \ \
 #definition(title: $"Reduction" gt.tri$)[
