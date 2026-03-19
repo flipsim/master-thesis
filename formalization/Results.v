@@ -1,5 +1,6 @@
 From FD Require Import Syntax.
 From FD Require Import StructCong.
+From FD Require Import Contexts.
 From FD Require Import Typing.
 From FD Require Import Reduction.
 From FD Require Import Preservation.
@@ -43,6 +44,12 @@ Theorem progress :
 Proof. exact progress. Qed.
 
 Print Assumptions progress.
+
+Corollary progress_for_closed_processes :
+  forall Γ P, ctx_eq Γ empty_ctx -> Γ ⊢ P :# -> (exists P', P ⊳ P') \/ (P = stop).
+Proof. exact progress_for_closed_processes. Qed.
+
+Print Assumptions progress_for_closed_processes.
 
 (* Given a well-typed process P under some context Γ (Γ ⊢ P :#),
    then P is final iff P is irreducible.
