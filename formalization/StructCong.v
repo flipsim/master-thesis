@@ -353,6 +353,18 @@ Proof.
     eapply c_cong_send_d; eauto.
 Qed.
 
+Lemma struct_cong_from_struct_cong_d :
+  (forall k P P', struct_cong_d k P P'  -> P ≡ P') /\
+  (forall k M M', struct_congM_d k M M' -> M !≡ M') /\
+  (forall k s s', struct_congS_d k s s' -> s $≡ s').
+Proof.
+  apply struct_cong_depth_ind; intros; try econstructor; eauto.
+  + apply c_comm in H0. apply c_comm in H. eapply c_trans; eauto.
+  + apply c_comm. apply c_cong_link; auto.
+  + apply c_comm. apply c_cong_cut; auto.
+  + apply c_comm. apply c_cong_seq; auto.
+Qed.
+
 (* reflexivitiy is derivable for messages and statements *)
 Lemma struct_cong_d_refl :
   (forall P, exists k, struct_cong_d k P P) /\

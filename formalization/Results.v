@@ -45,6 +45,10 @@ Proof. exact progress. Qed.
 
 Print Assumptions progress.
 
+(* Progress for closed processes:
+   Given a closed process P, then there exists a process P' such that P reduces
+   to P' or P is the nil process (stop).
+*)
 Corollary progress_for_closed_processes :
   forall Γ P, ctx_eq Γ empty_ctx -> Γ ⊢ P :# -> (exists P', P ⊳ P') \/ (P = stop).
 Proof. exact progress_for_closed_processes. Qed.
@@ -59,4 +63,3 @@ Theorem final_iff_irreducible :
 Proof. exact final_iff_irreducible. Qed.
 
 Print Assumptions final_iff_irreducible.
-
