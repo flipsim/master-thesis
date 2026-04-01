@@ -240,6 +240,201 @@ Proof.
   + inversion H1; subst. econstructor. eapply H; eauto.
 Qed.
 
+Lemma n_fv_down_Sn2 :
+  (forall (p : process),
+    forall n k, k < n -> (S n) ∈ p -> n ∈ (down1_process p k))
+  /\
+  (forall (m : message),
+    forall n k, k < n -> occurs_free_message (S n) m -> occurs_free_message n (down1_message m k))
+  /\
+  (forall (s : statement),
+    forall n k, k < n -> occurs_free_statement (S n) s -> occurs_free_statement n (down1_statement s k)).
+Proof.
+  apply syntax_ind; intros; simpl.
+  + simpl in H2; inversion H2; subst.
+    - apply fv_link_l. eapply (H n k); auto.
+    - apply fv_link_r. eapply (H0 n k); auto.
+  + simpl in H2; inversion H2; subst.
+    - apply fv_cut_l. eapply (H (S n) (S k)); auto. lia.
+    - apply fv_cut_r. eapply (H0 (S n) (S k)); auto. lia.
+  + simpl in H2; inversion H2; subst.
+    - apply fv_seq_l. eapply (H (S n) (S k)); auto. lia.
+    - apply fv_seq_r. eapply (H0 n k); auto.
+  + inversion H0.
+  + unfold down1_message in H0.
+    destruct (Nat.ltb k n) eqn:E.
+    - apply PeanoNat.Nat.ltb_lt in E.
+      destruct n. { exfalso; lia. }
+      simpl. inversion H0; subst. constructor.
+    - exfalso.
+      apply PeanoNat.Nat.ltb_ge in E.
+      inversion H0; subst.
+      assert (k < k) by lia.
+      eapply PeanoNat.Nat.lt_irrefl; eauto.
+  + simpl in H1; inversion H1; subst. econstructor. eapply H; eauto.
+  + simpl in H1; inversion H1; subst. econstructor. eapply (H (S n) (S k)); eauto. lia.
+  + simpl in H1; inversion H1; subst. econstructor. eapply (H (S n) (S k)); eauto. lia.
+  + simpl in H2; inversion H2; subst.
+    - apply fv_choice_l. eapply (H (S n) (S k)); auto. lia.
+    - apply fv_choice_r. eapply (H0 (S n) (S k)); auto. lia.
+  + simpl in H2; inversion H2; subst.
+    - apply fv_send_l. eapply (H (S n) (S k)); auto. lia.
+    - apply fv_send_r. eapply (H0 (S n) (S k)); auto. lia.
+  + simpl in H1; inversion H1; subst; econstructor. eapply (H (S (S n)) (S (S k))); eauto; lia.
+  + inversion H0.
+  + inversion H1; subst. econstructor. eapply H; eauto.
+Qed.
+
+Lemma fv_up_Sn :
+  (forall (p : process),
+    forall n k, k < n -> n ∈ p -> (S n) ∈ (lift_process p k 1))
+  /\
+  (forall (m : message),
+    forall n k, k < n -> occurs_free_message n m -> occurs_free_message (S n) (lift_message m k 1))
+  /\
+  (forall (s : statement),
+    forall n k, k < n -> occurs_free_statement n s -> occurs_free_statement (S n) (lift_statement s k 1)).
+Proof.
+  apply syntax_ind; intros; simpl.
+  + simpl in H2; inversion H2; subst.
+    - apply fv_link_l. eapply (H n k); auto.
+    - apply fv_link_r. eapply (H0 n k); auto.
+  + simpl in H2; inversion H2; subst.
+    - apply fv_cut_l. eapply (H (S n) (S k)); auto. lia.
+    - apply fv_cut_r. eapply (H0 (S n) (S k)); auto. lia.
+  + simpl in H2; inversion H2; subst.
+    - apply fv_seq_l. eapply (H (S n) (S k)); auto. lia.
+    - apply fv_seq_r. eapply (H0 n k); auto.
+  + inversion H0.
+  + inversion H0; subst.
+    destruct (Nat.leb k n) eqn:E.
+    - unfold relocate. rewrite E. simpl. free_var_econstructor.
+    - exfalso.
+      apply PeanoNat.Nat.leb_nle in E. lia.
+  + simpl in H1; inversion H1; subst. econstructor. eapply H; eauto.
+  + simpl in H1; inversion H1; subst. econstructor. eapply (H (S n) (S k)); eauto. lia.
+  + simpl in H1; inversion H1; subst. econstructor. eapply (H (S n) (S k)); eauto. lia.
+  + simpl in H2; inversion H2; subst.
+    - apply fv_choice_l. eapply (H (S n) (S k)); auto. lia.
+    - apply fv_choice_r. eapply (H0 (S n) (S k)); auto. lia.
+  + simpl in H2; inversion H2; subst.
+    - apply fv_send_l. eapply (H (S n) (S k)); auto. lia.
+    - apply fv_send_r. eapply (H0 (S n) (S k)); auto. lia.
+  + simpl in H1; inversion H1; subst; econstructor. eapply (H (S (S n)) (S (S k))); eauto; lia.
+  + inversion H0.
+  + inversion H1; subst. econstructor. eapply H; eauto.
+Qed.
+
+Lemma fv_up_Sn2 :
+  (forall (p : process),
+    forall n k, k < n -> (S n) ∈ (lift_process p k 1) -> n ∈ p)
+  /\
+  (forall (m : message),
+    forall n k, k < n -> occurs_free_message (S n) (lift_message m k 1) -> occurs_free_message n m)
+  /\
+  (forall (s : statement),
+    forall n k, k < n -> occurs_free_statement (S n) (lift_statement s k 1) -> occurs_free_statement n s).
+Proof.
+  apply syntax_ind; intros; simpl.
+  + simpl in H2; inversion H2; subst.
+    - apply fv_link_l. eapply (H n k); auto.
+    - apply fv_link_r. eapply (H0 n k); auto.
+  + simpl in H2; inversion H2; subst.
+    - apply fv_cut_l. eapply (H (S n) (S k)); auto. lia.
+    - apply fv_cut_r. eapply (H0 (S n) (S k)); auto. lia.
+  + simpl in H2; inversion H2; subst.
+    - apply fv_seq_l. eapply (H (S n) (S k)); auto. lia.
+    - apply fv_seq_r. eapply (H0 n k); auto.
+  + inversion H0.
+  + inversion H0; subst.
+    destruct (Nat.leb k n) eqn:E.
+    - simpl in *; unfold relocate in *; rewrite E in H3 H0; simpl in *.
+      inversion H0; subst. free_var_econstructor.
+    - simpl in *; unfold relocate in *; rewrite E in H3 H0. inversion H0; subst.
+      apply PeanoNat.Nat.leb_nle in E. lia.
+  + simpl in H1; inversion H1; subst. econstructor. eapply H; eauto.
+  + simpl in H1; inversion H1; subst. econstructor. eapply (H (S n) (S k)); eauto. lia.
+  + simpl in H1; inversion H1; subst. econstructor. eapply (H (S n) (S k)); eauto. lia.
+  + simpl in H2; inversion H2; subst.
+    - apply fv_choice_l. eapply (H (S n) (S k)); auto. lia.
+    - apply fv_choice_r. eapply (H0 (S n) (S k)); auto. lia.
+  + simpl in H2; inversion H2; subst.
+    - apply fv_send_l. eapply (H (S n) (S k)); auto. lia.
+    - apply fv_send_r. eapply (H0 (S n) (S k)); auto. lia.
+  + simpl in H1; inversion H1; subst; econstructor. eapply (H (S (S n)) (S (S k))); eauto; lia.
+  + inversion H0.
+  + inversion H1; subst. econstructor. eapply H; eauto.
+Qed.
+
+Lemma nfv_up_lt :
+  (forall (p : process),
+    forall n k, n < k -> ~ (n ∈ p) -> ~ (n ∈ (lift_process p k 1)))
+  /\
+  (forall (m : message),
+    forall n k, n < k -> ~ (occurs_free_message n m) -> ~ (occurs_free_message n (lift_message m k 1)))
+  /\
+  (forall (s : statement),
+    forall n k, n < k -> ~ (occurs_free_statement n s) -> ~ (occurs_free_statement n (lift_statement s k 1))).
+Proof.
+  apply syntax_ind; intros; intro Hfv; simpl in *; inversion Hfv; subst;
+  try match goal with
+  | [ H  : S ?n ∈ lift_process ?P (S ?k) 1,
+      IH : forall _ _, _ -> _ -> ~ (_ ∈ lift_process ?P _ _),
+      H' : ~ _
+      |- False ]
+    => eapply (IH (S n) (S k)); eauto; try lia; intro Hfv1; apply H'; free_var_econstructor; auto
+  | [ H  : occurs_free_statement ?n (lift_statement ?s ?k 1),
+      IH : forall _ _, _ -> _ -> ~ (occurs_free_statement _ (lift_statement ?s _ _)),
+      H' : ~ _
+      |- False ]
+    => eapply (IH n k); eauto; try lia; intro Hfv1; apply H'; free_var_econstructor; auto
+  | [ H  : occurs_free_message ?n (lift_message ?m ?k 1),
+      IH : forall _ _, _ -> _ -> ~ (occurs_free_message _ (lift_message ?m _ _)),
+      H' : ~ _
+      |- False ]
+    => eapply (IH n k); eauto; try lia; intro Hfv1; apply H'; free_var_econstructor; auto
+  end.
+  + unfold relocate in H. destruct (Nat.leb k n) eqn:E.
+    - apply PeanoNat.Nat.leb_le in E. lia.
+    - apply H0. unfold relocate. rewrite E. free_var_econstructor.
+  + apply (H n k); eauto. intro Hfv1. apply H1. free_var_econstructor; eauto.
+Qed.
+
+Lemma nfv_down_lt :
+  (forall (p : process),
+    forall n k, n < k -> ~ (n ∈ p) -> ~ (n ∈ (down1_process p k)))
+  /\
+  (forall (m : message),
+    forall n k, n < k -> ~ (occurs_free_message n m) -> ~ (occurs_free_message n (down1_message m k)))
+  /\
+  (forall (s : statement),
+    forall n k, n < k -> ~ (occurs_free_statement n s) -> ~ (occurs_free_statement n (down1_statement s k))).
+Proof.
+  apply syntax_ind; intros; intro Hfv; simpl in *; inversion Hfv; subst;
+  try match goal with
+  | [ H  : S ?n ∈ down1_process ?P (S ?k),
+      IH : forall _ _, _ -> _ -> ~ (_ ∈ down1_process ?P _),
+      H' : ~ _
+      |- False ]
+    => eapply (IH (S n) (S k)); eauto; try lia; intro Hfv1; apply H'; free_var_econstructor; auto
+  | [ H  : occurs_free_statement ?n (down1_statement ?s ?k),
+      IH : forall _ _, _ -> _ -> ~ (occurs_free_statement _ (down1_statement ?s _)),
+      H' : ~ _
+      |- False ]
+    => eapply (IH n k); eauto; try lia; intro Hfv1; apply H'; free_var_econstructor; auto
+  | [ H  : occurs_free_message ?n (down1_message ?m ?k),
+      IH : forall _ _, _ -> _ -> ~ (occurs_free_message _ (down1_message ?m _)),
+      H' : ~ _
+      |- False ]
+    => eapply (IH n k); eauto; try lia; intro Hfv1; apply H'; free_var_econstructor; auto
+  end.
+  + destruct (Nat.ltb k n) eqn:E.
+    - apply PeanoNat.Nat.ltb_lt in E. inversion H3. lia.
+    - inversion H3; subst. apply H0. free_var_econstructor.
+  + destruct (Nat.ltb k n) eqn:E; inversion H1.
+  + eapply H; eauto. intro Hfv1. apply H1. free_var_econstructor. auto.
+Qed.
+
 Lemma n_fv_down_n :
   (forall (p : process),
     forall n k, k >= n -> n ∈ p -> n ∈ (down1_process p k))

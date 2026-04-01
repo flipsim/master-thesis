@@ -12,4 +12,6 @@ Preservation.v
 FinalProcess.v
 Progress.v
 Irreducibility.v
+ConfluenceDefs.v
+DirectedCong.v
 Results.v

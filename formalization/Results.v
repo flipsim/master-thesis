@@ -7,10 +7,16 @@ From FD Require Import Preservation.
 From FD Require Import FinalProcess.
 From FD Require Import Progress.
 From FD Require Import Irreducibility.
+From FD Require Import ConfluenceDefs.
+From FD Require Import DirectedCong.
+
+From Stdlib Require Import Relations.
 
 (******************************************************************************)
 (* Main Results                                                               *)
 (******************************************************************************)
+
+(*** Type Safety **************************************************************)
 
 (* Preservation for Structural Congruence:
    Given two structurally congruent processes P and P' (P ≡ P'),
@@ -63,3 +69,28 @@ Theorem final_iff_irreducible :
 Proof. exact final_iff_irreducible. Qed.
 
 Print Assumptions final_iff_irreducible.
+
+(*** Church-Rosser ************************************************************)
+
+(* Directed congruence possesses the diamond property.
+*)
+Lemma diamond_property_for_directed_congruence : diamond_property directed_congruence.
+Proof. exact directed_cong_diamond. Qed.
+
+Print Assumptions diamond_property_for_directed_congruence.
+
+(* ≡ is contained in the transitive closure of ⇛
+*)
+Lemma struct_cong_subset_trans_clos_directed_cong :
+  forall P Q, P ≡ Q -> clos_trans_1n _ directed_congruence P Q.
+Proof. exact (proj1 struct_cong_in_trans_directed_cong). Qed.
+
+Print Assumptions struct_cong_subset_trans_clos_directed_cong.
+
+(* ⇛ is contained in ≡
+*)
+Lemma directed_cong_subset_struct_cong :
+  forall P Q, P ⇛ Q -> P ≡ Q.
+Proof. exact (proj1 directed_cong_in_struct_cong). Qed.
+
+Print Assumptions directed_cong_subset_struct_cong.

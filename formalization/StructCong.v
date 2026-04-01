@@ -291,13 +291,13 @@ Inductive struct_cong_d : nat -> process -> process -> Prop :=
 
   (* rules to make the relation a congruence *)
   | c_cong_link_d : forall n1 m1 m1' n2 m2 m2',
-                    struct_congM_d n1 m1 m1' ->
-                    struct_congM_d n2 m2 m2' ->
-                    struct_cong_d (S (Nat.max n1 n2)) (link m1 m2) (link m1' m2')
-  | c_cong_cut_d : forall n1 P P' n2 Q Q',
-                  struct_cong_d n1 P P' ->
-                  struct_cong_d n2 Q Q' ->
-                  struct_cong_d (S (Nat.max n1 n2)) (cut P Q) (cut P' Q')
+                      struct_congM_d n1 m1 m1' ->
+                                          struct_congM_d n2 m2 m2' ->
+                                                              struct_cong_d (S (Nat.max n1 n2)) (link m1 m2) (link m1' m2')
+                                                                | c_cong_cut_d : forall n1 P P' n2 Q Q',
+                                                                                  struct_cong_d n1 P P' ->
+                                                                                                    struct_cong_d n2 Q Q' ->
+                                                                                                                      struct_cong_d (S (Nat.max n1 n2)) (cut P Q) (cut P' Q')
   | c_cong_seq_d : forall n1 P P' n2 s s',
                   struct_cong_d n1 P P' ->
                   struct_congS_d n2 s s' ->
@@ -591,4 +591,74 @@ Proof.
   + apply (proj1 struct_cong_d_from_struct_cong) in H. destruct H.
     assert (struct_cong_d x (link (future i) M) P \/ struct_cong_d x P (link (future i) M) \/ struct_cong_d x (link M (future i)) P \/ struct_cong_d x P (link M (future i))) by eauto.
     apply (link_future_equiv_link_future_d x _ _ _ _ (PeanoNat.Nat.le_refl x) H0).
+Qed.
+
+(* Free variables are preserved under structural congruence *)
+Lemma free_vars_under_struct_cong :
+  (forall P Q, P ≡ Q -> forall k, (k ∈ P) <-> (k ∈ Q)) /\
+  (forall M1 M2, M1 !≡ M2 -> forall k, (occurs_free_message k M1) <-> (occurs_free_message k M2)) /\
+  (forall s1 s2, s1 $≡ s2 -> forall k, (occurs_free_statement k s1) <-> (occurs_free_statement k s2)).
+Proof.
+  apply struct_cong_ind; intros.
+  + split; intros; inversion H; subst; free_var_econstructor; auto.
+  + split; intros; inversion H; subst; free_var_econstructor; auto.
+  + split; intros.
+    - inversion H; subst.
+      * inversion H2; subst.
+        {
+          apply fv_cut_l.
+          destruct ((proj1 free_vars_decidable) (down (rename_process P swap01)) (S k)); auto.
+          apply (proj1 n_fv_down_Sn2); try lia.
+          apply ((proj1 fv_under_renaming) _ swap01). apply swap01_is_bijective.
+          simpl. rewrite swap_swap_id; auto.
+        }
+        {
+          apply fv_cut_r. apply fv_cut_l.
+          apply ((proj1 fv_under_renaming) _ swap01). apply swap01_is_bijective.
+          simpl. rewrite swap_swap_id; auto.
+        }
+      * apply fv_cut_r. apply fv_cut_r.
+        apply ((proj1 fv_under_renaming) _ swap01). apply swap01_is_bijective.
+        simpl. rewrite swap_swap_id; auto.
+        apply (proj1 fv_up_Sn); try lia. auto.
+    - inversion H; subst.
+      * apply fv_cut_l. apply fv_cut_l.
+        unfold down in H2.
+        apply ((proj1 n_fv_down_Sn) _ (S k) 0) in H2; try lia.
+        apply ((proj1 fv_under_renaming) _ swap01) in H2.
+        rewrite swap_swap_id in H2. simpl in H2; auto.
+        apply swap01_is_bijective.
+      * inversion H2; subst.
+        {
+          apply fv_cut_l. apply fv_cut_r. apply ((proj1 fv_under_renaming) _ swap01) in H3.
+          simpl in H3. rewrite swap_swap_id in H3; auto. apply swap01_is_bijective.
+        }
+        {
+          apply fv_cut_r. apply ((proj1 fv_under_renaming) _ swap01) in H3; try apply swap01_is_bijective.
+          simpl in H3. rewrite swap_swap_id in H3.
+          apply ((proj1 fv_up_Sn2) _ _ 0); try lia.
+          unfold up in H3. assumption.
+        }
+  + split; auto.
+  + split; intros; apply H; auto.
+  + split; intros.
+    - apply H0. apply H. assumption.
+    - apply H. apply H0. assumption.
+  + split; intros; inversion H1; subst;
+    try apply H in H4; try apply H0 in H4; free_var_econstructor; auto.
+  + split; intros; inversion H1; subst;
+    try apply H in H4; try apply H0 in H4; free_var_econstructor; auto.
+  + split; intros; inversion H1; subst;
+    try apply H in H4; try apply H0 in H4; free_var_econstructor; auto.
+  + split; intros; inversion H; free_var_econstructor.
+  + split; intros; inversion H0; subst; apply H in H3; free_var_econstructor; auto.
+  + split; intros; inversion H0; subst; apply H in H3; free_var_econstructor; auto.
+  + split; intros; inversion H0; subst; apply H in H3; free_var_econstructor; auto.
+  + split; intros; inversion H1; subst;
+    try apply H in H4; try apply H0 in H4; free_var_econstructor; auto.
+  + split; intros; inversion H1; subst;
+    try apply H in H4; try apply H0 in H4; free_var_econstructor; auto.
+  + split; intros; inversion H0; subst; apply H in H3; free_var_econstructor; auto.
+  + split; intros; inversion H.
+  + split; intros; inversion H0; subst; apply H in H3; free_var_econstructor; auto.
 Qed.
