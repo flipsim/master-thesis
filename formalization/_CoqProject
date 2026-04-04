@@ -14,4 +14,6 @@ Progress.v
 Irreducibility.v
 ConfluenceDefs.v
 DirectedCong.v
+ParallelReduction.v
+Confluence.v
 Results.v

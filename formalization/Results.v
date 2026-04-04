@@ -9,6 +9,8 @@ From FD Require Import Progress.
 From FD Require Import Irreducibility.
 From FD Require Import ConfluenceDefs.
 From FD Require Import DirectedCong.
+From FD Require Import ParallelReduction.
+From FD Require Import Confluence.
 
 From Stdlib Require Import Relations.
 
@@ -94,3 +96,19 @@ Lemma directed_cong_subset_struct_cong :
 Proof. exact (proj1 directed_cong_in_struct_cong). Qed.
 
 Print Assumptions directed_cong_subset_struct_cong.
+
+(* ⊵* = ▶
+*)
+Lemma par_reds_clos_trans_multi_step_red_coincide :
+  forall P Q, (clos_trans _ par_reduces) P Q <-> P ▶ Q.
+Proof. exact par_reds_clos_trans_multi_step_red_coincide. Qed.
+
+Print Assumptions par_reds_clos_trans_multi_step_red_coincide.
+
+(* If ⊵ is confluent, then ▶ is too.
+*)
+Lemma diamond_par_red_imp_diamond_multistep :
+  diamond_property par_reduces -> diamond_property multi_step_reduction.
+Proof. exact diamond_par_red_imp_diamond_multistep. Qed.
+
+Print Assumptions diamond_par_red_imp_diamond_multistep.

@@ -1,6 +1,10 @@
 From FD Require Import Syntax.
 From FD Require Import StructCong.
 
+From Stdlib Require Import Relations.Relation_Operators.
+From Stdlib Require Import Relations.Operators_Properties.
+From Stdlib Require Import Relation_Definitions.
+
 (* \vartriangleright *)
 Reserved Notation "P ⊳ Q" (no associativity, at level 61).
 
@@ -27,6 +31,11 @@ Inductive reduces : process -> process -> Prop :=
                 P ≡ P' -> P' ⊳ Q' -> Q' ≡ Q -> P ⊳ Q
 where
   "P ⊳ Q" := (reduces P Q).
+
+(* multi-step reduction \blacktriangleright *)
+Definition multi_step_reduction := clos_trans _ (union _ reduces structural_congruence).
+
+Notation "P '▶' Q" := (multi_step_reduction P Q) (no associativity, at level 61).
 
 (******************************************************************************)
 (* Reduction (depth-indexed)                                                  *)

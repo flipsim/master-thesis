@@ -17,9 +17,14 @@ From Stdlib Require Import Lia.
    reduces the amount of case distinction to prove the diamond property
    for parallel reduction. Key properties include:
 
-   (i)   Symmetry is derivable for directed congruence.
+   (i)   Symmetry is admissable for directed congruence.
    (ii)  ≡ ⊂ ⇛^*
    (iii) ⇛ ⊂ ≡
+
+   NB: If symmetry were to be added as a rule, then ⊵ would have to consider
+   addtional AxCut rules in order to allow diverging reductions to reconciliate
+   in one step. Thus, admissibility of symmetry helps to drastically reduce
+   the amount of case distinctions.
 *)
 
 (******************************************************************************)
