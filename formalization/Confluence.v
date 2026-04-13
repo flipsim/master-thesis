@@ -18,27 +18,80 @@ Qed.
 
 Lemma link_directed_cong_par_red_confluent :
   forall ml mr P Q, (link ml mr) ⇛ P -> (link ml mr) ⊵ Q ->
-    exists R, P ⊵ R /\ Q ⇛ R.
+    exists R, P ⊵ R /\ Q ⊵ R.
 Proof.
   intros. inversion H; subst.
-  { exists Q; split; auto; econstructor. }
-  inversion H0; subst.
-  + inversion H1; subst.
-    - eexists; split; repeat econstructor; auto.
-    - apply directed_cong_symm in H. exists (link ml mr). split. (econstructor; eauto).
-      econstructor; apply directed_cong_symm; auto.
-  + inversion H3; subst.
-    - admit.
-Admitted.
-
+  { exists Q; split; auto; econstructor. econstructor. }
+  inversion H0; subst;
+  (* For reflexivity, we discharge the goal via admissibility of symmetry *)
+  try (now (eexists; split; econstructor; apply directed_cong_symm; eauto));
+  try match goal with
+  | [ H1 : (prefix (send _ _)) !⇛ _,
+      H2 : (prefix (receive _)) !⇛ _
+      |- _ ] =>
+    apply directed_cong_inversion_prefix in H1; destruct H1 as [? [? H1']];
+    apply directed_cong_inversion_prefix in H2; destruct H2 as [? [? H2']];
+    apply directed_cong_inversion_send in H1'; destruct H1' as [? [? [? [? ?]]]];
+    apply directed_cong_inversion_receive in H2'; destruct H2' as [? [? ?]];
+    subst; eexists; split; [
+      try eapply rp_tensor_par_2; try eapply rp_tensor_par_1; try eapply directed_cong_symm; eauto
+    | eapply rp_cong_cut; try (now (econstructor; eapply directed_cong_symm; eauto));
+      eapply rp_cong_cut; try (now (econstructor; eapply directed_cong_symm; eauto));
+      econstructor; apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective;
+      apply directed_cong_invariant_under_upshifting;
+      apply directed_cong_symm; auto
+    ]
+  | [ H1 : (prefix (choose_left _)) !⇛ _,
+      H2 : (prefix (offer_choice _ _)) !⇛ _
+      |- _ ] =>
+    apply directed_cong_inversion_prefix in H1; destruct H1 as [? [? H1']];
+    apply directed_cong_inversion_prefix in H2; destruct H2 as [? [? H2']];
+    apply directed_cong_inversion_choosel in H1'; destruct H1' as [? [? ?]];
+    apply directed_cong_inversion_choice in H2'; destruct H2' as [? [? [? [? ?]]]];
+    subst; eexists; split; [
+      try eapply rp_plus_with_l1; try eapply rp_plus_with_l2; try eapply directed_cong_symm; eauto
+    | eapply rp_cong_cut; try (now (econstructor; eapply directed_cong_symm; eauto));
+      eapply rp_cong_cut; try (now (econstructor; eapply directed_cong_symm; eauto));
+      econstructor; apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective;
+      apply directed_cong_invariant_under_upshifting;
+      apply directed_cong_symm; auto
+    ]
+  | [ H1 : (prefix (choose_right _)) !⇛ _,
+      H2 : (prefix (offer_choice _ _)) !⇛ _
+      |- _ ] =>
+    apply directed_cong_inversion_prefix in H1; destruct H1 as [? [? H1']];
+    apply directed_cong_inversion_prefix in H2; destruct H2 as [? [? H2']];
+    apply directed_cong_inversion_chooser in H1'; destruct H1' as [? [? ?]];
+    apply directed_cong_inversion_choice in H2'; destruct H2' as [? [? [? [? ?]]]];
+    subst; eexists; split; [
+      try eapply rp_plus_with_r1; try eapply rp_plus_with_r2; try eapply directed_cong_symm; eauto
+    | eapply rp_cong_cut; try (now (econstructor; eapply directed_cong_symm; eauto));
+      eapply rp_cong_cut; try (now (econstructor; eapply directed_cong_symm; eauto));
+      econstructor; apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective;
+      apply directed_cong_invariant_under_upshifting;
+      apply directed_cong_symm; auto
+    ]
+  | [ H1 : (prefix close) !⇛ _,
+      H2 : (prefix (wait _)) !⇛ _
+      |- _ ] =>
+    apply directed_cong_inversion_prefix in H1; destruct H1 as [? [? H1']];
+    apply directed_cong_inversion_prefix in H2; destruct H2 as [? [? H2']];
+    apply directed_cong_inversion_close in H1';
+    apply directed_cong_inversion_wait in H2'; destruct H2' as [? [? ?]];
+    subst; eexists; split; [
+      try eapply rp_one_bot1; try eapply rp_one_bot2; try eapply directed_cong_symm; eauto
+    | econstructor; apply directed_cong_symm; auto
+    ]
+  end.
+Qed.
 
 Lemma confluence_directed_cong_par_red :
-  forall P Q1 Q2, P ⇛ Q1 -> P ⊵ Q2 -> exists R, Q1 ⊵ R /\ Q2 ⇛ R.
+  forall P Q1 Q2, P ⇛ Q1 -> P ⊵ Q2 -> exists R, Q1 ⊵ R /\ Q2 ⊵ R.
 Proof.
   intros. generalize dependent Q2.
   induction H; intros.
-  + exists Q2. split; auto. econstructor.
-  + admit.
+  + exists Q2. split; auto. econstructor. apply c_refl.
+  + eapply link_directed_cong_par_red_confluent; eauto. econstructor; eauto.
   + inversion H1; subst.
     - admit.
     - (* downM M' requires well-typedness of M to conclude that 0 is not in free vars of M' *)
@@ -67,9 +120,10 @@ Proof.
       * admit.
     - admit.
   + inversion H6; subst.
-    - exists Q2; split; try (now econstructor).
+    - exists Q2; split; try (now econstructor);
       admit.
     - (* dont bother doing an inversion on H9; try to use invariances instead *)
+      (* we need 0 not in M/M' *)
       admit.
     - (* in R1, up results in future 2 but swap01 is also uped ->
          future 1 remains in R1 ->
@@ -80,7 +134,19 @@ Proof.
     - admit.
     - admit.
   + admit.
-  + admit.
+  + inversion H1; subst.
+    - exists (seq P s). apply directed_cong_symm in H, H0, H2.
+      split; auto; repeat econstructor; auto.
+    - eexists. split.
+      * eapply rp_seq.
+        { apply directed_cong_symm in H. apply H. }
+        { apply directed_cong_symm in H0. apply H0. }
+      * apply directed_cong_symm in H4, H6. econstructor.
+        apply directed_cong_substitution; auto.
+        intros i. destruct i; simpl; econstructor; auto.
+    - apply directed_cong_symm in H, H0, H6.
+      apply IHdirected_congruence in H4. destruct H4 as [? [? ?]].
+      eexists. split; eapply rp_cong_seq; eauto.
 Admitted.
 
 (* invariance for ⊵ under renaming, shifting, substitution must follow by induction on depth *)

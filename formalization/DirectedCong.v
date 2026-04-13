@@ -25,6 +25,10 @@ From Stdlib Require Import Lia.
    addtional AxCut rules in order to allow diverging reductions to reconciliate
    in one step. Thus, admissibility of symmetry helps to drastically reduce
    the amount of case distinctions.
+
+   NB: ⇛ can be thought of as being able to perform multiple congruences
+   at all, i.e. a parallel congruence (e.g. associating and commuting a cut
+   in one step)
 *)
 
 (******************************************************************************)
@@ -35,64 +39,182 @@ Reserved Notation "P '⇛' Q" (no associativity, at level 1).
 Reserved Notation "M '!⇛' N" (no associativity, at level 1).
 Reserved Notation "s '$⇛' r" (no associativity, at level 1).
 
-Inductive directed_congruence : process -> process -> Prop :=
-  | c_refl : forall P, P ⇛ P
-  | c_link : forall ml1 ml2 mr1 mr2,
-              ml1 !⇛ ml2 ->
-              mr1 !⇛ mr2 -> 
-              (link ml1 mr1) ⇛ (link mr2 ml2)
-  | c_cut_comm : forall P1 P2 Q1 Q2,
-                  P1 ⇛ P2 ->
-                  Q1 ⇛ Q2 ->
-                  (cut P1 Q1) ⇛ (cut Q2 P2)
-  | c_cut_assoc_l : forall P Q R P1 Q1 R1 P' Q' R',
-                      ~ (1 ∈ P) ->
-                      P ⇛ P1 ->
-                      Q ⇛ Q1 ->
-                      R ⇛ R1 ->
-                      P' = down (rename_process P1 swap01) ->
-                      Q' = rename_process Q1 swap01 ->
-                      R' = rename_process (up R1) swap01 ->
-                      (cut (cut P Q) R) ⇛ (cut P' (cut Q' R'))
-  | c_cut_assoc_r : forall P Q R P1 Q1 R1 P' Q' R',
-                      ~ (1 ∈ R) ->
-                      P ⇛ P1 ->
-                      Q ⇛ Q1 ->
-                      R ⇛ R1 ->
-                      P' = rename_process (up P1) swap01 ->
-                      Q' = rename_process Q1 swap01 ->
-                      R' = down (rename_process R1 swap01) ->
-                      (cut P (cut Q R)) ⇛ (cut (cut P' Q') R')
-  | c_cong_seq : forall P P' s s',
-                  P ⇛ P' -> s $⇛ s' -> (seq P s) ⇛ (seq P' s')
+(* Inductive directed_congruence : process -> process -> Prop :=
+  (* links *)
+  | dc_cong_link : forall ml1 ml2 mr1 mr2,
+      ml1 !⇛ ml2 -> mr1 !⇛ mr2 -> (link ml1 mr1) ⇛ (link ml2 mr2)
+  | dc_link : forall ml1 ml2 mr1 mr2,
+      ml1 !⇛ ml2 -> mr1 !⇛ mr2 -> (link ml1 mr1) ⇛ (link mr2 ml2)
+
+  (* cuts *)
+  | dc_cut_comm : forall P P' Q Q', 
+      P ⇛ P' -> Q ⇛ Q' -> (cut P Q) ⇛ (cut Q' P')
+  | dc_cut_assoc_l : forall P (* P' *) P'' Q Q' R R' L L',
+      L ⇛ (cut P Q) (* (cut P Q) *) (* -> ~ (1 ∈ P) -> P' ⇛ P *) (* P ⇛ P' *) ->
+      P'' = down (rename_process P swap01) (* down (rename_process P' swap01) *) ->
+      Q' = rename_process Q swap01 ->
+      R' = rename_process (up R) swap01 ->
+      (cut Q' R') ⇛ L' ->
+      (cut L R) ⇛ (cut P'' L')
+  | dc_cut_assoc_l_comm : forall P P' P'' Q Q' R R' L L',
+      L ⇛ (cut P Q) -> ~ (1 ∈ P) -> P ⇛ P' ->
+      P'' = down (rename_process P' swap01) ->
+      Q' = rename_process Q swap01 ->
+      R' = rename_process (up R) swap01 ->
+      (cut Q' R') ⇛ L' ->
+      (cut L R) ⇛ (cut L' P'')
+  (* these rules are necessary to ensure admissibility of symmetry *)
+  | dc_cut_assoc_r : forall P P' Q Q' R R' R'' L L',
+      L ⇛ (cut Q R) -> ~ (1 ∈ R) -> R ⇛ R' ->
+      P' = rename_process (up P) swap01 ->
+      Q' = rename_process Q swap01 ->
+      R'' = down (rename_process R' swap01) ->
+      (cut P' Q') ⇛ L' ->
+      (cut P L) ⇛ (cut L' R'')
+  | dc_cut_assoc_r_comm : forall P P' Q Q' R R' R'' L L',
+      L ⇛ (cut Q R) -> ~ (1 ∈ R) -> R ⇛ R' ->
+      P' = rename_process (up P) swap01 ->
+      Q' = rename_process Q swap01 ->
+      R'' = down (rename_process R' swap01) ->
+      (cut P' Q') ⇛ L' ->
+      (cut P L) ⇛ (cut R'' L')
+  | dc_cong_cut : forall P P' Q Q', P ⇛ P' -> Q ⇛ Q' -> (cut P Q) ⇛ (cut P' Q')
+
+  (* seqs *)
+  | dc_cong_seq : forall P P' s s', P ⇛ P' -> s $⇛ s' -> (seq P s) ⇛ (seq P' s')
+
+  (* stop *)
+  | dc_stop : stop ⇛ stop
 where
   "P '⇛' Q" := (directed_congruence P Q)
 
 with directed_congruence_message : message -> message -> Prop :=
-  | c_cong_prefix : forall s s', s $⇛ s' -> (prefix s) !⇛ (prefix s')
-  | c_cong_reflM : forall m, m !⇛ m
+  | dc_cong_prefix : forall s s', s $⇛ s' -> (prefix s) !⇛ (prefix s')
+  | dc_cong_reflM : forall m, m !⇛ m
 where
   "M '!⇛' N" := (directed_congruence_message M N)
 
 with directed_congruence_statement : statement -> statement -> Prop :=
-  | c_cong_choose_l : forall P P',
+  | dc_cong_choose_l : forall P P',
                         P ⇛ P' ->
                         (choose_left P) $⇛ (choose_left P')
-  | c_cong_choose_r : forall P P',
+  | dc_cong_choose_r : forall P P',
                         P ⇛ P' ->
                         (choose_right P) $⇛ (choose_right P')
-  | c_cong_choice : forall P P' Q Q',
+  | dc_cong_choice : forall P P' Q Q',
                       P ⇛ P' -> Q ⇛ Q' -> (offer_choice P Q) $⇛ (offer_choice P' Q')
-  | c_cong_send : forall P P' Q Q',
+  | dc_cong_send : forall P P' Q Q',
                     P ⇛ P' -> Q ⇛ Q' -> (send P Q) $⇛ (send P' Q')
-  | c_cong_receive : forall P P', P ⇛ P' -> (receive P) $⇛ (receive P')
-  | c_cong_close : close $⇛ close
-  | c_cong_wait : forall P P', P ⇛ P' -> (wait P) $⇛ (wait P')
-  | c_cong_reflS : forall s, s $⇛ s
+  | dc_cong_receive : forall P P', P ⇛ P' -> (receive P) $⇛ (receive P')
+  | dc_cong_close : close $⇛ close
+  | dc_cong_wait : forall P P', P ⇛ P' -> (wait P) $⇛ (wait P')
+  | dc_cong_reflS : forall s, s $⇛ s
+where
+  "s '$⇛' r" := (directed_congruence_statement s r). *)
+
+Inductive directed_congruence : process -> process -> Prop :=
+  (* links *)
+  | dc_cong_link : forall ml1 ml2 mr1 mr2,
+      ml1 !⇛ ml2 -> mr1 !⇛ mr2 -> (link ml1 mr1) ⇛ (link ml2 mr2)
+  | dc_link : forall ml1 ml2 mr1 mr2,
+      ml1 !⇛ ml2 -> mr1 !⇛ mr2 -> (link ml1 mr1) ⇛ (link mr2 ml2)
+
+  (* cuts *)
+  | dc_cut_comm : forall P P' Q Q', 
+      P ⇛ P' -> Q ⇛ Q' -> (cut P Q) ⇛ (cut Q' P')
+  | dc_cut_assoc_l1 : forall P P' P'' Q Q' R R' R'' L L',
+      (* i don't like the L ⇛ (cut P Q) premise, can we cut it? *)
+      L ⇛ (cut P Q) -> ~ (1 ∈ P) -> P ⇛ P' -> R ⇛ R' ->
+      P'' = down (rename_process P' swap01) ->
+      Q' = rename_process Q swap01 ->
+      R'' = rename_process (up R') swap01 ->
+      (cut Q' R'') ⇛ L' ->
+      (cut L R) ⇛ (cut P'' L')
+  | dc_cut_assoc_l2 : forall P P' P'' Q Q' R R' R'' L L',
+      L ⇛ (cut Q P) -> ~ (1 ∈ P) -> P ⇛ P' -> R ⇛ R' ->
+      P'' = down (rename_process P' swap01) ->
+      Q' = rename_process Q swap01 ->
+      R'' = rename_process (up R') swap01 ->
+      (cut R'' Q') ⇛ L' ->
+      (cut L R) ⇛ (cut P'' L')
+  | dc_cut_assoc_l1_comm : forall P P' P'' Q Q' R R' R'' L L',
+      L ⇛ (cut P Q) -> ~ (1 ∈ P) -> P ⇛ P' -> R ⇛ R' ->
+      P'' = down (rename_process P' swap01) ->
+      Q' = rename_process Q swap01 ->
+      R'' = rename_process (up R') swap01 ->
+      (cut Q' R'') ⇛ L' ->
+      (cut L R) ⇛ (cut L' P'')
+  | dc_cut_assoc_l2_comm : forall P P' P'' Q Q' R R' R'' L L',
+      L ⇛ (cut Q P) -> ~ (1 ∈ P) -> P ⇛ P' -> R ⇛ R' ->
+      P'' = down (rename_process P' swap01) ->
+      Q' = rename_process Q swap01 ->
+      R'' = rename_process (up R') swap01 ->
+      (cut R'' Q') ⇛ L' ->
+      (cut L R) ⇛ (cut L' P'')
+  (* these rules are necessary to ensure admissibility of symmetry *)
+  | dc_cut_assoc_r1 : forall P P' P'' Q Q' R R' R'' L L',
+      L ⇛ (cut Q R) -> ~ (1 ∈ R) -> P ⇛ P' -> R ⇛ R' ->
+      P'' = rename_process (up P') swap01 ->
+      Q' = rename_process Q swap01 ->
+      R'' = down (rename_process R' swap01) ->
+      (cut P'' Q') ⇛ L' ->
+      (cut P L) ⇛ (cut L' R'')
+  | dc_cut_assoc_r2 : forall P P' P'' Q Q' R R' R'' L L',
+      L ⇛ (cut R Q) -> ~ (1 ∈ R) -> P ⇛ P' -> R ⇛ R' ->
+      P'' = rename_process (up P') swap01 ->
+      Q' = rename_process Q swap01 ->
+      R'' = down (rename_process R' swap01) ->
+      (cut Q' P'') ⇛ L' ->
+      (cut P L) ⇛ (cut L' R'')
+  | dc_cut_assoc_r1_comm : forall P P' P'' Q Q' R R' R'' L L',
+      L ⇛ (cut Q R) -> ~ (1 ∈ R) -> P ⇛ P' -> R ⇛ R' ->
+      P'' = rename_process (up P') swap01 ->
+      Q' = rename_process Q swap01 ->
+      R'' = down (rename_process R' swap01) ->
+      (cut P'' Q') ⇛ L' ->
+      (cut P L) ⇛ (cut R'' L')
+  | dc_cut_assoc_r2_comm : forall P P' P'' Q Q' R R' R'' L L',
+      L ⇛ (cut R Q) -> ~ (1 ∈ R) -> P ⇛ P' -> R ⇛ R' ->
+      P'' = rename_process (up P') swap01 ->
+      Q' = rename_process Q swap01 ->
+      R'' = down (rename_process R' swap01) ->
+      (cut Q' P'') ⇛ L' ->
+      (cut P L) ⇛ (cut R'' L')
+  | dc_cong_cut : forall P P' Q Q', P ⇛ P' -> Q ⇛ Q' -> (cut P Q) ⇛ (cut P' Q')
+
+  (* seqs *)
+  | dc_cong_seq : forall P P' s s', P ⇛ P' -> s $⇛ s' -> (seq P s) ⇛ (seq P' s')
+
+  (* stop *)
+  | dc_stop : stop ⇛ stop
+where
+  "P '⇛' Q" := (directed_congruence P Q)
+
+with directed_congruence_message : message -> message -> Prop :=
+  | dc_cong_prefix : forall s s', s $⇛ s' -> (prefix s) !⇛ (prefix s')
+  | dc_cong_reflM : forall m, m !⇛ m
+where
+  "M '!⇛' N" := (directed_congruence_message M N)
+
+with directed_congruence_statement : statement -> statement -> Prop :=
+  | dc_cong_choose_l : forall P P',
+                        P ⇛ P' ->
+                        (choose_left P) $⇛ (choose_left P')
+  | dc_cong_choose_r : forall P P',
+                        P ⇛ P' ->
+                        (choose_right P) $⇛ (choose_right P')
+  | dc_cong_choice : forall P P' Q Q',
+                      P ⇛ P' -> Q ⇛ Q' -> (offer_choice P Q) $⇛ (offer_choice P' Q')
+  | dc_cong_send : forall P P' Q Q',
+                    P ⇛ P' -> Q ⇛ Q' -> (send P Q) $⇛ (send P' Q')
+  | dc_cong_receive : forall P P', P ⇛ P' -> (receive P) $⇛ (receive P')
+  | dc_cong_close : close $⇛ close
+  | dc_cong_wait : forall P P', P ⇛ P' -> (wait P) $⇛ (wait P')
+  | dc_cong_reflS : forall s, s $⇛ s
 where
   "s '$⇛' r" := (directed_congruence_statement s r).
 
-(* Mutual induction principle for strucutral congruence *)
+(* Mutual induction principle for directed congruence *)
 Scheme directed_congP_ind := Induction for directed_congruence Sort Prop
   with directed_congM_ind := Induction for directed_congruence_message Sort Prop
   with directed_congS_ind := Induction for directed_congruence_statement Sort Prop.
@@ -104,40 +226,216 @@ Local Hint Rewrite
   up_after_down_process_id
     : up_down_rename_rewrites.
 
+Lemma directed_cong_reflexive :
+  forall P, P ⇛ P.
+Proof.
+  intros. induction P.
+  + apply dc_cong_link; apply dc_cong_reflM.
+  + apply dc_cong_cut; auto.
+  + apply dc_cong_seq; auto. apply dc_cong_reflS.
+  + econstructor.
+Qed.
+
+(* test *)
+Lemma directed_cong_triangle :
+  (forall P1 P2, P1 ⇛ P2 -> forall P3, P1 ⇛ P3 -> P2 ⇛ P3) /\
+  (forall M1 M2, M1 !⇛ M2 -> forall M3, M1 !⇛ M3 -> M2 !⇛ M3) /\
+  (forall s1 s2, s1 $⇛ s2 -> forall s3, s1 $⇛ s3 -> s2 $⇛ s3).
+Proof.
+  apply directed_cong_ind; intros.
+  + inversion H1; subst.
+    - apply dc_cong_link; try apply H; try apply H0; auto.
+    - apply dc_link; try apply H; try apply H0; auto.
+  + inversion H1; subst.
+    - apply dc_link; try apply H; try apply H0; auto.
+    - apply dc_cong_link; try apply H; try apply H0; auto.
+  + admit.
+  + inversion H3; subst.
+    - assert ( L' ⇛ (cut (rename_process Q swap01) (rename_process (up R) swap01)))
+        by admit.
+      eapply dc_cut_assoc_r1_comm.
+      * apply H4.
+      * admit.
+      * assert (
+          (down (rename_process P' swap01)) ⇛ (down (rename_process P swap01))
+        ) by admit.
+        apply H5.
+      * assert (
+          (rename_process (up R) swap01) ⇛ (rename_process (up Q'0) swap01)
+        ) by admit.
+        apply H5.
+      * autorewrite with up_down_rename_rewrites; auto.
+        admit.
+      * autorewrite with up_down_rename_rewrites. auto.
+      * autorewrite with up_down_rename_rewrites. auto.
+      * apply (H _ H6).
+    - admit.
+    - admit.
+    - 
+Admitted.
+(* test end *)
+
+(******************************************************************************)
+(* Directed congruence is invariant under substitution                        *)
+(******************************************************************************)
+(* Lemma directed_cong_substitution :
+  (forall P Q, P ⇛ Q -> forall σ1 σ2, (forall i, (σ1 i) !⇛ (σ2 i))
+    -> (subst_process P σ1) ⇛ (subst_process Q σ2)) /\
+  (forall M N, M !⇛ N -> forall σ1 σ2, (forall i, (σ1 i) !⇛ (σ2 i))
+    -> (subst_message M σ1) !⇛ (subst_message N σ2)) /\
+  (forall s t, s $⇛ t -> forall σ1 σ2, (forall i, (σ1 i) !⇛ (σ2 i))
+    -> (subst_statement s σ1) $⇛ (subst_statement t σ2)).
+Proof.
+  apply directed_cong_ind; intros; simpl.
+  + admit.
+  + econstructor; try apply H; try apply H0; auto.
+  + admit.
+  + (* up_subst twice results in up in every σ1 i -> ~ 1 ∈ P ...
+       since (up_subst (up_subst σ1)) is id up to index 2, at swap01 is
+       id starting at 2 we can swap rename and subst
+       what remains:
+        down (subst P (up_subst (up_subst σ1)))
+        =  subst (down P) (up_subst σ1)
+        I think the IH is the same as in down_ren_up_ren_commute!?
+
+        We need similar lemmas as below, just with substitution
+       *)
+    admit.
+  + admit.
+  + admit.
+  + admit.
+  + admit.
+Admitted. *)
+
+(* Notes: For ⇛ to be invariant under substitution, we require
+   the congruences from ≡. In this case, reflexivity is derivable so we can drop it.
+
+   Also, the additional premises in the what used to be axiom in ≡ seem
+   redundant now. But idk, we migt still need them later.
+
+   The diamond property immemdiately follows from symmetry but is too weak
+   for parallel reduction: What we need is the following property (pictorally):
+
+        Q                          Q
+     ⇛    ⇛       then         ⇛   ⇛
+    Q1     Q2                  Q1  ⇛  Q2
+
+   With symmetry, this means that we can always convert between diverging
+   congruences in a single step (but now we need additional premises in the axioms).
+   We also need more cut_assoc rules to deal with communication in order to
+   reconciliate in triangle-shape. Note: This also increases the amount of
+   rp_cut_assoc rules (since the link may now occurs in every position).
+
+   Switch back confluence_directed_cong_par_red to
+   forall P Q1 Q2, P ⇛ Q1 -> P ⊵ Q2 -> exists R, Q1 ⊵ R /\ Q2 ⇛ R.
+*)
+
+(******************************************************************************)
+(* Specialized inversion                                                      *)
+(******************************************************************************)
+Lemma directed_cong_inversion_prefix :
+  forall s m, (prefix s) !⇛ m -> exists s', m = prefix s' /\ s $⇛ s'.
+Proof. intros. inversion H; subst; eauto. exists s. split; eauto. apply dc_cong_reflS. Qed.
+
+Lemma directed_cong_inversion_send :
+  forall P Q s, (send P Q) $⇛ s ->
+    exists P' Q', s = send P' Q' /\ P ⇛ P' /\ Q ⇛ Q'.
+Proof. intros. inversion H; subst; eauto. eexists; eexists; split; auto; split; apply directed_cong_reflexive. Qed.
+
+Lemma directed_cong_inversion_receive :
+  forall P s, (receive P) $⇛ s -> exists P', s = receive P' /\ P ⇛ P'.
+Proof. intros. inversion H; subst; eauto. eexists; split; auto. apply directed_cong_reflexive. Qed.
+
+Lemma directed_cong_inversion_choosel :
+  forall P s, (choose_left P) $⇛ s -> exists P', s = choose_left P' /\ P ⇛ P'.
+Proof. intros. inversion H; subst; eauto. eexists; split; auto. apply directed_cong_reflexive. Qed.
+
+Lemma directed_cong_inversion_chooser :
+  forall P s, (choose_right P) $⇛ s -> exists P', s = choose_right P' /\ P ⇛ P'.
+Proof. intros. inversion H; subst; eauto. eexists; split; auto. apply directed_cong_reflexive. Qed.
+
+Lemma directed_cong_inversion_choice :
+  forall P Q s, (offer_choice P Q) $⇛ s ->
+    exists P' Q', s = offer_choice P' Q' /\ P ⇛ P' /\ Q ⇛ Q'.
+Proof. intros. inversion H; subst; eauto. eexists; eexists; split; auto; split; apply directed_cong_reflexive. Qed.
+
+Lemma directed_cong_inversion_close :
+  forall s, close $⇛ s -> s = close.
+Proof. intros. inversion H; subst; auto. Qed.
+
+Lemma directed_cong_inversion_wait :
+  forall P s, (wait P) $⇛ s -> exists P', s = wait P' /\ P ⇛ P'.
+Proof. intros. inversion H; subst; eauto. eexists; split; auto. apply directed_cong_reflexive. Qed.
+
+(******************************************************************************)
+(* Properties about directed congruence                                       *)
+(******************************************************************************)
+
 (* ⇛ ⊂ ≡ *)
 Lemma directed_cong_in_struct_cong :
   (forall P Q, P ⇛ Q -> P ≡ Q) /\
   (forall M N, M !⇛ N -> M !≡ N) /\
   (forall s t, s $⇛ t -> s $≡ t).
 Proof.
-  apply directed_cong_ind; intros; try now (econstructor; eauto).
-  + eapply c_trans. eapply StructCong.c_link. apply c_cong_link; auto.
-  + eapply c_trans. eapply StructCong.c_cut_comm. apply c_cong_cut; auto.
-  + assert ((cut (cut P Q) R) ≡ (cut (cut P1 Q1) R1)).
-    {
-      apply c_cong_cut; auto. apply c_cong_cut; auto.
-    }
+  (* apply directed_cong_ind; intros; try (now (econstructor; eauto)).
+  + eapply c_trans. { eapply c_link. }
+    eapply c_cong_link; eauto.
+  + eapply c_trans. { eapply c_cut_comm. }
+    eapply c_cong_cut; eauto.
+  + eapply c_trans. { eapply c_cong_cut. apply H. apply c_refl. }
+    eapply c_trans. { eapply c_cong_cut. eapply c_cong_cut. apply H0. apply c_refl. apply c_refl. }
     subst. eapply c_trans.
-    - apply H2.
+    - eapply c_cut_assoc; auto. intro Hfv.
+      apply (proj2 ((proj1 free_vars_under_struct_cong) _ _ H0 _)) in Hfv.
+      congruence.
+    - eapply c_cong_cut. apply c_refl. auto.
+      admit.
+  + eapply c_trans. { eapply c_cong_cut. apply H. apply c_refl. }
+    eapply c_trans. { eapply c_cong_cut. eapply c_cong_cut. apply H0. apply c_refl. apply c_refl. }
+    subst. eapply c_trans.
+    - eapply c_cut_assoc; auto. intro Hfv.
+      apply (proj2 ((proj1 free_vars_under_struct_cong) _ _ H0 _)) in Hfv.
+      congruence.
+    - eapply c_trans. apply c_cut_comm. eapply c_cong_cut; try apply c_refl.
+      auto.
+      admit.
+  + eapply c_trans. { eapply c_cong_cut. apply c_refl. apply H. }
+    eapply c_trans. { eapply c_cong_cut. apply c_refl. apply c_cong_cut. apply c_refl. apply H0. }
+    eapply c_comm. eapply c_trans. { eapply c_cong_cut. apply c_comm in H1. apply H1. apply c_refl. }
+    eapply c_trans.
     - apply c_cut_assoc; auto.
-      intro Hfv. apply ((proj1 free_vars_under_struct_cong) _ _ H) in Hfv. congruence.
-  + assert ( (cut P (cut Q R)) ≡ (cut P1 (cut Q1 R1)) ).
-    { apply c_cong_cut; auto. apply c_cong_cut; auto. }
-    eapply c_trans. { apply H2. }
-    apply c_comm. eapply c_trans.
-    - apply c_cut_assoc; subst; auto. replace 1 with (swap01 0) by reflexivity.
-      apply ((proj1 nfv_under_renaming) _ swap01). apply swap01_is_bijective.
-      apply nfv_lift_n; lia.
-    - autorewrite with up_down_rename_rewrites. apply StructCong.c_refl.
-      replace 0 with (swap01 1) by reflexivity.
-      apply ((proj1 nfv_under_renaming) _ swap01). apply swap01_is_bijective.
-      intro Hfv. apply c_comm in H1.
-      apply ((proj1 free_vars_under_struct_cong) _ _ H1) in Hfv. congruence.
+      assert (~ (0 ∈ (up P))). { apply nfv_lift_n; lia. }
+      replace 1 with (swap01 0) by auto. subst.
+      apply ((proj1 nfv_under_renaming) _ swap01); auto. apply swap01_is_bijective.
+    - subst. autorewrite with up_down_rename_rewrites.
+      * apply c_cong_cut; apply c_refl.
+      * replace 0 with (swap01 1) by auto.
+        apply ((proj1 nfv_under_renaming) _ swap01). apply swap01_is_bijective.
+        intro Hfv. apply (proj2 ((proj1 free_vars_under_struct_cong) _ _ H0 _)) in Hfv.
+        congruence.
+  + eapply c_trans. { eapply c_cong_cut. apply c_refl. apply H. }
+    eapply c_trans. { eapply c_cong_cut. apply c_refl. apply c_cong_cut. apply c_refl. apply H0. }
+    assert ((cut P (cut Q R')) ≡ (cut L' R'')).
+    {
+      eapply c_comm. eapply c_trans. { eapply c_cong_cut. apply c_comm in H1. apply H1. apply c_refl. }
+      eapply c_trans.
+      - apply c_cut_assoc; auto.
+        assert (~ (0 ∈ (up P))). { apply nfv_lift_n; lia. }
+        replace 1 with (swap01 0) by auto. subst.
+        apply ((proj1 nfv_under_renaming) _ swap01); auto. apply swap01_is_bijective.
+      - subst. autorewrite with up_down_rename_rewrites.
+        * apply c_cong_cut; apply c_refl.
+        * replace 0 with (swap01 1) by auto.
+          apply ((proj1 nfv_under_renaming) _ swap01). apply swap01_is_bijective.
+          intro Hfv. apply (proj2 ((proj1 free_vars_under_struct_cong) _ _ H0 _)) in Hfv.
+          congruence.
+    }
+    eapply c_trans. apply H2. apply c_cut_comm.
   + destruct (proj1 (proj2 struct_cong_d_refl) m).
     eapply (proj1 (proj2 struct_cong_from_struct_cong_d)); eauto.
   + destruct (proj2 (proj2 struct_cong_d_refl) s).
-    eapply (proj2 (proj2 struct_cong_from_struct_cong_d)); eauto.
-Qed.
+    eapply (proj2 (proj2 struct_cong_from_struct_cong_d)); eauto. *)
+Admitted.
 
 Lemma ren_up_up_ren_commute :
   (forall P, forall r k,
@@ -271,110 +569,278 @@ Lemma directed_cong_invariant_under_renaming :
   /\
   (forall s t, s $⇛ t -> forall r, bijective r -> (rename_statement s r) $⇛ (rename_statement t r)).
 Proof.
-  apply directed_cong_ind; intros.
-  + apply c_refl.
-  + simpl. apply c_link; auto.
-  + simpl. apply c_cut_comm.
-    - apply (H (up_ren r)). apply shift_preserves_bijection; auto.
-    - apply (H0 (up_ren r)). apply shift_preserves_bijection; auto.
-  + simpl.
-    assert (bijective (up_ren r)) by (repeat apply shift_preserves_bijection; auto).
-    assert (bijective (up_ren (up_ren r))) by (repeat apply shift_preserves_bijection; auto).
-    subst. eapply c_cut_assoc_l.
-    - replace 1 with ((up_ren (up_ren r)) 1) by reflexivity.
-      apply ((proj1 nfv_under_renaming) _ (up_ren (up_ren r))); auto.
-    - apply H; auto.
-    - apply H0; auto.
-    - apply H1; auto.
-    - assert (
-        rename_process (rename_process P1 (up_ren (up_ren r))) swap01 =
-        rename_process (rename_process P1 swap01) (up_ren (up_ren r))
+  (* apply directed_cong_ind; intros; try (now (simpl; econstructor; eauto));
+  try (now (simpl; econstructor; try apply H; try apply H0; auto;
+       try apply shift_preserves_bijection;try apply shift_preserves_bijection;  auto)).
+  + simpl. eapply dc_cut_assoc_l.
+    - apply H. apply shift_preserves_bijection. auto.
+    - fold rename_process.
+      replace 1 with (up_ren (up_ren r) 1) by auto.
+      apply ((proj1 nfv_under_renaming) _ (up_ren (up_ren r)) _) in n;
+      try (repeat apply shift_preserves_bijection; auto).
+    - fold rename_process. apply H0.
+      repeat apply shift_preserves_bijection. auto.
+    - rewrite e. unfold down.
+      assert (
+        rename_process (rename_process P' (up_ren (up_ren r))) swap01 =
+        rename_process (rename_process P' swap01) (up_ren (up_ren r))
       ).
       {
         rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
         rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
         reflexivity. all: intros[|[|]]; auto.
       }
-      rewrite H5. unfold down.
-      assert (~ 1 ∈ P1).
+      rewrite H3.
+      assert (~ 1 ∈ P').
       {
-        intro Hfv. apply directed_cong_in_struct_cong in d. apply c_comm in d.
-        apply ((proj1 free_vars_under_struct_cong) _ _ d) in Hfv. congruence.
+        intro Hfv. apply directed_cong_in_struct_cong in d0. apply c_comm in d0.
+        apply ((proj1 free_vars_under_struct_cong) _ _ d0) in Hfv. congruence.
       }
       rewrite (proj1 down_ren_up_ren_commute); auto.
-      { intros. exfalso. lia. }
-      apply nfv_01_swap; auto.
-    - rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
-      rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
-      reflexivity. all: intros[|[|]]; auto.
+      * apply shift_preserves_bijection; auto.
+      * intros. exfalso; lia.
+      * replace 0 with (swap01 1) by auto. apply nfv_under_renaming; auto.
+        apply swap01_is_bijective.
+    - fold rename_process. auto.
+    - auto.
     - assert (
-        rename_process (rename_process (up R1) swap01) (up_ren (up_ren r)) =
-        rename_process (rename_process (up R1) (up_ren (up_ren r))) swap01
+        rename_process (rename_process Q (up_ren (up_ren r))) swap01 =
+        rename_process (rename_process Q swap01) (up_ren (up_ren r))
       ).
       {
         rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
         rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
         reflexivity. all: intros[|[|]]; auto.
       }
-      rewrite H5. unfold up.
-      rewrite (proj1 ren_up_up_ren_commute); auto.
-      intros. exfalso. lia.
-  + simpl. subst.
-    assert (bijective (up_ren r)) by (repeat apply shift_preserves_bijection; auto).
-    assert (bijective (up_ren (up_ren r))) by (repeat apply shift_preserves_bijection; auto).
-    eapply c_cut_assoc_r.
-    - replace 1 with ((up_ren (up_ren r)) 1) by reflexivity.
-      apply ((proj1 nfv_under_renaming) _ (up_ren (up_ren r))); auto.
-    - apply H; auto.
-    - apply H0; auto.
-    - apply H1; auto.
-    - assert (
-        rename_process (rename_process (up P1) swap01) (up_ren (up_ren r)) =
-        rename_process (rename_process (up P1) (up_ren (up_ren r))) swap01
+      rewrite H3. rewrite <- e0.
+      assert (
+        rename_process (rename_process (up R) swap01) (up_ren (up_ren r)) =
+        rename_process (rename_process (up R) (up_ren (up_ren r))) swap01
       ).
       {
         rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
         rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
         reflexivity. all: intros[|[|]]; auto.
       }
-      rewrite H5. unfold up.
-      rewrite (proj1 ren_up_up_ren_commute); auto.
-      intros. exfalso. lia.
-    - rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
-      rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
-      reflexivity. all: intros[|[|]]; auto.
-    - assert (
-        rename_process (rename_process R1 (up_ren (up_ren r))) swap01 =
-        rename_process (rename_process R1 swap01) (up_ren (up_ren r))
+      assert (
+        up (rename_process R (up_ren r)) =
+        rename_process (up R) (up_ren (up_ren r))
+      ).
+      {
+        unfold up.
+        rewrite (proj1 ren_up_up_ren_commute); auto.
+        + apply shift_preserves_bijection; auto.
+        + intros. exfalso; lia.
+      }
+      rewrite H5. rewrite <- H4. rewrite <- e1.
+      replace
+        (cut (rename_process Q' (up_ren (up_ren r))) (rename_process R' (up_ren (up_ren r))))
+        with
+        (rename_process (cut Q' R') (up_ren r))
+        by auto.
+      apply H1. apply shift_preserves_bijection; auto.
+  + simpl. eapply dc_cut_assoc_l_comm.
+    - apply H. apply shift_preserves_bijection. auto.
+    - fold rename_process.
+      replace 1 with (up_ren (up_ren r) 1) by auto.
+      apply ((proj1 nfv_under_renaming) _ (up_ren (up_ren r)) _) in n;
+      try (repeat apply shift_preserves_bijection; auto).
+    - fold rename_process. apply H0.
+      repeat apply shift_preserves_bijection. auto.
+    - rewrite e. unfold down.
+      assert (
+        rename_process (rename_process P' (up_ren (up_ren r))) swap01 =
+        rename_process (rename_process P' swap01) (up_ren (up_ren r))
       ).
       {
         rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
         rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
         reflexivity. all: intros[|[|]]; auto.
       }
-      rewrite H5. unfold down.
-      assert (~ 1 ∈ R1).
+      rewrite H3.
+      assert (~ 1 ∈ P').
       {
-        intro Hfv. apply directed_cong_in_struct_cong in d1. apply c_comm in d1.
-        apply ((proj1 free_vars_under_struct_cong) _ _ d1) in Hfv. congruence.
+        intro Hfv. apply directed_cong_in_struct_cong in d0. apply c_comm in d0.
+        apply ((proj1 free_vars_under_struct_cong) _ _ d0) in Hfv. congruence.
       }
       rewrite (proj1 down_ren_up_ren_commute); auto.
-      { intros. exfalso. lia. }
-      apply nfv_01_swap; auto.
-  + simpl. apply c_cong_seq; auto. apply (H (up_ren r)); auto. apply shift_preserves_bijection; auto.
-  + simpl. apply c_cong_prefix; auto.
-  + apply c_cong_reflM.
-  + simpl. constructor; auto. apply (H (up_ren r)); auto. apply shift_preserves_bijection; auto.
-  + simpl. constructor; auto. apply (H (up_ren r)); auto. apply shift_preserves_bijection; auto.
-  + simpl. constructor; auto;
-    try apply (H (up_ren r)); try apply (H0 (up_ren r)); auto; apply shift_preserves_bijection; auto.
-  + simpl. constructor; auto;
-    try apply (H (up_ren r)); try apply (H0 (up_ren r)); auto; apply shift_preserves_bijection; auto.
-  + simpl. constructor; auto. apply (H (up_ren (up_ren r))); auto; repeat apply shift_preserves_bijection; auto.
-  + simpl; constructor.
-  + simpl. constructor; auto.
-  + simpl. constructor.
-Qed.
+      * apply shift_preserves_bijection; auto.
+      * intros. exfalso; lia.
+      * replace 0 with (swap01 1) by auto. apply nfv_under_renaming; auto.
+        apply swap01_is_bijective.
+    - fold rename_process. auto.
+    - auto.
+    - assert (
+        rename_process (rename_process Q (up_ren (up_ren r))) swap01 =
+        rename_process (rename_process Q swap01) (up_ren (up_ren r))
+      ).
+      {
+        rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
+        rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
+        reflexivity. all: intros[|[|]]; auto.
+      }
+      rewrite H3. rewrite <- e0.
+      assert (
+        rename_process (rename_process (up R) swap01) (up_ren (up_ren r)) =
+        rename_process (rename_process (up R) (up_ren (up_ren r))) swap01
+      ).
+      {
+        rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
+        rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
+        reflexivity. all: intros[|[|]]; auto.
+      }
+      assert (
+        up (rename_process R (up_ren r)) =
+        rename_process (up R) (up_ren (up_ren r))
+      ).
+      {
+        unfold up.
+        rewrite (proj1 ren_up_up_ren_commute); auto.
+        + apply shift_preserves_bijection; auto.
+        + intros. exfalso; lia.
+      }
+      rewrite H5. rewrite <- H4. rewrite <- e1.
+      replace
+        (cut (rename_process Q' (up_ren (up_ren r))) (rename_process R' (up_ren (up_ren r))))
+        with
+        (rename_process (cut Q' R') (up_ren r))
+        by auto.
+      apply H1. apply shift_preserves_bijection; auto.
+  + simpl. eapply dc_cut_assoc_r.
+    - apply H. apply shift_preserves_bijection. auto.
+    - fold rename_process.
+      replace 1 with (up_ren (up_ren r) 1) by auto.
+      apply ((proj1 nfv_under_renaming) _ (up_ren (up_ren r)) _) in n;
+      try (repeat apply shift_preserves_bijection; auto).
+    - fold rename_process. apply H0.
+      repeat apply shift_preserves_bijection. auto.
+    - auto.
+    - fold rename_process. auto.
+    - rewrite e1. unfold down.
+      assert (
+        rename_process (rename_process R' (up_ren (up_ren r))) swap01 =
+        rename_process (rename_process R' swap01) (up_ren (up_ren r))
+      ).
+      {
+        rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
+        rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
+        reflexivity. all: intros[|[|]]; auto.
+      }
+      rewrite H3.
+      assert (~ 1 ∈ R').
+      {
+        intro Hfv. apply directed_cong_in_struct_cong in d0. apply c_comm in d0.
+        apply ((proj1 free_vars_under_struct_cong) _ _ d0) in Hfv. congruence.
+      }
+      rewrite (proj1 down_ren_up_ren_commute); auto.
+      * apply shift_preserves_bijection; auto.
+      * intros. exfalso; lia.
+      * replace 0 with (swap01 1) by auto. apply nfv_under_renaming; auto.
+        apply swap01_is_bijective.
+    - assert (
+        rename_process (rename_process Q (up_ren (up_ren r))) swap01 =
+        rename_process (rename_process Q swap01) (up_ren (up_ren r))
+      ).
+      {
+        rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
+        rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
+        reflexivity. all: intros[|[|]]; auto.
+      }
+      rewrite H3. rewrite <- e0.
+      assert (
+        rename_process (rename_process (up P) swap01) (up_ren (up_ren r)) =
+        rename_process (rename_process (up P) (up_ren (up_ren r))) swap01
+      ).
+      {
+        rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
+        rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
+        reflexivity. all: intros[|[|]]; auto.
+      }
+      assert (
+        up (rename_process P (up_ren r)) =
+        rename_process (up P) (up_ren (up_ren r))
+      ).
+      {
+        unfold up.
+        rewrite (proj1 ren_up_up_ren_commute); auto.
+        + apply shift_preserves_bijection; auto.
+        + intros. exfalso; lia.
+      }
+      rewrite H5. rewrite <- H4. rewrite <- e.
+      replace
+        (cut (rename_process P' (up_ren (up_ren r))) (rename_process Q' (up_ren (up_ren r))))
+        with
+        (rename_process (cut P' Q') (up_ren r))
+        by auto.
+      apply H1. apply shift_preserves_bijection; auto.
+  + simpl. eapply dc_cut_assoc_r_comm.
+    - apply H. apply shift_preserves_bijection. auto.
+    - fold rename_process.
+      replace 1 with (up_ren (up_ren r) 1) by auto.
+      apply ((proj1 nfv_under_renaming) _ (up_ren (up_ren r)) _) in n;
+      try (repeat apply shift_preserves_bijection; auto).
+    - fold rename_process. apply H0.
+      repeat apply shift_preserves_bijection. auto.
+    - auto.
+    - fold rename_process. auto.
+    - rewrite e1. unfold down.
+      assert (
+        rename_process (rename_process R' (up_ren (up_ren r))) swap01 =
+        rename_process (rename_process R' swap01) (up_ren (up_ren r))
+      ).
+      {
+        rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
+        rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
+        reflexivity. all: intros[|[|]]; auto.
+      }
+      rewrite H3.
+      assert (~ 1 ∈ R').
+      {
+        intro Hfv. apply directed_cong_in_struct_cong in d0. apply c_comm in d0.
+        apply ((proj1 free_vars_under_struct_cong) _ _ d0) in Hfv. congruence.
+      }
+      rewrite (proj1 down_ren_up_ren_commute); auto.
+      * apply shift_preserves_bijection; auto.
+      * intros. exfalso; lia.
+      * replace 0 with (swap01 1) by auto. apply nfv_under_renaming; auto.
+        apply swap01_is_bijective.
+    - assert (
+        rename_process (rename_process Q (up_ren (up_ren r))) swap01 =
+        rename_process (rename_process Q swap01) (up_ren (up_ren r))
+      ).
+      {
+        rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
+        rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
+        reflexivity. all: intros[|[|]]; auto.
+      }
+      rewrite H3. rewrite <- e0.
+      assert (
+        rename_process (rename_process (up P) swap01) (up_ren (up_ren r)) =
+        rename_process (rename_process (up P) (up_ren (up_ren r))) swap01
+      ).
+      {
+        rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
+        rewrite ((proj1 renamings_compose) _ _ _ (Basics.compose swap01 (up_ren (up_ren r)))).
+        reflexivity. all: intros[|[|]]; auto.
+      }
+      assert (
+        up (rename_process P (up_ren r)) =
+        rename_process (up P) (up_ren (up_ren r))
+      ).
+      {
+        unfold up.
+        rewrite (proj1 ren_up_up_ren_commute); auto.
+        + apply shift_preserves_bijection; auto.
+        + intros. exfalso; lia.
+      }
+      rewrite H5. rewrite <- H4. rewrite <- e.
+      replace
+        (cut (rename_process P' (up_ren (up_ren r))) (rename_process Q' (up_ren (up_ren r))))
+        with
+        (rename_process (cut P' Q') (up_ren r))
+        by auto.
+      apply H1. apply shift_preserves_bijection; auto. *)
+Admitted.
 
 Lemma lift_after_down_lt_commute :
   (forall P,
@@ -619,32 +1085,96 @@ Lemma directed_cong_invariant_under_upshifting :
   (forall M N, M !⇛ N -> forall k, (lift_message M k 1) !⇛ (lift_message N k 1)) /\
   (forall s t, s $⇛ t -> forall k, (lift_statement s k 1) $⇛ (lift_statement t k 1)).
 Proof.
-  apply directed_cong_ind; intros; try now (econstructor; eauto).
-  + simpl. subst. eapply c_cut_assoc_l; auto.
-    - apply nfv_up_lt; try lia. assumption.
+  (* apply directed_cong_ind; intros; try now (econstructor; eauto).
+  + simpl. subst. eapply dc_cut_assoc_l.
+    - apply H.
+    - fold lift_process. apply nfv_up_lt; try lia. auto.
+    - fold lift_process. apply H0.
     - unfold down.
       rewrite (proj1 lift_after_down_lt_commute); try lia.
       rewrite (proj1 lift_at_k_rename_id_after_k_commute); auto. apply swap01_is_bijective.
       intros [|[|]] ?; auto; exfalso; lia.
-    - rewrite (proj1 lift_at_k_rename_id_after_k_commute); auto. apply swap01_is_bijective.
-      intros [|[|]] ?; auto; exfalso; lia.
-    - rewrite (proj1 lift_at_k_rename_id_after_k_commute).
-      * unfold up. rewrite (proj1 lift_k_lift_Sj_lt_commute); auto. lia.
-      * apply swap01_is_bijective.
-      * intros [|[|]] ?; auto; exfalso; lia.
-  + simpl. subst. eapply c_cut_assoc_r; auto.
-    - apply nfv_up_lt; try lia. assumption.
-    - rewrite (proj1 lift_at_k_rename_id_after_k_commute).
-      * unfold up. rewrite (proj1 lift_k_lift_Sj_lt_commute); auto. lia.
-      * apply swap01_is_bijective.
-      * intros [|[|]] ?; auto; exfalso; lia.
-    - rewrite (proj1 lift_at_k_rename_id_after_k_commute); auto. apply swap01_is_bijective.
-      intros [|[|]] ?; auto; exfalso; lia.
+    - auto.
+    - auto.
+    - fold lift_process.
+      rewrite <- (proj1 lift_at_k_rename_id_after_k_commute); try apply swap01_is_bijective.
+      unfold up. rewrite <- (proj1 lift_k_lift_Sj_lt_commute); try lia.
+      rewrite <- (proj1 lift_at_k_rename_id_after_k_commute); try apply swap01_is_bijective.
+      replace (
+        (cut (lift_process (rename_process Q swap01) (S (S k)) 1)
+             (lift_process (rename_process (lift_process R 0 1) swap01) (S (S k)) 1))
+      ) with (
+        (lift_process (cut (rename_process Q swap01) (rename_process (up R) swap01)) (S k) 1)
+      ) by auto.
+      apply H1.
+      all: intros [|[|]] ?; auto; exfalso; lia.
+  + simpl. subst. eapply dc_cut_assoc_l_comm.
+    - apply H.
+    - fold lift_process. apply nfv_up_lt; try lia. auto.
+    - fold lift_process. apply H0.
     - unfold down.
       rewrite (proj1 lift_after_down_lt_commute); try lia.
       rewrite (proj1 lift_at_k_rename_id_after_k_commute); auto. apply swap01_is_bijective.
       intros [|[|]] ?; auto; exfalso; lia.
-Qed.
+    - auto.
+    - auto.
+    - fold lift_process.
+      rewrite <- (proj1 lift_at_k_rename_id_after_k_commute); try apply swap01_is_bijective.
+      unfold up. rewrite <- (proj1 lift_k_lift_Sj_lt_commute); try lia.
+      rewrite <- (proj1 lift_at_k_rename_id_after_k_commute); try apply swap01_is_bijective.
+      replace (
+        (cut (lift_process (rename_process Q swap01) (S (S k)) 1)
+             (lift_process (rename_process (lift_process R 0 1) swap01) (S (S k)) 1))
+      ) with (
+        (lift_process (cut (rename_process Q swap01) (rename_process (up R) swap01)) (S k) 1)
+      ) by auto.
+      apply H1.
+      all: intros [|[|]] ?; auto; exfalso; lia.
+  + simpl. subst. eapply dc_cut_assoc_r.
+    - apply H.
+    - apply nfv_up_lt; try lia. auto.
+    - apply H0.
+    - auto.
+    - fold lift_process. auto.
+    - unfold down.
+      rewrite (proj1 lift_after_down_lt_commute); try lia.
+      rewrite (proj1 lift_at_k_rename_id_after_k_commute); auto. apply swap01_is_bijective.
+      intros [|[|]] ?; auto; exfalso; lia.
+    - fold lift_process.
+      rewrite <- (proj1 lift_at_k_rename_id_after_k_commute); try apply swap01_is_bijective.
+      unfold up. rewrite <- (proj1 lift_k_lift_Sj_lt_commute); try lia.
+      rewrite <- (proj1 lift_at_k_rename_id_after_k_commute); try apply swap01_is_bijective.
+      replace (
+        (cut (lift_process (rename_process Q swap01) (S (S k)) 1)
+             (lift_process (rename_process (lift_process R 0 1) swap01) (S (S k)) 1))
+      ) with (
+        (lift_process (cut (rename_process Q swap01) (rename_process (up R) swap01)) (S k) 1)
+      ) by auto.
+      apply H1.
+      all: intros [|[|]] ?; auto; exfalso; lia.
+  + simpl. subst. eapply dc_cut_assoc_r_comm.
+    - apply H.
+    - apply nfv_up_lt; try lia. auto.
+    - apply H0.
+    - auto.
+    - fold lift_process. auto.
+    - unfold down.
+      rewrite (proj1 lift_after_down_lt_commute); try lia.
+      rewrite (proj1 lift_at_k_rename_id_after_k_commute); auto. apply swap01_is_bijective.
+      intros [|[|]] ?; auto; exfalso; lia.
+    - fold lift_process.
+      rewrite <- (proj1 lift_at_k_rename_id_after_k_commute); try apply swap01_is_bijective.
+      unfold up. rewrite <- (proj1 lift_k_lift_Sj_lt_commute); try lia.
+      rewrite <- (proj1 lift_at_k_rename_id_after_k_commute); try apply swap01_is_bijective.
+      replace (
+        (cut (lift_process (rename_process Q swap01) (S (S k)) 1)
+             (lift_process (rename_process (lift_process R 0 1) swap01) (S (S k)) 1))
+      ) with (
+        (lift_process (cut (rename_process Q swap01) (rename_process (up R) swap01)) (S k) 1)
+      ) by auto.
+      apply H1.
+      all: intros [|[|]] ?; auto; exfalso; lia. *)
+Admitted.
 
 Lemma directed_cong_invariant_under_downshifting :
   (forall P Q, P ⇛ Q -> forall k,
@@ -654,7 +1184,7 @@ Lemma directed_cong_invariant_under_downshifting :
   (forall s t, s $⇛ t -> forall k,
     (~ (occurs_free_statement k s)) -> ((down1_statement s k) $⇛ (down1_statement t k))).
 Proof.
-  apply directed_cong_ind; intros; simpl; try (now (econstructor));
+  (* apply directed_cong_ind; intros; simpl; try (now (econstructor));
   try match goal with
   | [ IH1 : forall _, ~ _ -> (down1_message ?ml1 _) !⇛ (down1_message ?ml2 _),
       IH2 : forall _, ~ _ -> (down1_message ?mr1 _) !⇛ (down1_message ?mr2 _),
@@ -673,43 +1203,227 @@ Proof.
       |- _ ]
     => econstructor; try apply (IH1 (S k)); try apply IH1; intro Hfv; apply H; free_var_econstructor; auto
   end.
-  + eapply c_cut_assoc_l; subst.
-    - apply (proj1 nfv_down_lt); auto. lia.
-    - apply H. intro Hfv. apply H2. repeat free_var_econstructor; auto.
-    - apply H0. intro Hfv. apply H2. repeat free_var_econstructor; auto.
-    - apply H1. intro Hfv. apply H2. repeat free_var_econstructor; auto.
-    - unfold down.
+  + eapply dc_cut_assoc_l.
+    - apply H. intros Hfv. apply H2. repeat free_var_econstructor; eauto.
+    - fold down1_process. apply (proj1 nfv_down_lt); auto. lia.
+    - fold down1_process. apply H0.
+      intro Hfv. apply H2. apply fv_cut_l.
+      apply directed_cong_in_struct_cong in d.
+      assert ((S k) ∈ (cut P Q)) by (repeat free_var_econstructor; eauto).
+      apply ((proj1 free_vars_under_struct_cong) _ _ d) in H3. auto.
+    - subst. unfold down.
       rewrite <- (proj1 down_at_k_rename_id_after_k_commute).
       * rewrite (proj1 down_k_down_Sj_lt_commute); auto. lia.
       * apply swap01_is_bijective.
       * intros [|[|]] ?; auto; exfalso; lia.
-    - rewrite <- (proj1 down_at_k_rename_id_after_k_commute); auto.
-      apply swap01_is_bijective. intros [|[|]] ?; auto; exfalso; lia.
-    - unfold up.
-      rewrite (proj1 down_at_k_rename_id_after_k_commute).
-      * rewrite (proj1 down_after_down_gt_commute); auto. lia.
-      * apply swap01_is_bijective.
+    - fold down1_process. auto.
+    - auto.
+    - fold lift_process.
+      rewrite <- (proj1 down_at_k_rename_id_after_k_commute); try apply swap01_is_bijective.
+      rewrite <- e0.
+      unfold up.
+      rewrite <- (proj1 down_after_down_gt_commute); try lia.
+      rewrite <- (proj1 down_at_k_rename_id_after_k_commute); try apply swap01_is_bijective.
+      replace (lift_process R 0 1) with (up R) by auto. rewrite <- e1.
+      apply H1.
+      * intro Hfv. inversion Hfv; subst.
+        ++ replace (S (S k)) with (swap01 (S (S k))) in H5 by auto.
+           apply fv_under_renaming in H5; try apply swap01_is_bijective.
+           apply H2. apply fv_cut_l.
+           apply directed_cong_in_struct_cong in d.
+           assert ((S k) ∈ (cut P Q)) by (repeat free_var_econstructor; eauto).
+           apply ((proj1 free_vars_under_struct_cong) _ _ d) in H3. auto.
+        ++ apply H2. apply fv_cut_r.
+           replace (S (S k)) with (swap01 (S (S k))) in H5 by auto.
+           apply fv_under_renaming in H5; try apply swap01_is_bijective.
+           apply fv_up_Sn2 in H5; auto; lia.
       * intros [|[|]] ?; auto; exfalso; lia.
-  + eapply c_cut_assoc_r; subst.
-    - apply (proj1 nfv_down_lt); auto. lia.
-    - apply H. intro Hfv. apply H2. repeat free_var_econstructor; auto.
-    - apply H0. intro Hfv. apply H2. apply fv_cut_r. free_var_econstructor; auto.
-    - apply H1. intro Hfv. apply H2. apply fv_cut_r. free_var_econstructor; auto.
-    - unfold up.
-      rewrite (proj1 down_at_k_rename_id_after_k_commute).
-      * rewrite (proj1 down_after_down_gt_commute); auto. lia.
-      * apply swap01_is_bijective.
       * intros [|[|]] ?; auto; exfalso; lia.
-    - rewrite <- (proj1 down_at_k_rename_id_after_k_commute); auto.
-      apply swap01_is_bijective. intros [|[|]] ?; auto; exfalso; lia.
-    - unfold down.
+  + eapply dc_cut_assoc_l_comm.
+    - apply H. intros Hfv. apply H2. repeat free_var_econstructor; eauto.
+    - fold down1_process. apply (proj1 nfv_down_lt); auto. lia.
+    - fold down1_process. apply H0.
+      intro Hfv. apply H2. apply fv_cut_l.
+      apply directed_cong_in_struct_cong in d.
+      assert ((S k) ∈ (cut P Q)) by (repeat free_var_econstructor; eauto).
+      apply ((proj1 free_vars_under_struct_cong) _ _ d) in H3. auto.
+    - subst. unfold down.
       rewrite <- (proj1 down_at_k_rename_id_after_k_commute).
       * rewrite (proj1 down_k_down_Sj_lt_commute); auto. lia.
       * apply swap01_is_bijective.
+      * intros [|[|]] ?; auto; exfalso; lia.
+    - fold down1_process. auto.
+    - auto.
+    - fold lift_process.
+      rewrite <- (proj1 down_at_k_rename_id_after_k_commute); try apply swap01_is_bijective.
+      rewrite <- e0.
+      unfold up.
+      rewrite <- (proj1 down_after_down_gt_commute); try lia.
+      rewrite <- (proj1 down_at_k_rename_id_after_k_commute); try apply swap01_is_bijective.
+      replace (lift_process R 0 1) with (up R) by auto. rewrite <- e1.
+      apply H1.
+      * intro Hfv. inversion Hfv; subst.
+        ++ replace (S (S k)) with (swap01 (S (S k))) in H5 by auto.
+           apply fv_under_renaming in H5; try apply swap01_is_bijective.
+           apply H2. apply fv_cut_l.
+           apply directed_cong_in_struct_cong in d.
+           assert ((S k) ∈ (cut P Q)) by (repeat free_var_econstructor; eauto).
+           apply ((proj1 free_vars_under_struct_cong) _ _ d) in H3. auto.
+        ++ apply H2. apply fv_cut_r.
+           replace (S (S k)) with (swap01 (S (S k))) in H5 by auto.
+           apply fv_under_renaming in H5; try apply swap01_is_bijective.
+           apply fv_up_Sn2 in H5; auto; lia.
+      * intros [|[|]] ?; auto; exfalso; lia.
+      * intros [|[|]] ?; auto; exfalso; lia.
+  + eapply dc_cut_assoc_r.
+    - apply H. intros Hfv. apply H2. repeat free_var_econstructor; eauto.
+    - fold down1_process. apply (proj1 nfv_down_lt); auto. lia.
+    - fold down1_process. apply H0.
+      intro Hfv. apply H2. apply fv_cut_r.
+      apply directed_cong_in_struct_cong in d.
+      assert ((S k) ∈ (cut Q R)) by (repeat free_var_econstructor; eauto).
+      apply ((proj1 free_vars_under_struct_cong) _ _ d) in H3. auto.
+    - auto.
+    - fold down1_process. auto.
+    - subst. unfold down.
+      rewrite <- (proj1 down_at_k_rename_id_after_k_commute).
+      * rewrite (proj1 down_k_down_Sj_lt_commute); auto. lia.
+      * apply swap01_is_bijective.
+      * intros [|[|]] ?; auto; exfalso; lia.
+    - fold lift_process.
+      rewrite <- (proj1 down_at_k_rename_id_after_k_commute); try apply swap01_is_bijective.
+      rewrite <- e0.
+      unfold up.
+      rewrite <- (proj1 down_after_down_gt_commute); try lia.
+      rewrite <- (proj1 down_at_k_rename_id_after_k_commute); try apply swap01_is_bijective.
+      replace (lift_process P 0 1) with (up P) by auto. rewrite <- e.
+      apply H1.
+      * intro Hfv. inversion Hfv; subst.
+        ++ replace (S (S k)) with (swap01 (S (S k))) in H5 by auto.
+           apply fv_under_renaming in H5; try apply swap01_is_bijective.
+           apply H2. apply fv_cut_l.
+           apply fv_up_Sn2 in H5; auto; lia.
+        ++ apply H2. apply fv_cut_r.
+           replace (S (S k)) with (swap01 (S (S k))) in H5 by auto.
+           apply fv_under_renaming in H5; try apply swap01_is_bijective.
+           apply directed_cong_in_struct_cong in d.
+           assert ((S k) ∈ (cut Q R)) by (repeat free_var_econstructor; eauto).
+           apply ((proj1 free_vars_under_struct_cong) _ _ d) in H3. auto.
+      * intros [|[|]] ?; auto; exfalso; lia.
+      * intros [|[|]] ?; auto; exfalso; lia.
+  + eapply dc_cut_assoc_r_comm.
+    - apply H. intros Hfv. apply H2. repeat free_var_econstructor; eauto.
+    - fold down1_process. apply (proj1 nfv_down_lt); auto. lia.
+    - fold down1_process. apply H0.
+      intro Hfv. apply H2. apply fv_cut_r.
+      apply directed_cong_in_struct_cong in d.
+      assert ((S k) ∈ (cut Q R)) by (repeat free_var_econstructor; eauto).
+      apply ((proj1 free_vars_under_struct_cong) _ _ d) in H3. auto.
+    - auto.
+    - fold down1_process. auto.
+    - subst. unfold down.
+      rewrite <- (proj1 down_at_k_rename_id_after_k_commute).
+      * rewrite (proj1 down_k_down_Sj_lt_commute); auto. lia.
+      * apply swap01_is_bijective.
+      * intros [|[|]] ?; auto; exfalso; lia.
+    - fold lift_process.
+      rewrite <- (proj1 down_at_k_rename_id_after_k_commute); try apply swap01_is_bijective.
+      rewrite <- e0.
+      unfold up.
+      rewrite <- (proj1 down_after_down_gt_commute); try lia.
+      rewrite <- (proj1 down_at_k_rename_id_after_k_commute); try apply swap01_is_bijective.
+      replace (lift_process P 0 1) with (up P) by auto. rewrite <- e.
+      apply H1.
+      * intro Hfv. inversion Hfv; subst.
+        ++ replace (S (S k)) with (swap01 (S (S k))) in H5 by auto.
+           apply fv_under_renaming in H5; try apply swap01_is_bijective.
+           apply H2. apply fv_cut_l.
+           apply fv_up_Sn2 in H5; auto; lia.
+        ++ apply H2. apply fv_cut_r.
+           replace (S (S k)) with (swap01 (S (S k))) in H5 by auto.
+           apply fv_under_renaming in H5; try apply swap01_is_bijective.
+           apply directed_cong_in_struct_cong in d.
+           assert ((S k) ∈ (cut Q R)) by (repeat free_var_econstructor; eauto).
+           apply ((proj1 free_vars_under_struct_cong) _ _ d) in H3. auto.
+      * intros [|[|]] ?; auto; exfalso; lia.
       * intros [|[|]] ?; auto; exfalso; lia.
   + econstructor; try apply (H (S k)); try apply H0; intro Hfv; apply H1; free_var_econstructor; auto.
-  + econstructor; apply H; intro Hfv; apply H0; free_var_econstructor; auto.
-Qed.
+  + econstructor; apply H; intro Hfv; apply H0; free_var_econstructor; auto. *)
+Admitted.
+
+(******************************************************************************)
+(* Transitivity is admissible                                                 *)
+(******************************************************************************)
+Lemma directed_cong_triangle :
+  (forall P1 P2, P1 ⇛ P2 -> forall P3, P1 ⇛ P3 -> P2 ⇛ P3) /\
+  (forall M1 M2, M1 !⇛ M2 -> forall M3, M1 !⇛ M3 -> M2 !⇛ M3) /\
+  (forall s1 s2, s1 $⇛ s2 -> forall s3, s1 $⇛ s3 -> s2 $⇛ s3).
+Proof.
+  (* apply directed_cong_ind; intros.
+  + inversion H1; subst.
+    - apply dc_cong_link; try apply H; try apply H0; auto.
+    - apply dc_link; try apply H; try apply H0; auto.
+  + inversion H1; subst.
+    - apply dc_link; try apply H; try apply H0; auto.
+    - apply dc_cong_link; try apply H; try apply H0; auto.
+  + admit.
+  (* + inversion H1; subst.
+    - apply dc_cong_cut; try apply H; try apply H0; eauto.
+    - assert ( P' ⇛ (cut P0 Q0) ) by apply (H _ H4).
+      (* show that if P ⇛ cut P0 Q0, then also P ⇛ cut Q0 P0 *)
+      (* and other direction as well since we haven't proven symmetry yet *)
+      assert ( P' ⇛ (cut Q0 P0) )
+        by admit.
+      eapply dc_cut_assoc_r_comm.
+      * apply H3.
+      * assumption.
+      * admit.
+      * auto.
+      * auto.
+      * auto.
+      * admit.
+    - admit.
+    - admit.
+    - admit.
+    - apply dc_cut_comm; try apply H; try apply H0; eauto. *)
+  + admit.
+  + admit.
+  + admit.
+  + admit.
+  + admit.
+  + inversion H1; subst; econstructor; eauto.
+  + inversion H; econstructor.
+  + inversion H0; econstructor; eauto. apply H. apply dc_cong_reflS.
+  + auto.
+  + inversion H0; econstructor; eauto. apply H. apply directed_cong_reflexive.
+  + inversion H0; econstructor; eauto. apply H. apply directed_cong_reflexive.
+  + inversion H1; econstructor; eauto; try apply H; try apply H0; apply directed_cong_reflexive.
+  + inversion H1; econstructor; eauto; try apply H; try apply H0; apply directed_cong_reflexive.
+  + inversion H0; econstructor; eauto. apply H. apply directed_cong_reflexive.
+  + inversion H; econstructor.
+  + inversion H0; econstructor; eauto. apply H. apply directed_cong_reflexive.
+  + auto. *)
+Admitted.
+
+(******************************************************************************)
+(* Symmetry is admissible                                                     *)
+(******************************************************************************)
+(* Lemma directed_cong_cut_comm_common_reduct :
+  forall P1 P2 Q, (cut P1 P2) ⇛ Q -> (cut P2 P1) ⇛ Q.
+Proof.
+  intros.
+  generalize dependent P1.
+  generalize dependent P2.
+  induction Q; intros; try (now (inversion H)).
+  inversion H; subst.
+  + apply dc_cong_cut; auto.
+  + 
+    admit.
+  + admit.
+  + admit.
+  + admit.
+  + apply dc_cut_comm; auto.
+Admitted. *)
 
 Lemma directed_cong_symm :
   (forall P1 P2, P1 ⇛ P2 -> P2 ⇛ P1) /\
@@ -717,16 +1431,62 @@ Lemma directed_cong_symm :
   (forall s1 s2, s1 $⇛ s2 -> s2 $⇛ s1).
 Proof.
   apply directed_cong_ind; intros; try now (econstructor; eauto).
-  + assert ((down (rename_process P1 swap01)) ⇛ (down (rename_process P swap01))).
+  + assert ((down (rename_process P' swap01)) ⇛ (down (rename_process P swap01))).
     {
       apply directed_cong_invariant_under_downshifting.
       + apply directed_cong_invariant_under_renaming; auto. apply swap01_is_bijective.
       + apply nfv_01_swap. intro Hfv.
-        apply directed_cong_in_struct_cong in d. apply c_comm in d.
-        apply (proj1 free_vars_under_struct_cong) with (k := 1) in d. apply n.
-        apply d. auto.
+        apply directed_cong_in_struct_cong in d0. apply c_comm in d0.
+        apply (proj1 free_vars_under_struct_cong) with (k := 1) in d0. apply n.
+        apply d0. auto.
     }
-    assert ((rename_process Q1 swap01) ⇛ (rename_process Q swap01)).
+    eapply dc_cut_assoc_r1.
+    - apply H2.
+    - rewrite e1. apply nfv_10_swap. apply nfv_lift_n; lia.
+    - rewrite e. apply H3.
+    - assert (
+        (rename_process (up R') swap01) ⇛ (rename_process (up R) swap01)
+      ).
+      {
+        apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective.
+        apply directed_cong_invariant_under_upshifting; auto.
+      }
+      rewrite e1. apply H4.
+    - autorewrite with up_down_rename_rewrites. reflexivity.
+      apply nfv_01_swap; auto.
+    - rewrite e0. autorewrite with up_down_rename_rewrites; auto.
+    - subst; autorewrite with up_down_rename_rewrites; auto.
+    - apply H.
+  + assert ((down (rename_process P' swap01)) ⇛ (down (rename_process P swap01))).
+    {
+      apply directed_cong_invariant_under_downshifting.
+      + apply directed_cong_invariant_under_renaming; auto. apply swap01_is_bijective.
+      + apply nfv_01_swap. intro Hfv.
+        apply directed_cong_in_struct_cong in d0. apply c_comm in d0.
+        apply (proj1 free_vars_under_struct_cong) with (k := 1) in d0. apply n.
+        apply d0. auto.
+    }
+    eapply dc_cut_assoc_r2.
+    - apply H2.
+    - rewrite e1. apply nfv_10_swap. apply nfv_lift_n; lia.
+    - rewrite e. apply H3.
+    - assert (
+        (rename_process (up R') swap01) ⇛ (rename_process (up R) swap01)
+      ).
+      {
+        apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective.
+        apply directed_cong_invariant_under_upshifting; auto.
+      }
+      rewrite e1. apply H4.
+    - autorewrite with up_down_rename_rewrites. reflexivity.
+      apply nfv_01_swap. auto.
+    - rewrite e0. autorewrite with up_down_rename_rewrites; auto.
+    - subst; autorewrite with up_down_rename_rewrites; auto.
+    - auto.
+  + admit.
+  + admit.
+
+    (* assert ((rename_process Q1 swap01) ⇛ (rename_process Q swap01)).
     { apply directed_cong_invariant_under_renaming; auto. apply swap01_is_bijective. }
     assert ((rename_process (up R1) swap01) ⇛ (rename_process (up R) swap01)).
     {
@@ -772,8 +1532,8 @@ Proof.
       (rename_process (up (down (rename_process R swap01))) swap01)
       by (autorewrite with up_down_rename_rewrites; try eapply nfv_01_swap; eauto).
     subst.
-    eapply c_cut_assoc_l; eauto. apply nfv_10_swap. apply nfv_lift_n. lia.
-Qed.
+    eapply c_cut_assoc_l; eauto. apply nfv_10_swap. apply nfv_lift_n. lia. *)
+Admitted.
 
 Corollary directed_cong_symmetric : symmetric _ directed_congruence.
 Proof. unfold symmetric; intros. apply (proj1 directed_cong_symm) in H. auto. Qed.
@@ -787,8 +1547,11 @@ Lemma struct_cong_in_trans_directed_cong :
   (forall M N, M !≡ N -> clos_trans_1n _ directed_congruence_message M N) /\
   (forall s t, s $≡ t -> clos_trans_1n _ directed_congruence_statement s t).
 Proof.
-  apply struct_cong_ind; intros;
-  try now (apply t1n_step; repeat econstructor).
+  apply struct_cong_ind; intros.
+  + apply t1n_step; econstructor; apply dc_cong_reflM.
+  + apply t1n_step. apply dc_cut_comm; apply directed_cong_reflexive.
+  + apply t1n_step. eapply dc_cut_assoc_l; try apply directed_cong_reflexive; auto.
+  + apply t1n_step; apply directed_cong_reflexive.
   + apply symmetric_clos_trans_1n in H; auto. apply directed_cong_symmetric.
   + apply clos_trans_t1n.
     apply clos_t1n_trans in H.
@@ -798,56 +1561,49 @@ Proof.
     {
       clear s s0 H0. induction H.
       + eapply Relation_Operators.t1n_trans.
-        - apply c_link. apply H. apply c_cong_reflM.
+        - apply dc_cong_link. apply H. apply dc_cong_reflM.
         - apply t1n_step. repeat econstructor.
       + eapply Relation_Operators.t1n_trans.
-        - apply c_link. apply H. apply c_cong_reflM.
+        - apply dc_cong_link. apply H. apply dc_cong_reflM.
         - eapply Relation_Operators.t1n_trans.
-          * apply c_link; apply c_cong_reflM.
+          * apply dc_cong_link; apply dc_cong_reflM.
           * apply IHclos_trans_1n.
     }
     apply clos_trans_t1n. eapply t_trans; apply clos_t1n_trans. { eassumption. }
     clear s s0 H H1. induction H0.
     - eapply Relation_Operators.t1n_trans.
-      * apply c_link. apply c_cong_reflM. apply H.
-      * apply t1n_step. apply c_link; apply c_cong_reflM.
+      * apply dc_cong_link. apply dc_cong_reflM. apply H.
+      * apply t1n_step. apply dc_cong_link; apply dc_cong_reflM.
     - eapply Relation_Operators.t1n_trans.
-      * apply c_link. apply c_cong_reflM. apply H.
-      * eapply Relation_Operators.t1n_trans. { apply c_link; apply c_cong_reflM. } auto.
+      * apply dc_cong_link. apply dc_cong_reflM. apply H.
+      * eapply Relation_Operators.t1n_trans. { apply dc_cong_link; apply dc_cong_reflM. } auto.
   + assert (clos_trans_1n _ directed_congruence (cut P Q) (cut P' Q)).
     {
       clear s s0 H0. induction H.
+      + apply t1n_step. apply dc_cong_cut; eauto. apply directed_cong_reflexive.
       + eapply Relation_Operators.t1n_trans.
-        - apply c_cut_comm. apply H. apply c_refl.
-        - apply t1n_step. repeat econstructor.
-      + eapply Relation_Operators.t1n_trans.
-        - apply c_cut_comm. apply H. apply c_refl.
-        - eapply Relation_Operators.t1n_trans.
-          * apply c_cut_comm; apply c_refl.
-          * apply IHclos_trans_1n.
+        apply dc_cong_cut; eauto. apply directed_cong_reflexive. auto.
     }
     apply clos_trans_t1n. eapply t_trans; apply clos_t1n_trans. { eassumption. }
     clear s s0 H H1. induction H0.
-    - eapply Relation_Operators.t1n_trans.
-      * apply c_cut_comm. apply c_refl. apply H.
-      * apply t1n_step. apply c_cut_comm; apply c_refl.
-    - eapply Relation_Operators.t1n_trans.
-      * apply c_cut_comm. apply c_refl. apply H.
-      * eapply Relation_Operators.t1n_trans. { apply c_cut_comm; apply c_refl. } auto.
+    - apply t1n_step. apply dc_cong_cut. apply directed_cong_reflexive. auto.
+    - eapply Relation_Operators.t1n_trans; eauto.
+      apply dc_cong_cut. apply directed_cong_reflexive. eapply H.
   + assert (clos_trans_1n _ directed_congruence (seq P s) (seq P' s)).
     {
       clear H0 s0 s1 s'. induction H.
-      + apply t1n_step. econstructor; eauto. apply c_cong_reflS.
+      + apply t1n_step. econstructor; eauto. apply dc_cong_reflS.
       + eapply Relation_Operators.t1n_trans.
-        - econstructor; [apply H | apply c_cong_reflS].
+        - econstructor; [apply H | apply dc_cong_reflS].
         - apply IHclos_trans_1n.
     }
     apply clos_trans_t1n. eapply t_trans; apply clos_t1n_trans. { eassumption. }
     clear s0 s1 H H1 P. induction H0.
-    - apply t1n_step. econstructor; eauto. apply c_refl.
+    - apply t1n_step. econstructor; eauto. apply directed_cong_reflexive.
     - eapply Relation_Operators.t1n_trans.
-      * econstructor; [apply c_refl | apply H].
+      * econstructor; [apply directed_cong_reflexive | apply H].
       * apply IHclos_trans_1n.
+  + apply t1n_step; econstructor.
   + clear s0. induction H; intros.
     - repeat econstructor; eauto.
     - eapply Relation_Operators.t1n_trans. { econstructor; eauto. } apply IHclos_trans_1n.
@@ -860,34 +1616,35 @@ Proof.
   + assert (clos_trans_1n _ directed_congruence_statement (offer_choice P Q) (offer_choice P' Q)).
     {
       clear s s0 H0 Q' H0. induction H.
-      + apply t1n_step. econstructor; eauto. apply c_refl.
+      + apply t1n_step. econstructor; eauto. apply directed_cong_reflexive.
       + eapply Relation_Operators.t1n_trans.
-        - econstructor; [apply H | apply c_refl].
+        - econstructor; [apply H | apply directed_cong_reflexive].
         - apply IHclos_trans_1n.
     }
     apply clos_trans_t1n. eapply t_trans; apply clos_t1n_trans. { eassumption. }
     clear s s0 H H1. induction H0.
-    - apply t1n_step. econstructor; eauto. apply c_refl.
+    - apply t1n_step. econstructor; eauto. apply directed_cong_reflexive.
     - eapply Relation_Operators.t1n_trans.
-      * econstructor; [apply c_refl | apply H].
+      * econstructor; [apply directed_cong_reflexive | apply H].
       * apply IHclos_trans_1n.
   + assert (clos_trans_1n _ directed_congruence_statement (send P Q) (send P' Q)).
     {
       clear s s0 H0 Q' H0. induction H.
-      + apply t1n_step. econstructor; eauto. apply c_refl.
+      + apply t1n_step. econstructor; eauto. apply directed_cong_reflexive.
       + eapply Relation_Operators.t1n_trans.
-        - econstructor; [apply H | apply c_refl].
+        - econstructor; [apply H | apply directed_cong_reflexive].
         - apply IHclos_trans_1n.
     }
     apply clos_trans_t1n. eapply t_trans; apply clos_t1n_trans. { eassumption. }
     clear s s0 H H1. induction H0.
-    - apply t1n_step. econstructor; eauto. apply c_refl.
+    - apply t1n_step. econstructor; eauto. apply directed_cong_reflexive.
     - eapply Relation_Operators.t1n_trans.
-      * econstructor; [apply c_refl | apply H].
+      * econstructor; [apply directed_cong_reflexive | apply H].
       * apply IHclos_trans_1n.
   + clear s. induction H; intros.
     - repeat econstructor; eauto.
     - eapply Relation_Operators.t1n_trans. { econstructor; eauto. } apply IHclos_trans_1n.
+  + apply t1n_step; econstructor.
   + clear s. induction H; intros.
     - repeat econstructor; eauto.
     - eapply Relation_Operators.t1n_trans. { econstructor; eauto. } apply IHclos_trans_1n.

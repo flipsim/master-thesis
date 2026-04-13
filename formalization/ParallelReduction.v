@@ -117,17 +117,20 @@ Inductive par_reduces : process -> process -> Prop :=
 
   (* duplicate AxCut up to commutation and association of cuts *)
   | rp_ax_cut : forall M M' P P',
-      P ⇛ P' -> M !⇛ M' ->
+      P ⇛ P' -> M !⇛ M' -> (* !!!!!!!! this should be P ⊵ P' ??? or can we get away with ⇛ (I think this is the way, less effort ;) 
+                                not sure though if this work because of rp_cong_cut (but since redexes do not overlap, i.e.
+                                we dont really need a simultaneous reduction, this should be fine and if there are multiple
+                                redexes, it should be possible to use rp_cong_cut) *)
       cut (link (future 0) M) P ⊵ subst_process P' ((downM M') ⋅ id_subst)
   | rp_ax_cut_comm : forall M M' P P',
-      P ⇛ P' -> M !⇛ M' ->
+      P ⇛ P' -> M !⇛ M' -> (* !!!!!!!! this should be P ⊵ P' *)
       cut P (link (future 0) M) ⊵ subst_process P' ((downM M') ⋅ id_subst)
   (* this rules allows contraction if reduction diverges because of c_cut_assoc_l *)
   | rp_ax_cut_assoc_l : forall P P' P'' M M' M'' R R' R'',
-      P ⊵ P' -> M !⇛ M' -> R ⊵ R' -> ~ (1 ∈ R') ->
+      P ⊵ P' -> M !⇛ M' -> R ⊵ R' -> ~ (1 ∈ R') -> (* can we get away with ⇛ instead of ⊵ *)
       P'' = rename_process (up P') swap01 ->
       M'' = rename_message M' swap01 ->
-      R'' = down (rename_process R' swap01) ->
+      R'' = down (rename_process R' swap01) -> (* if ~ 1 ∈ R' then down (ren R' swap01) = down R' *)
       cut P (cut (link (future 1) M) R) ⊵ cut (subst_process P'' ((downM M'' ⋅ id_subst))) R''
   (* this rules allows contraction if reduction diverges because of c_cut_assoc_r *)
   | rp_ax_cut_assoc_r : forall P P' P'' M M' M'' R R' R'',

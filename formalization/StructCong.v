@@ -375,6 +375,20 @@ Proof.
   try destruct H; try destruct H0; eexists; econstructor; eauto.
 Qed.
 
+Lemma struct_cong_reflM :
+  forall M, M !≡ M.
+Proof.
+  intros. destruct ((proj1 (proj2 struct_cong_d_refl)) M).
+  eapply (proj1 (proj2 struct_cong_from_struct_cong_d)); eauto.
+Qed.
+
+Lemma struct_cong_reflS :
+  forall s, s $≡ s.
+Proof.
+  intros. destruct ((proj2 (proj2 struct_cong_d_refl)) s).
+  eapply (proj2 (proj2 struct_cong_from_struct_cong_d)); eauto.
+Qed.
+
 (* transitivity is derivable for messages and statements *)
 Lemma struct_cong_d_trans :
   forall n1 n2,
