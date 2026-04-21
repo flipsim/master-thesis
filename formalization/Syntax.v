@@ -1,5 +1,6 @@
 From Stdlib Require Import ssreflect.
 From Stdlib Require Import List.
+From Stdlib Require Import Lia.
 
 (******************************************************************************)
 (* Syntax                                                                     *)
@@ -91,6 +92,33 @@ Definition shift m n := lift_message m 0 n.
 Definition up  p := lift_process p 0 1.
 Definition upM m := lift_message m 0 1.
 Definition upS s := lift_statement s 0 1.
+
+(* shift with 0 is idempotent *)
+Lemma shift_with_0_idempotent :
+  (forall P n, lift_process P n 0 = P) /\
+  (forall M n, lift_message M n 0 = M) /\
+  (forall s n, lift_statement s n 0 = s).
+Proof.
+  apply syntax_ind; intros; simpl; try rewrite H; try rewrite H0; auto.
+  unfold relocate. destruct (Nat.leb n0 n); auto.
+Qed.
+
+(* shifts are additive *)
+Lemma shift_additive :
+  (forall P n k1 k2,
+    (lift_process (lift_process P n k1) n k2) = (lift_process P n (k1 + k2))) /\
+  (forall M n k1 k2,
+    (lift_message (lift_message M n k1) n k2) = (lift_message M n (k1 + k2))) /\
+  (forall s n k1 k2,
+    (lift_statement (lift_statement s n k1) n k2) = (lift_statement s n (k1 + k2))).
+Proof.
+  apply syntax_ind; intros; simpl; try rewrite H; try rewrite H0; auto.
+  unfold relocate.
+  destruct (Nat.leb n0 n) eqn:E.
+  + apply PeanoNat.Nat.leb_le in E. assert (n0 <= k1 + n) by lia.
+    apply PeanoNat.Nat.leb_le in H. rewrite H. f_equal. lia.
+  + rewrite E. auto.
+Qed.
 
 (******************************************************************************)
 (* Downshifting                                                               *)
