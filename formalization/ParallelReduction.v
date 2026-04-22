@@ -6,10 +6,12 @@ From FD Require Import FreeVars.
 From FD Require Import StructCong.
 From FD Require Import ConfluenceDefs.
 From FD Require Import DirectedCong.
+From FD Require Import AxCutCtx.
 
 From Stdlib Require Import Relations.Relation_Operators.
 From Stdlib Require Import Relations.Operators_Properties.
 From Stdlib Require Import Relation_Definitions.
+From Stdlib Require Import Lia.
 
 (* ⊵ trianglerighteq *)
 Reserved Notation "P ⊵ Q" (no associativity, at level 61).
@@ -36,30 +38,17 @@ Inductive equiv_reduces : process -> process -> Prop :=
   | rp_one_bot1 : forall P, link (prefix close) (prefix (wait P)) ⊵ P
   | rp_one_bot2 : forall P, link (prefix (wait P)) (prefix close) ⊵ P
 
-  (* duplicate AxCut up to commutation and association of cuts *)
-  (* | rp_ax_cut : forall M M' P P',
-      P ⇛ P' -> M !⇛ M' -> (* !!!!!!!! this should be P ⊵ P' ??? or can we get away with ⇛ (I think this is the way, less effort ;) 
-                                not sure though if this work because of rp_cong_cut (but since redexes do not overlap, i.e.
-                                we dont really need a simultaneous reduction, this should be fine and if there are multiple
-                                redexes, it should be possible to use rp_cong_cut) *)
-      cut (link (future 0) M) P ⊵ subst_process P' ((downM M') ⋅ id_subst)
-  | rp_ax_cut_comm : forall M M' P P',
-      P ⇛ P' -> M !⇛ M' -> (* !!!!!!!! this should be P ⊵ P' *)
-      cut P (link (future 0) M) ⊵ subst_process P' ((downM M') ⋅ id_subst)
-  (* this rules allows contraction if reduction diverges because of c_cut_assoc_l *)
-  | rp_ax_cut_assoc_l : forall P P' P'' M M' M'' R R' R'',
-      P ⊵ P' -> M !⇛ M' -> R ⊵ R' -> ~ (1 ∈ R') -> (* can we get away with ⇛ instead of ⊵ *)
-      P'' = rename_process (up P') swap01 ->
-      M'' = rename_message M' swap01 ->
-      R'' = down (rename_process R' swap01) -> (* if ~ 1 ∈ R' then down (ren R' swap01) = down R' *)
-      cut P (cut (link (future 1) M) R) ⊵ cut (subst_process P'' ((downM M'' ⋅ id_subst))) R''
-  (* this rules allows contraction if reduction diverges because of c_cut_assoc_r *)
-  | rp_ax_cut_assoc_r : forall P P' P'' M M' M'' R R' R'',
-      P ⊵ P' -> M !⇛ M' -> R ⊵ R' -> ~ (1 ∈ P') ->
-      P'' = down (rename_process P' swap01) ->
-      M'' = rename_message M' swap01 ->
-      R'' = rename_process (up R') swap01 ->
-      cut (cut P (link (future 1) M)) R ⊵ cut P'' (subst_process R'' ((downM M'' ⋅ id_subst))) *)
+  (* AxCut (duplicated to account for symmetry) *)
+  | rp_ax_cut_l : forall P Q (E : axcut_ctx 0) M R,
+      Q = fill_hole E M ->
+      well_formed_axcut_ctx 0 E ->
+      R = reduce_axcut E M P ->
+      equiv_reduces (cut Q P) R
+  | rp_ax_cut_r : forall P Q (E : axcut_ctx 0) M R,
+      Q = fill_hole E M ->
+      well_formed_axcut_ctx 0 E ->
+      R = reduce_axcut E M P ->
+      equiv_reduces (cut P Q) R
 
   (* seq *)
   | rp_seq : forall P s, seq P s ⊵ subst_process P ((prefix s) ⋅ id_subst)
@@ -91,31 +80,39 @@ Qed.
 Lemma single_step_struct_cong_in_clos_trans_par_reduction :
   forall P Q, (union _ reduces structural_congruence) P Q -> (clos_trans _ par_reduction) P Q.
 Proof.
-  (* intros. destruct H.
+  intros. destruct H.
   + induction H.
-    - econstructor. eapply rp_tensor_par_1; eauto; apply c_refl.
-    - econstructor. eapply rp_plus_with_l1; eauto; apply c_refl.
-    - econstructor. eapply rp_plus_with_r1; eauto; apply c_refl.
-    - econstructor. eapply rp_one_bot1. apply c_refl.
-    - econstructor. eapply rp_ax_cut; try eapply c_refl; try apply c_cong_reflM.
-    - econstructor. eapply rp_seq. apply c_refl. apply c_cong_reflS.
+    - econstructor. econstructor. eapply rp_tensor_par_1; eauto; apply c_refl.
+    - econstructor. econstructor. eapply rp_plus_with_l1; eauto; apply c_refl.
+    - econstructor. econstructor. eapply rp_plus_with_r1; eauto; apply c_refl.
+    - econstructor. econstructor. eapply rp_one_bot1.
+    - econstructor. econstructor.
+      eapply (rp_ax_cut_l _ _ (nil_l 0)).
+      * simpl. reflexivity.
+      * econstructor.
+      * simpl. rewrite reduce_axcut_unfold_eq. simpl. reflexivity.
+    - econstructor. econstructor. eapply rp_seq.
     - clear H. induction IHreduces.
-      * econstructor. apply rp_cong_cut; eauto. econstructor. apply c_refl.
+      * econstructor. destruct H.
+        ** econstructor. apply rp_cong_cut_l; auto.
+        ** right. apply c_cong_cut; auto. econstructor.
       * eapply t_trans; eauto.
     - clear H. induction IHreduces.
-      * econstructor. apply rp_cong_seq; eauto. econstructor.
+      * econstructor. destruct H.
+        ** econstructor. apply rp_cong_seq; auto.
+        ** right. apply c_cong_seq; auto. apply struct_cong_reflS.
       * eapply t_trans; eauto.
     - apply struct_cong_in_trans_directed_cong in H.
       apply struct_cong_in_trans_directed_cong in H1.
-      apply clos_trans_1n_directed_cong_in_clos_trans_1n_par_reduces in H.
-      apply clos_trans_1n_directed_cong_in_clos_trans_1n_par_reduces in H1.
+      apply clos_trans_1n_directed_cong_in_clos_trans_1n_par_reduction in H.
+      apply clos_trans_1n_directed_cong_in_clos_trans_1n_par_reduction in H1.
       apply clos_trans_t1n_iff in H.
       apply clos_trans_t1n_iff in H1.
       eapply t_trans; eauto. eapply t_trans; eauto.
   + apply (proj1 struct_cong_in_trans_directed_cong) in H.
     apply clos_trans_t1n_iff.
-    apply clos_trans_1n_directed_cong_in_clos_trans_1n_par_reduces. auto. *)
-Admitted.
+    apply clos_trans_1n_directed_cong_in_clos_trans_1n_par_reduction. auto.
+Qed.
 
 (* ▶ ⊂ ↠* *)
 Lemma multi_step_red_in_clos_trans_par_red :
@@ -141,8 +138,21 @@ Proof.
   try (now (left; econstructor; eauto));
   try (now (left; eapply r_struct; [ apply c_link | econstructor; eauto | apply c_refl ])).
   + right. apply c_refl.
+  + econstructor.
+    assert ( exists L, (cut Q P) ≡ L /\ L ⊳ R ).
+    { eapply equiv_red_axcut_in_reduces_axcut; eauto. }
+    destruct H2 as [? [? ?]].
+    eapply r_struct; eauto; apply c_refl.
+  + econstructor.
+    assert ( exists L, (cut Q P) ≡ L /\ L ⊳ R ).
+    { eapply equiv_red_axcut_in_reduces_axcut; eauto. }
+    destruct H2 as [? [? ?]].
+    eapply r_struct.
+    - eapply c_trans. eapply c_cut_comm. apply H2.
+    - apply H3.
+    - apply c_refl.
   + destruct IHequiv_reduces.
-    - left. apply r_cong_cut. auto.
+    - left. apply r_cong_cut; auto.
     - right. apply c_cong_cut; auto. apply c_refl.
   + destruct IHequiv_reduces.
     - left. eapply r_struct. apply c_cut_comm. apply r_cong_cut. eauto. apply c_cut_comm.
