@@ -39,12 +39,12 @@ Inductive equiv_reduces : process -> process -> Prop :=
   | rp_one_bot2 : forall P, link (prefix (wait P)) (prefix close) ⊵ P
 
   (* AxCut (duplicated to account for symmetry) *)
-  | rp_ax_cut_l : forall P Q (E : axcut_ctx 0) M R,
+  | rp_ax_cut_l : forall P Q (E : axcut_ctx) M R,
       Q = fill_hole E M ->
       well_formed_axcut_ctx 0 E ->
       R = reduce_axcut E M P ->
       equiv_reduces (cut Q P) R
-  | rp_ax_cut_r : forall P Q (E : axcut_ctx 0) M R,
+  | rp_ax_cut_r : forall P Q (E : axcut_ctx) M R,
       Q = fill_hole E M ->
       well_formed_axcut_ctx 0 E ->
       R = reduce_axcut E M P ->
@@ -162,7 +162,7 @@ Proof.
     - right. apply c_cong_seq; auto. apply struct_cong_reflS.
 Qed.
 
-(* ↠ ∪ (⊳ ∪ ≡) *)
+(* ↠ ⊂ (⊳ ∪ ≡) *)
 Lemma par_reduction_in_reduces_or_struct_cong :
   forall P Q, P ↠ Q -> (union _ reduces structural_congruence) P Q.
 Proof.
@@ -170,205 +170,6 @@ Proof.
   - apply equiv_reduces_in_reduces_or_struct_cong; auto.
   - right; auto.
 Qed.
-
-(* Lemma par_reduces_in_union_single_step_red_struct_cong :
-  forall P Q, P ↠ Q -> clos_trans _ (union _ reduces structural_congruence) P Q.
-Proof.
-  intros. induction H.
-  + econstructor. apply directed_cong_in_struct_cong in H. right. auto.
-  + econstructor. left; repeat directed_cong_to_struct_cong. eapply r_struct.
-    - eapply StructCong.c_cong_link; eapply StructCong.c_cong_prefix; econstructor; eauto.
-    - econstructor; eauto.
-    - apply StructCong.c_refl.
-  + econstructor. left; repeat directed_cong_to_struct_cong. eapply r_struct.
-    - eapply StructCong.c_trans. apply StructCong.c_link.
-      eapply StructCong.c_cong_link; eapply StructCong.c_cong_prefix; econstructor; eauto.
-    - econstructor; eauto.
-    - apply StructCong.c_refl.
-  + econstructor. left; repeat directed_cong_to_struct_cong. eapply r_struct.
-    - eapply StructCong.c_cong_link; eapply StructCong.c_cong_prefix; econstructor; eauto.
-    - econstructor; eauto.
-    - apply StructCong.c_refl.
-  + econstructor. left; repeat directed_cong_to_struct_cong. eapply r_struct.
-    - eapply StructCong.c_trans. apply StructCong.c_link.
-      eapply StructCong.c_cong_link; eapply StructCong.c_cong_prefix; econstructor; eauto.
-    - econstructor; eauto.
-    - apply StructCong.c_refl.
-  + econstructor. left; repeat directed_cong_to_struct_cong. eapply r_struct.
-    - eapply StructCong.c_cong_link; eapply StructCong.c_cong_prefix; econstructor; eauto. apply StructCong.c_refl.
-    - econstructor; eauto.
-    - apply StructCong.c_refl.
-  + econstructor. left; repeat directed_cong_to_struct_cong. eapply r_struct.
-    - eapply StructCong.c_trans. apply StructCong.c_link.
-      eapply StructCong.c_cong_link; eapply StructCong.c_cong_prefix; econstructor; eauto. apply StructCong.c_refl.
-    - econstructor; eauto.
-    - apply StructCong.c_refl.
-  + econstructor. left; repeat directed_cong_to_struct_cong. eapply r_struct.
-    - eapply StructCong.c_cong_link; eapply StructCong.c_cong_prefix; econstructor; eauto.
-    - econstructor; eauto.
-    - apply StructCong.c_refl.
-  + econstructor. left; repeat directed_cong_to_struct_cong. eapply r_struct.
-    - eapply StructCong.c_trans. apply StructCong.c_link.
-      eapply StructCong.c_cong_link; eapply StructCong.c_cong_prefix; econstructor; eauto.
-    - econstructor; eauto.
-    - apply StructCong.c_refl.
-  + econstructor. left; repeat directed_cong_to_struct_cong. eapply r_struct.
-    - apply c_cong_cut; eauto. apply c_cong_link; eauto. econstructor.
-    - econstructor.
-    - apply StructCong.c_refl.
-  + econstructor. left; repeat directed_cong_to_struct_cong. eapply r_struct.
-    - eapply c_trans. apply StructCong.c_cut_comm.
-      apply c_cong_cut; eauto. apply c_cong_link; eauto. econstructor.
-    - econstructor.
-    - apply StructCong.c_refl.
-  + directed_cong_to_struct_cong.
-    assert (
-      clos_trans _ (union _ reduces structural_congruence)
-        (cut P (cut (link (future 1) M) R))
-        (cut P (cut (link (future 1) M') R))
-    ).
-    {
-      econstructor. right. apply StructCong.c_cong_cut.
-      apply StructCong.c_refl. apply StructCong.c_cong_cut; try apply StructCong.c_refl.
-      apply c_cong_link; auto. econstructor.
-    }
-    eapply t_trans. apply H6. clear H0 H6 M.
-    assert (
-      clos_trans _ (union _ reduces structural_congruence)
-        (cut P (cut (link (future 1) M') R))
-        (cut P' (cut (link (future 1) M') R))
-    ).
-    {
-      clear - IHpar_reduces1. induction IHpar_reduces1.
-      + econstructor. destruct H.
-        - left. apply r_cong_cut. assumption.
-        - right. apply StructCong.c_cong_cut; auto. apply StructCong.c_refl.
-      + eapply t_trans; eauto.
-    }
-    eapply t_trans. apply H0. clear IHpar_reduces1 H0 H P.
-    assert (
-      clos_trans _ (union _ reduces structural_congruence)
-        (cut P' (cut (link (future 1) M') R))
-        (cut P' (cut (link (future 1) M') R'))
-    ).
-    {
-      clear - IHpar_reduces2. induction IHpar_reduces2.
-      + econstructor. destruct H.
-        - left. eapply r_struct.
-          * apply StructCong.c_cut_comm.
-          * apply r_cong_cut. eapply r_struct. apply StructCong.c_cut_comm.
-            apply r_cong_cut; eauto. apply StructCong.c_cut_comm.
-          * apply StructCong.c_cut_comm.
-        - right. apply StructCong.c_cong_cut. apply StructCong.c_refl.
-          apply StructCong.c_cong_cut. apply StructCong.c_refl. auto.
-      + eapply t_trans; eauto.
-    }
-    eapply t_trans. apply H. clear H IHpar_reduces2 H1 R.
-    assert (
-      clos_trans process (union process reduces structural_congruence)
-        (cut P' (cut (link (future 1) M') R'))
-        (cut (cut (link (future 0) M'') P'') R'')
-    ).
-    {
-      econstructor. right. subst.
-      eapply c_trans.
-      + eapply c_trans.
-        * apply StructCong.c_cut_comm.
-        * eapply c_cong_cut. apply StructCong.c_cut_comm.
-          apply StructCong.c_refl.
-      + eapply c_trans.
-        * eapply c_cut_assoc; auto.
-        * eapply c_trans.
-          - eapply StructCong.c_cut_comm.
-          - eapply c_cong_cut; apply StructCong.c_refl.
-    }
-    eapply t_trans. apply H. subst. clear H H2.
-    econstructor. left. simpl. apply r_cong_cut. econstructor.
-  + directed_cong_to_struct_cong.
-    assert (
-      clos_trans _ (union _ reduces structural_congruence)
-        (cut (cut P (link (future 1) M)) R)
-        (cut (cut P (link (future 1) M')) R)
-    ).
-    {
-      econstructor. right. apply StructCong.c_cong_cut.
-      apply StructCong.c_cong_cut; try apply StructCong.c_refl.
-      apply c_cong_link; auto. econstructor. apply StructCong.c_refl.
-    }
-    eapply t_trans. apply H6. clear H0 H6 M.
-    assert (
-      clos_trans _ (union _ reduces structural_congruence)
-        (cut (cut P (link (future 1) M')) R)
-        (cut (cut P (link (future 1) M')) R')
-    ).
-    {
-      clear - IHpar_reduces2. induction IHpar_reduces2.
-      + econstructor. destruct H.
-        - left. eapply r_struct.
-          * apply StructCong.c_cut_comm.
-          * apply r_cong_cut; eauto.
-          * apply StructCong.c_cut_comm.
-        - right. apply StructCong.c_cong_cut; auto.
-          apply StructCong.c_cong_cut; apply StructCong.c_refl.
-      + eapply t_trans; eauto.
-    }
-    eapply t_trans. apply H0. clear IHpar_reduces2 H0 H1 R.
-    assert (
-      clos_trans _ (union _ reduces structural_congruence)
-        (cut (cut P (link (future 1) M')) R')
-        (cut (cut P' (link (future 1) M')) R')
-    ).
-    {
-      clear - IHpar_reduces1. induction IHpar_reduces1.
-      + econstructor. destruct H.
-        - left. apply r_cong_cut. apply r_cong_cut. auto.
-        - right. apply StructCong.c_cong_cut. apply StructCong.c_cong_cut. auto.
-          all: apply StructCong.c_refl.
-      + eapply t_trans; eauto.
-    }
-    eapply t_trans. apply H0. clear H IHpar_reduces1 H0 P.
-    assert (
-      clos_trans process (union process reduces structural_congruence)
-        (cut (cut P' (link (future 1) M')) R')
-        (cut P'' (cut (link (future 0) M'') R''))
-    ).
-    { econstructor. right. subst. apply c_cut_assoc; auto. }
-    eapply t_trans. apply H. subst. clear H H2.
-    econstructor. left. eapply r_struct.
-    - apply StructCong.c_cut_comm.
-    - apply r_cong_cut. econstructor.
-    - apply StructCong.c_cut_comm.
-  + econstructor. left; repeat directed_cong_to_struct_cong. eapply r_struct.
-    - eapply StructCong.c_cong_seq; eauto.
-    - econstructor.
-    - apply StructCong.c_refl.
-  + clear H H0.
-    assert (
-      clos_trans _ (union _ reduces structural_congruence) (cut P Q) (cut P' Q)
-    ).
-    {
-      clear IHpar_reduces2 Q'. induction IHpar_reduces1.
-      + econstructor. destruct H.
-        - left. econstructor. auto.
-        - right. apply StructCong.c_cong_cut; auto. apply StructCong.c_refl.
-      + eapply t_trans; eauto.
-    }
-    eapply t_trans. apply H. clear H IHpar_reduces1 P.
-    induction IHpar_reduces2.
-    - econstructor. destruct H.
-      * left. eapply r_struct; [apply StructCong.c_cut_comm | econstructor; eauto | apply StructCong.c_cut_comm].
-      * right. apply StructCong.c_cong_cut; auto. apply StructCong.c_refl.
-    - eapply t_trans; eauto.
-  + repeat directed_cong_to_struct_cong. clear H.
-    eapply t_trans. { apply t_step. right. apply StructCong.c_cong_seq. apply StructCong.c_refl. eauto. }
-    clear H0 s. induction IHpar_reduces.
-    - econstructor. destruct H.
-      * left. econstructor; auto.
-      * right. apply StructCong.c_cong_seq; eauto.
-        destruct ((proj2 (proj2 struct_cong_d_refl)) s').
-        eapply (proj2 (proj2 struct_cong_from_struct_cong_d)); eauto.
-    - eapply t_trans; eauto.
-Admitted. *)
 
 (* ↠* ∪ ▶ *)
 Corollary clos_trans_par_red_in_multi_step_red :

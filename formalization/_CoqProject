@@ -16,5 +16,5 @@ ConfluenceDefs.v
 DirectedCong.v
 AxCutCtx.v
 ParallelReduction.v
-# Confluence.v
+Confluence.v
 # Results.v

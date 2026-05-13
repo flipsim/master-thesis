@@ -535,6 +535,15 @@ Proof.
   + apply (proj1 rename_id); auto.
 Qed.
 
+Corollary swap_swap_idM :
+  forall M, rename_message (rename_message M swap01) swap01 = M.
+Proof.
+  intros.
+  rewrite ((proj1 (proj2 renamings_compose)) _ _ _ id).
+  + intros. destruct x; auto; destruct x; reflexivity.
+  + apply (proj1 (proj2 rename_id)); auto.
+Qed.
+
 (******************************************************************************)
 (* Properties of downshifting and upshifing wrt typing                        *)
 (******************************************************************************)

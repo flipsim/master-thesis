@@ -7,6 +7,15 @@ From FD Require Import ConfluenceDefs.
 From FD Require Import DirectedCong.
 From FD Require Import Reduction.
 From FD Require Import ParallelReduction.
+From FD Require Import AxCutCtx.
+
+From Stdlib Require Import Lia.
+
+Local Hint Rewrite
+  swap_swap_id
+  down_after_up_process_id
+  up_after_down_process_id
+    : up_down_rename_rewrites.
 
 Lemma link_directed_cong_equiv_red_commute :
   forall ml mr P Q, (link ml mr) ⇛ P -> (link ml mr) ⊵ Q ->
@@ -70,67 +79,271 @@ Qed.
          P
       ⇛    ⊵
     Q1       Q2
-      ⊵    ⇛
+      ⊵    ≡
          R
 *)
 Lemma directed_cong_equiv_red_commute :
-  (* ⇛ in conclusion has to be changed to ≡ for axcut *)
-  forall P Q1 Q2, P ⇛ Q1 -> P ⊵ Q2 -> exists R, Q1 ⊵ R /\ Q2 ⇛ R.
+  forall P Q1 Q2, P ⇛ Q1 -> P ⊵ Q2 -> exists R, Q1 ⊵ R /\ Q2 ≡ R.
 Proof.
   intros. generalize dependent Q2.
   induction H; intros.
   (* link *)
-  + eapply link_directed_cong_equiv_red_commute; eauto; econstructor; eauto.
-  + eapply link_directed_cong_equiv_red_commute; eauto. apply dc_link; auto.
+  + destruct (link_directed_cong_equiv_red_commute _ _ _ _ (dc_cong_link _ _ _ _  H H0) H1) as [? [? ?]].
+    eexists; split; eauto. apply directed_cong_in_struct_cong; auto.
+  + destruct (link_directed_cong_equiv_red_commute _ _ _ _ (dc_link _ _ _ _  H H0) H1) as [? [? ?]].
+    eexists; split; eauto. apply directed_cong_in_struct_cong; auto.
 
   (* cut *)
-  + admit.
-  + admit.
-  + admit.
-  + admit.
+  + inversion H1; subst.
+    - eexists; split. apply rp_refl.
+      apply directed_cong_in_struct_cong. apply dc_cut_comm; auto.
+    - (* Helpful lemmas:
+         i.  If fill_hole E M ⇛ P, then exists E' M', s.t. P = fill_hole E' M'
+         ii. If Q ⇛ Q' and fill_hole E M ⇛ fill_hole E' M',
+             then reduce_axcut E M Q ⇛ reduce_axcut E' M' Q'
 
-  (* + inversion H0; subst.
-    - eexists. split. econstructor. apply dc_cut_comm.
-    - eexists. split.
-      * apply rp_cong_cut_r; eauto.
-      * apply dc_cut_comm.
-    - eexists. split.
-      * apply rp_cong_cut_l; eauto.
-      * apply dc_cut_comm.
-  + inversion H3; subst.
-    - eexists. split.
-      * apply rp_refl.
-      * eapply dc_cut_assoc_l; auto.
-    - inversion H7; subst.
-      *  eexists. split. apply rp_refl. apply dc_cut_assoc_l; auto.
-      * (* ⊵ is invariant under renaming, shifting *)
-        assert ( (down (rename_process P swap01)) ⊵  (down (rename_process P' swap01)) )
-         by admit.
-        eexists. split. { apply rp_cong_cut_l. apply H0. }
-        apply dc_cut_assoc_l; auto.
-        (* free variables are preserved under reduction *)
+             proof by induction on size of context (in ax cut case, IH holds
+             for renamed context)
+      *)
+      (* Idea: Define ⇛ on contexts, then show
+         E[M] ⇛ P, then P = E'[M'] and E ⇛ E' and M ⇛ M'
+
+         Then, show that if E ⇛ E', M ⇛ M', Q ⇛ Q' then
+          reduce_axcut E M Q ⇛ reduce_axcut E' M' Q'
+      *)
+      destruct (fill_hole_congruence _ _ _ _ eq_refl H) as [E' [M' [? [? ?]]]].
+      exists (reduce_axcut E' M' Q'). split.
+      {
+        rewrite H2. eapply rp_ax_cut_r; eauto.
+        eapply edc_preserves_well_formedness; eauto.
+      }
+      apply directed_cong_in_struct_cong.
+      apply reduce_axcut_invariant_under_dc; auto.
+    - destruct (fill_hole_congruence _ _ _ _ eq_refl H0) as [E' [M' [? [? ?]]]].
+      exists (reduce_axcut E' M' P'). split.
+      {
+        rewrite H2. eapply rp_ax_cut_l; eauto.
+        eapply edc_preserves_well_formedness; eauto.
+      }
+      apply directed_cong_in_struct_cong.
+      apply reduce_axcut_invariant_under_dc; auto.
+    - specialize IHdirected_congruence1 with P'0.
+      apply IHdirected_congruence1 in H5. destruct H5 as [? [? ?]].
+      exists (cut Q' x). split.
+      * apply rp_cong_cut_r; auto.
+      * eapply c_trans. apply c_cut_comm. apply c_cong_cut; auto.
+        apply directed_cong_in_struct_cong; auto.
+    - specialize IHdirected_congruence2 with Q'0.
+      apply IHdirected_congruence2 in H5. destruct H5 as [? [? ?]].
+      exists (cut x P'). split.
+      * apply rp_cong_cut_l; auto.
+      * eapply c_trans. apply c_cut_comm. apply c_cong_cut; auto.
+        apply directed_cong_in_struct_cong; auto.
+  + inversion H6; subst.
+    - eexists. split. apply rp_refl.
+      apply directed_cong_in_struct_cong in H0, H1, H2.
+      apply c_trans with (cut (cut P1 Q1) R1).
+      * repeat (apply c_cong_cut; auto).
+      * apply c_cut_assoc; auto. intro Hfv.
+        apply ((proj1 free_vars_under_struct_cong) _ _ H0 1) in Hfv. congruence.
+    - destruct E; simpl in H9; try congruence.
+      {
+        inversion H9; subst.
+        destruct (fill_hole_congruence _ _ _ _ eq_refl H1) as [E' [M' [? [? ?]]]].
+        rewrite H3.
+        rewrite rename_axcut_ctx_over_fill_hole.
+        eexists. split.
+        + apply rp_cong_cut_r. eapply rp_ax_cut_l.
+          - reflexivity.
+          - replace swap01 with (up_ren_n 0 swap01) by auto.
+            inversion H10; subst.
+            apply (edc_preserves_well_formedness _ _ _ H4) in H13.
+            replace 0 with ((up_ren_n 0 swap01) 1) at 1 by auto.
+            apply well_formedness_preserved_under_swap01; assumption.
+          - reflexivity.
+        + rewrite reduce_axcut_equation_3. apply c_cong_cut.
+          - apply directed_cong_in_struct_cong.
+            apply directed_cong_invariant_under_downshifting.
+            apply directed_cong_invariant_under_renaming; auto; try apply swap01_is_bijective.
+            apply nfv_01_swap; auto.
+          - apply directed_cong_in_struct_cong.
+            apply reduce_axcut_invariant_under_dc.
+            * apply edc_invariant_under_renaming; auto; apply swap01_is_bijective.
+            * apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective.
+              auto.
+            * apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective.
+              apply directed_cong_invariant_under_upshifting; auto.
+        + apply swap01_is_bijective.
+      }
+      {
+        (* because of well-formedness, 0 must be free in (cons_r E P0)
+           in which case 1 ∈ E. However, because of association, ~ 1 ∈ P. *)
+        exfalso.
+        inversion H9; subst. inversion H10; subst.
+        apply well_formed_ctx_fv in H8.
+        apply (fv_ctx_fill_hole _ _ (upM M)) in H8.
+        congruence.
+      }
+    - (* use more difficult reduce_axcut / assoc lemma *)
+      (*
+        (reduce_axcut E M (cut P Q)) ≡
+        (cut (down (swap01 P))
+             (reduce_axcut (swap01 up E) (swap01 up M) (swap01 Q)))
+        ≡
+        (cut (down (swap01 P1))
+             (reduce_axcut (swap01 up E') (swap01 up M') (swap01 Q1)))
+        Needs invariance of congruence of ctxs under swap01 and shifting
+      *)
+      admit.
+    - inversion H10; subst.
+      * eexists. split. apply rp_refl.
+        eapply c_trans.
+        ** apply directed_cong_in_struct_cong in H0, H1, H2.
+           apply c_cong_cut; eauto; apply c_cong_cut; eauto.
+        ** apply c_cut_assoc; auto. apply directed_cong_in_struct_cong in H0.
+           apply (nfv_under_struct_cong _ _ _ H0); auto.
+      * (* use reduce_axcut / assoc lemma *)
+        (* cut (reduce_axcut E M Q) R
+            ≡ cut (reduce_axcut (down E swap01) (cut Q1' R1')) *)
+        (* then use invariance of reduce_axcut under struct cong
+        *)
         admit.
-      * (* ⊵ is invariant under renaming, shifting *)
-        assert ( (rename_process Q swap01) ⊵  (rename_process Q' swap01) )
-         by admit.
-        eexists. split. { apply rp_cong_cut_r. apply rp_cong_cut_l. apply H0. }
-        apply dc_cut_assoc_l; auto.
-    - admit.
+      * (* might need well-typedness to conclude that 0 not in M so that down shift possible *)
+        
+        (* FUCK: definition of fill_hole does not work because in E[M], no free variable 
+            can be bound because we are upping at every stage! BAD!
+            instead rewrite, so that M is already upshifting accordingly (syntactically identically to what we
+            fill in the hole):
+            rename E[M] r = (rename E r)[rename M (up_ren_n (size E) r)]
+        *)
+        destruct (fill_hole_congruence _ _ _ _ eq_refl H1) as [E' [M' [? [? ?]]]].
+        assert (
+          (* Γ ⊢ E[M] and WF E j -> ~ j ∈ M *)
+          ~ (occurs_free_message 0 M')
+        ) by admit.
+        assert (
+          (* generalization :
+              ~ (S k) ∈ P
+              lift (down P k 1) k 1 = rename P (up_ren_n k swap01)
+          *)
+          upM (downM (rename_message M' swap01)) = M'
+        ).
+        {
+          admit.
+        }
+        assert (
+          (cut (rename_process Q1 swap01)
+               (rename_process (up R1) swap01)) =
+          fill_hole (cons_r (rename_axcut_ctx E' swap01) (rename_process (up R1) swap01))
+                    (downM (rename_message M' swap01))
+        ).
+        {
+          admit.
+        }
+        eexists. split.
+        ** rewrite H11. eapply rp_ax_cut_r; eauto.
+           econstructor.
+           { apply nfv_10_swap. apply nfv_lift_n; lia. }
+           replace swap01 with (up_ren_n 0 swap01) by auto.
+           replace 1 with ((up_ren_n 0 swap01) 0) by auto.
+           apply well_formedness_preserved_under_swap01.
+           eapply edc_preserves_well_formedness; eauto.
+        ** rewrite reduce_axcut_equation_4; simpl.
+           rewrite H9. autorewrite with up_down_rename_rewrites.
+           {
+              apply directed_cong_in_struct_cong in H2.
+              apply c_cong_cut; auto.
+              apply directed_cong_in_struct_cong.
+              rewrite swap_swap_idM.
+              rewrite rename_axcut_ctx_compose with (c := id); try (intros [|[|]]; simpl; auto).
+              rewrite rename_axcut_ctx_id; auto.
+              apply reduce_axcut_invariant_under_dc; auto.
+           }
+           apply nfv_01_swap. apply directed_cong_in_struct_cong in H0.
+           apply (nfv_under_struct_cong _ _ _ H0); auto.
+      * destruct (IHdirected_congruence1 _ H7) as [R' [? ?]].
+        eexists. split.
+        ** apply rp_cong_cut_l.
+           assert ( down (rename_process P1 swap01) ⊵ down (rename_process R' swap01) )
+            by admit.
+           (* show distribution of renaming over subst only for up_subst_n j swap01
+              forall n to simplify *)
+           apply H5.
+        ** eapply c_trans.
+           {
+            apply c_cong_cut. apply c_cong_cut. apply H4.
+            apply directed_cong_in_struct_cong in H1; apply H1.
+            apply directed_cong_in_struct_cong in H2; apply H2.
+           }
+           apply c_cut_assoc; auto.
+           apply (nfv_under_struct_cong _ _ _ H4).
+           (* set of free variables is preserved under reduction *)
+           (* does this need well-typedness? no:
+              show that set of free variables decreases during reduction,
+              but argument with WT is simpler *)
+           admit.
+      * admit.
+        (* needs invariances for ⊵ w.r.t. renaming/shifting *)
+    - destruct (IHdirected_congruence3 Q'0 H10) as [? [? ?]].
+      assert (
+        rename_process (up R1) swap01 ⊵ rename_process (up x) swap01
+      ) by admit.
+      eexists. split.
+      * apply rp_cong_cut_r. apply rp_cong_cut_r. apply H5.
+      * eapply c_trans with (cut (cut P1 Q1) x).
+        {
+          apply directed_cong_in_struct_cong in H0.
+          apply directed_cong_in_struct_cong in H1.
+          apply c_cong_cut; auto. apply c_cong_cut; auto.
+        }
+        apply c_cut_assoc; auto.
+        apply directed_cong_in_struct_cong in H0.
+        pose proof ((proj1 free_vars_under_struct_cong) _ _ H0 1).
+        intro Hfv. apply H7 in Hfv. congruence.
   + admit.
-  + admit. *)
+  + inversion H1; subst.
+    - eexists; split. apply rp_refl. apply c_cong_cut; apply directed_cong_in_struct_cong; auto.
+    - destruct (fill_hole_congruence _ _ _ _ eq_refl H) as [E' [M' [? [? ?]]]].
+      exists (reduce_axcut E' M' Q'). split.
+      {
+        rewrite H2. eapply rp_ax_cut_l; eauto.
+        eapply edc_preserves_well_formedness; eauto.
+      }
+      apply directed_cong_in_struct_cong.
+      apply reduce_axcut_invariant_under_dc; auto.
+    - destruct (fill_hole_congruence _ _ _ _ eq_refl H0) as [E' [M' [? [? ?]]]].
+      exists (reduce_axcut E' M' P'). split.
+      {
+        rewrite H2. eapply rp_ax_cut_r; eauto.
+        eapply edc_preserves_well_formedness; eauto.
+      }
+      apply directed_cong_in_struct_cong.
+      apply reduce_axcut_invariant_under_dc; auto.
+    - specialize IHdirected_congruence1 with P'0.
+      apply IHdirected_congruence1 in H5. destruct H5 as [? [? ?]].
+      exists (cut x Q'). split.
+      * apply rp_cong_cut_l; auto.
+      * apply c_cong_cut; auto. apply directed_cong_in_struct_cong; auto.
+    - specialize IHdirected_congruence2 with Q'0.
+      apply IHdirected_congruence2 in H5. destruct H5 as [? [? ?]].
+      exists (cut P' x). split.
+      * apply rp_cong_cut_r; auto.
+      * apply c_cong_cut; auto. apply directed_cong_in_struct_cong; auto.
 
   (* seq *)
   + inversion H1; subst.
-    - eexists. split. apply rp_refl. apply dc_cong_seq; auto.
-    - eexists. split. apply rp_seq.
+    - eexists. split. apply rp_refl.
+      apply directed_cong_in_struct_cong in H, H0.
+      apply c_cong_seq; auto.
+    - eexists. split. apply rp_seq. eapply directed_cong_in_struct_cong.
       apply directed_cong_invariant_under_substitution; auto.
       intros [|]; simpl. { econstructor; eauto. }
       apply dc_cong_reflM.
     - destruct (IHdirected_congruence _ H5) as [? [? ?]].
       eexists. split.
       * apply rp_cong_seq. apply H2.
-      * apply dc_cong_seq; auto.
-  + inversion H0; subst. exists stop; split; eauto. apply dc_stop.
+      * apply directed_cong_in_struct_cong in H, H0. apply c_cong_seq; auto.
+  + inversion H0; subst. exists stop; split; eauto. apply c_refl.
 Admitted.
 
 (* ≡ and ↠ commute *)
@@ -149,17 +362,21 @@ Proof.
     generalize dependent Q2.
     induction H; intros.
     - destruct (directed_cong_equiv_red_commute _ _ _ H H0) as [? [? ?]].
-      exists x0. split.
-      * left. auto.
-      * apply directed_cong_in_struct_cong. auto.
+      exists x0. split; auto. left; auto.
     - destruct (directed_cong_equiv_red_commute _ _ _ H H1) as [? [? ?]].
       destruct (IHclos_trans_1n _ H2) as [? [? ?]].
-      exists x1. split; auto.
-      apply directed_cong_in_struct_cong in H3. eapply c_trans; eauto.
+      exists x1. split; auto. eapply c_trans; eauto.
   + exists P. split.
     - right. apply c_comm; auto.
     - apply c_comm; auto.
 Qed.
+
+(* ⊵ can be reconciliated *)
+Lemma equiv_red_diamond :
+  forall P Q1 Q2, P ⊵ Q1 -> P ⊵ Q2 ->
+    exists R, Q1 ↠ R /\ Q2 ↠ R.
+Proof.
+Admitted.
 
 (* ↠ is confluent *)
 Lemma church_rosser_parallel_reduction :
@@ -169,12 +386,12 @@ Proof.
   destruct H eqn:E.
   + destruct H0.
     - clear - H0 e.
-      admit.
+      eapply equiv_red_diamond; eauto.
     - destruct (struct_cong_par_red_commute _ _ _ H0 H) as [? [? ?]].
       eexists; split; eauto. right; auto.
   + destruct (struct_cong_par_red_commute _ _ _ s H0) as [? [? ?]].
     eexists; split; eauto. right; auto.
-Admitted.
+Qed.
 
 (* ▶ is confluent *)
 Lemma church_rosser :
@@ -185,6 +402,8 @@ Proof.
     apply church_rosser_parallel_reduction.
   + apply par_reds_clos_trans_multi_step_red_coincide.
 Qed.
+
+Print Assumptions church_rosser.
 
 (* invariance for ⊵ under renaming, shifting, substitution must follow by induction on depth *)
 (* for invariance under subst: show that subst compose then argue by extensionality on composition 

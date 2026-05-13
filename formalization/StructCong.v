@@ -461,6 +461,14 @@ Lemma future_equiv_future :
       -> M = future i.
 Proof. intros. destruct H; inversion H; auto. Qed.
 
+Corollary future_equiv_future1 :
+  forall M n, (future n) !≡ M -> M = future n.
+Proof.
+  intros.
+  apply struct_cong_d_from_struct_cong in H. destruct H.
+  pose proof (future_equiv_future _ _ _ (or_introl H)). auto.
+Qed.
+
 (******************************************************************************)
 (* Inversions on Congruence                                                   *)
 (******************************************************************************)
@@ -675,4 +683,20 @@ Proof.
   + split; intros; inversion H0; subst; apply H in H3; free_var_econstructor; auto.
   + split; intros; inversion H.
   + split; intros; inversion H0; subst; apply H in H3; free_var_econstructor; auto.
+Qed.
+
+Corollary nfv_under_struct_cong :
+  forall P Q n, P ≡ Q -> ~ n ∈ P -> ~ n ∈ Q.
+Proof.
+  intros. intro Hfv.
+  pose proof ((proj1 free_vars_under_struct_cong) _ _ H n).
+  apply H0. apply H1. auto.
+Qed.
+
+Corollary nfv_under_struct_congM :
+  forall M N n, M !≡ N -> ~ (occurs_free_message n M) -> ~ (occurs_free_message n N).
+Proof.
+  intros. intro Hfv.
+  pose proof ((proj1 (proj2 free_vars_under_struct_cong)) _ _ H n).
+  apply H0. apply H1. auto.
 Qed.
