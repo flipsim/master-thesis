@@ -74,41 +74,11 @@ Print Assumptions final_iff_irreducible.
 
 (*** Church-Rosser ************************************************************)
 
-(* Directed congruence possesses the diamond property.
+(* Well-typed processes enjoy Church-Rosser
 *)
-Lemma diamond_property_for_directed_congruence : diamond_property directed_congruence.
-Proof. exact directed_cong_diamond. Qed.
+Lemma church_rosser :
+  forall Γ P Q1 Q2, Γ ⊢ P :# -> P ▶ Q1 -> P ▶ Q2 ->
+    exists R, Q1 ▶ R /\ Q2 ▶ R.
+Proof. exact church_rosser. Qed.
 
-Print Assumptions diamond_property_for_directed_congruence.
-
-(* ≡ is contained in the transitive closure of ⇛
-*)
-Lemma struct_cong_subset_trans_clos_directed_cong :
-  forall P Q, P ≡ Q -> clos_trans_1n _ directed_congruence P Q.
-Proof. exact (proj1 struct_cong_in_trans_directed_cong). Qed.
-
-Print Assumptions struct_cong_subset_trans_clos_directed_cong.
-
-(* ⇛ is contained in ≡
-*)
-Lemma directed_cong_subset_struct_cong :
-  forall P Q, P ⇛ Q -> P ≡ Q.
-Proof. exact (proj1 directed_cong_in_struct_cong). Qed.
-
-Print Assumptions directed_cong_subset_struct_cong.
-
-(* ⊵* = ▶
-*)
-Lemma par_reds_clos_trans_multi_step_red_coincide :
-  forall P Q, (clos_trans _ par_reduces) P Q <-> P ▶ Q.
-Proof. exact par_reds_clos_trans_multi_step_red_coincide. Qed.
-
-Print Assumptions par_reds_clos_trans_multi_step_red_coincide.
-
-(* If ⊵ is confluent, then ▶ is too.
-*)
-Lemma diamond_par_red_imp_diamond_multistep :
-  diamond_property par_reduces -> diamond_property multi_step_reduction.
-Proof. exact diamond_par_red_imp_diamond_multistep. Qed.
-
-Print Assumptions diamond_par_red_imp_diamond_multistep.
+Print Assumptions church_rosser.

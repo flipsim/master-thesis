@@ -4,6 +4,8 @@ From FD Require Import FreeVars.
 From FD Require Import Renaming.
 From FD Require Import FreeVars.
 From FD Require Import StructCong.
+From FD Require Import Contexts.
+From FD Require Import Typing.
 From FD Require Import ConfluenceDefs.
 From FD Require Import DirectedCong.
 
@@ -38,7 +40,7 @@ Inductive axcut_ctx : Type :=
 
 (* Well-formedness of evaluation contexts *)
 (* The index corresponds to the future in the contexts leaf, i.e.
-   we will only allow reduction on zero indexes contexts.
+   we will only allow reduction on zero-indexed contexts.
    Processes of the contexts added via cons must satisfy a condition on
    free variables. This condition ensures that cut association is possible. *)
 Inductive well_formed_axcut_ctx : nat -> axcut_ctx -> Prop :=
@@ -58,8 +60,8 @@ Fixpoint fill_hole (E : axcut_ctx) (M : message) : process :=
   match E with
   | nil_l n => link (future n) M
   | nil_r n => link M (future n)
-  | cons_l P E' => cut P (fill_hole E' (upM M))
-  | cons_r E' P => cut (fill_hole E' (upM M)) P
+  | cons_l P E' => cut P (fill_hole E' M)
+  | cons_r E' P => cut (fill_hole E' M) P
   end.
 
 (******************************************************************************)
@@ -200,6 +202,13 @@ Proof.
   rewrite (IHE (up_ren r)); auto.
 Qed.
 
+Lemma lift_ctx_preserves_length :
+  forall E j k,
+    length_axcut_ctx (lift_ctx E j k) = length_axcut_ctx E.
+Proof.
+  intro E; induction E; intros; simpl; auto.
+Qed.
+
 Definition lt_axcut_ctx (E1 E2 : axcut_ctx) : Prop :=
   (length_axcut_ctx E1) < (length_axcut_ctx E2).
 
@@ -208,6 +217,38 @@ Proof. apply well_founded_ltof. Qed.
 
 Instance lt_axcut_wf : WellFounded lt_axcut_ctx.
 Proof. apply lt_axcut_ctx_well_founded. Qed.
+
+(******************************************************************************)
+(* n-th upshift of a renaming                                                 *)
+(******************************************************************************)
+Fixpoint up_ren_n (n : nat) (r : renaming) : renaming :=
+  match n with
+  | O    => r
+  | S n' => up_ren (up_ren_n n' r)
+  end.
+
+Lemma up_ren_n_S_up_ren :
+  forall r n, up_ren_n n (up_ren r) = up_ren_n (S n) r.
+Proof.
+  intros.
+  induction n; auto.
+  simpl. rewrite IHn. simpl. reflexivity.
+Qed.
+
+Lemma up_ren_n_preserves_bijection :
+  forall r n, bijective r -> bijective (up_ren_n n r).
+Proof.
+  intros. induction n; simpl; auto.
+  apply shift_preserves_bijection; auto.
+Qed.
+
+Lemma up_ren_n_additive :
+  forall r n k, up_ren_n n (up_ren_n k r) = up_ren_n (n + k) r.
+Proof.
+  intros.
+  induction n; auto.
+  simpl. rewrite IHn. reflexivity.
+Qed.
 
 (******************************************************************************)
 (* Reduct of an AxCut Redex                                                   *)
@@ -224,16 +265,11 @@ Equations? reduce_axcut (E : axcut_ctx) (M : message) (P : process) : process by
   reduce_axcut (cons_l Q E') M P := cut (down (rename_process Q swap01))
                                         (reduce_axcut
                                            (rename_axcut_ctx E' swap01)
-                                           (rename_message (upM M) swap01)
+                                           (rename_message M (up_ren_n (length_axcut_ctx E') swap01))
                                            (rename_process (up P) swap01));
-  (* reduce_axcut (cons_r E' Q) M P := cut (down (rename_process Q swap01))
-                                        (reduce_axcut
-                                           (rename_axcut_ctx E' swap01)
-                                           (rename_message (upM M) swap01)
-                                           (rename_process (up P) swap01)) *)
   reduce_axcut (cons_r E' Q) M P := cut (reduce_axcut
                                            (rename_axcut_ctx E' swap01)
-                                           (rename_message (upM M) swap01)
+                                           (rename_message M (up_ren_n (length_axcut_ctx E') swap01))
                                            (rename_process (up P) swap01))
                                         (down (rename_process Q swap01)).
   + intros; unfold lt_axcut_ctx. simpl. rewrite (rename_axcut_ctx_preserves_length swap01 E').
@@ -251,20 +287,21 @@ Lemma rename_axcut_ctx_over_fill_hole :
   forall (E : axcut_ctx) M r,
     bijective r ->
     rename_process (fill_hole E M) r
-      = fill_hole (rename_axcut_ctx E r) (rename_message M r).
+      = fill_hole (rename_axcut_ctx E r) (rename_message M (up_ren_n (length_axcut_ctx E) r)).
 Proof.
   intros.
   generalize dependent M.
   generalize dependent r.
   induction E; intros; auto.
   + simpl. f_equal.
-    unfold upM. rewrite <- (proj1 (proj2 ren_up_up_ren_commute)); auto.
-    rewrite IHE; auto. apply shift_preserves_bijection; auto.
-    intros [|] ?; exfalso; lia.
+    rewrite IHE.
+    - replace (up_ren (up_ren_n (length_axcut_ctx E) r)) with (up_ren_n (S (length_axcut_ctx E)) r) by auto.
+      rewrite up_ren_n_S_up_ren; reflexivity.
+    - apply shift_preserves_bijection; auto.
   + simpl. f_equal.
-    unfold upM. rewrite <- (proj1 (proj2 ren_up_up_ren_commute)); auto.
-    rewrite IHE; auto. apply shift_preserves_bijection; auto.
-    intros [|] ?; exfalso; lia.
+    rewrite IHE.
+    - rewrite up_ren_n_S_up_ren; reflexivity.
+    - apply shift_preserves_bijection; auto.
 Qed.
 
 Lemma lift_after_down_ge_commute :
@@ -309,7 +346,7 @@ Qed.
 Lemma down_ctx_over_fill_hole :
   forall E M k,
     down1_process (fill_hole E M) k =
-      fill_hole (down1_ctx E k) (down1_message M k).
+      fill_hole (down1_ctx E k) (down1_message M ((length_axcut_ctx E) + k)).
 Proof.
   intros.
   generalize dependent M.
@@ -317,29 +354,29 @@ Proof.
   induction E; intros; simpl.
   + destruct (Nat.ltb k n); auto.
   + destruct (Nat.ltb k n); auto.
-  + f_equal. rewrite (IHE (S k) (upM M)). f_equal.
-    unfold upM.
-    rewrite (proj1 (proj2 lift_after_down_ge_commute)); auto. lia.
-  + f_equal. rewrite (IHE (S k) (upM M)). f_equal.
-    unfold upM.
-    rewrite (proj1 (proj2 lift_after_down_ge_commute)); auto. lia.
+  + f_equal.
+    replace (S (length_axcut_ctx E + k)) with (length_axcut_ctx E + (S k)) by lia.
+    rewrite IHE. reflexivity.
+  + f_equal.
+    replace (S (length_axcut_ctx E + k)) with (length_axcut_ctx E + (S k)) by lia.
+    rewrite IHE. reflexivity.
 Qed.
 
 Lemma up_ctx_over_fill_hole :
   forall E M k,
     lift_process (fill_hole E M) k 1 =
-      fill_hole (lift_ctx E k 1) (lift_message M k 1).
+      fill_hole (lift_ctx E k 1) (lift_message M (length_axcut_ctx E + k) 1).
 Proof.
   intros.
   generalize dependent M.
   generalize dependent k.
   induction E; intros; simpl; auto.
-  + f_equal. rewrite (IHE (S k) (upM M)). f_equal.
-    unfold upM.
-    apply lift_k_lift_Sj_lt_commute. lia.
-  + f_equal. rewrite (IHE (S k) (upM M)). f_equal.
-    unfold upM.
-    apply lift_k_lift_Sj_lt_commute. lia.
+  + f_equal.
+    replace (S (length_axcut_ctx E + k)) with (length_axcut_ctx E + (S k)) by lia.
+    rewrite IHE. reflexivity.
+  + f_equal.
+    replace (S (length_axcut_ctx E + k)) with (length_axcut_ctx E + (S k)) by lia.
+    rewrite IHE. reflexivity.
 Qed.
 
 Lemma fv_ctx_fill_hole :
@@ -368,13 +405,43 @@ Proof.
   + apply fv_ctx_cons_r2. apply IHE. inversion H; auto.
 Qed.
 
-(* swap01 preserves well-formedness *)
-Fixpoint up_ren_n (n : nat) (r : renaming) : renaming :=
-  match n with
-  | O    => r
-  | S n' => up_ren (up_ren_n n' r)
-  end.
+Lemma nfv_well_typed_fill_hole :
+  forall Γ E M j,
+    well_formed_axcut_ctx j E ->
+    Γ ⊢ (fill_hole E M) :# ->
+    ~ (occurs_free_message (length_axcut_ctx E + j) M).
+Proof.
+  intros.
+  generalize dependent Γ.
+  generalize dependent j.
+  induction E; intros; simpl.
+  + inversion H; subst. simpl in H0.
+    inversion H0; subst. intro Hfv.
+    destruct ((proj1 (proj2 free_var_in_ctx)) _ _ Hfv _ _ H6).
+    assert (occurs_free_message n (future n)) by (econstructor; eauto).
+    destruct ((proj1 (proj2 free_var_in_ctx)) _ _ H2 _ _ H5).
+    pose proof (ctx_split_lookup_in_partition _ _ _ n _ H3 H4).
+    symmetry in H7.
+    destruct (decide_ctx_split_partition _ _ _ n _ H3 H7) as [[? ?] | [? ?]]; subst; congruence.
+  + inversion H; subst. simpl in H0.
+    inversion H0; subst. intro Hfv.
+    destruct ((proj1 (proj2 free_var_in_ctx)) _ _ Hfv _ _ H5).
+    assert (occurs_free_message n (future n)) by (econstructor; eauto).
+    destruct ((proj1 (proj2 free_var_in_ctx)) _ _ H2 _ _ H6).
+    pose proof (ctx_split_lookup_in_partition _ _ _ n _ H3 H1).
+    symmetry in H7.
+    destruct (decide_ctx_split_partition _ _ _ n _ H3 H7) as [[? ?] | [? ?]]; subst; congruence.
+  + inversion H; subst.
+    inversion H0; subst.
+    replace (S (length_axcut_ctx E + j)) with (length_axcut_ctx E + (S j)) by lia.
+    eapply IHE; eauto.
+  + inversion H; subst.
+    inversion H0; subst.
+    replace (S (length_axcut_ctx E + j)) with (length_axcut_ctx E + (S j)) by lia.
+    eapply IHE; eauto.
+Qed.
 
+(* swap01 preserves well-formedness *)
 Lemma well_formedness_preserved_under_swap01 :
   forall (n : nat) (E : axcut_ctx),
     well_formed_axcut_ctx n E ->
@@ -429,26 +496,30 @@ Proof.
       * apply c_refl.
   + destruct E; simpl in H; try (exfalso; lia).
     - simpl in H1. rewrite reduce_axcut_equation_3 in H2.
-      specialize IHn with (E := rename_axcut_ctx E swap01).
-      specialize IHn with (P := rename_process (up P) swap01).
-      specialize IHn with (M := rename_message (upM M) swap01).
-      specialize IHn with (Q := rename_process (fill_hole E (upM M)) swap01).
+      rewrite H1.
       assert (
         exists L,
-          (cut (rename_process (fill_hole E (upM M)) swap01) (rename_process (up P) swap01)) ≡ L
-          /\
-          L ⊳ reduce_axcut (rename_axcut_ctx E swap01) (rename_message (upM M) swap01) (rename_process (up P) swap01)
+        (cut (rename_process (fill_hole E M) swap01) (rename_process (up P) swap01)) 
+          ≡ L /\
+        L ⊳
+        (reduce_axcut
+          (rename_axcut_ctx E swap01)
+          (rename_message M (up_ren_n (length_axcut_ctx E) swap01))
+          (rename_process (up P) swap01))
       ).
       {
+        specialize IHn with (E := rename_axcut_ctx E swap01).
+        specialize IHn with (P := rename_process (up P) swap01).
+        specialize IHn with (M := rename_message M (up_ren_n (length_axcut_ctx E) swap01)).
         eapply IHn; auto.
         + inversion H. rewrite (rename_axcut_ctx_preserves_length swap01 E). auto.
         + inversion H0; subst.
           apply well_formedness_preserved_under_swap01 with (j := 0) in H7.
           auto.
-        + rewrite (rename_axcut_ctx_over_fill_hole); auto. apply swap01_is_bijective.
+        + rewrite (rename_axcut_ctx_over_fill_hole); auto.
+          apply swap01_is_bijective.
       }
-      destruct H3 as [? [? ?]].
-      eexists. split.
+      destruct H3 as [? [? ?]]. eexists; split.
       * rewrite H1. eapply c_cut_assoc; auto. inversion H0; auto.
       * rewrite H2. eapply r_struct.
         ** eapply c_trans. apply c_cut_comm. apply c_cong_cut.
@@ -456,23 +527,28 @@ Proof.
         ** apply r_cong_cut. apply H4.
         ** apply c_cut_comm.
     - simpl in H1. rewrite reduce_axcut_equation_4 in H2.
-      specialize IHn with (E := rename_axcut_ctx E swap01).
-      specialize IHn with (P := rename_process (up P) swap01).
-      specialize IHn with (M := rename_message (upM M) swap01).
-      specialize IHn with (Q := rename_process (fill_hole E (upM M)) swap01).
+      rewrite H1.
       assert (
         exists L,
-          (cut (rename_process (fill_hole E (upM M)) swap01) (rename_process (up P) swap01)) ≡ L
-          /\
-          L ⊳ reduce_axcut (rename_axcut_ctx E swap01) (rename_message (upM M) swap01) (rename_process (up P) swap01)
+        (cut (rename_process (fill_hole E M) swap01) (rename_process (up P) swap01)) 
+          ≡ L /\
+        L ⊳
+        (reduce_axcut
+          (rename_axcut_ctx E swap01)
+          (rename_message M (up_ren_n (length_axcut_ctx E) swap01))
+          (rename_process (up P) swap01))
       ).
       {
+        specialize IHn with (E := rename_axcut_ctx E swap01).
+        specialize IHn with (P := rename_process (up P) swap01).
+        specialize IHn with (M := rename_message M (up_ren_n (length_axcut_ctx E) swap01)).
         eapply IHn; auto.
         + inversion H. rewrite (rename_axcut_ctx_preserves_length swap01 E). auto.
         + inversion H0; subst.
           apply well_formedness_preserved_under_swap01 with (j := 0) in H7.
           auto.
-        + rewrite (rename_axcut_ctx_over_fill_hole); auto. apply swap01_is_bijective.
+        + rewrite (rename_axcut_ctx_over_fill_hole); auto.
+          apply swap01_is_bijective.
       }
       destruct H3 as [? [? ?]].
       eexists. split.
@@ -483,7 +559,7 @@ Proof.
         ** eapply c_trans. apply c_cut_comm. apply c_cong_cut.
            apply H3. apply c_refl.
         ** apply r_cong_cut. apply H4.
-        ** apply c_refl. (* apply c_cut_comm. *)
+        ** apply c_refl.
 Qed.
 
 Lemma equiv_red_axcut_in_reduces_axcut :
@@ -560,6 +636,30 @@ Corollary upE_preserves_well_formedness :
   forall n E,
     well_formed_axcut_ctx n E -> well_formed_axcut_ctx (S n) (upE E).
 Proof. intros. apply upE_preserves_well_formedness'; auto. lia. Qed.
+
+Lemma upE_preserves_well_formedness2 :
+  forall n k E,
+    n < k ->
+      well_formed_axcut_ctx n E ->
+        well_formed_axcut_ctx n (lift_ctx E k 1).
+Proof.
+  intros n k E.
+  generalize dependent n.
+  generalize dependent k.
+  induction E; intros; simpl; unfold relocate.
+  + inversion H0; subst. assert (~ (k <= n)) by lia.
+    apply PeanoNat.Nat.leb_nle in H1. rewrite H1. econstructor.
+  + inversion H0; subst. assert (~ (k <= n)) by lia.
+    apply PeanoNat.Nat.leb_nle in H1. rewrite H1. econstructor.
+  + inversion H0; subst.
+    econstructor.
+    - intro Hfv. apply nfv_up_lt in Hfv; eauto. lia.
+    - apply IHE; auto. lia.
+  + inversion H0; subst.
+    econstructor.
+    - intro Hfv. apply nfv_up_lt in Hfv; eauto. lia.
+    - apply IHE; auto. lia.
+Qed.
 
 Lemma edc_preserves_well_formedness :
   forall E E' n, E #⇛ E' -> well_formed_axcut_ctx n E ->
@@ -755,9 +855,12 @@ Proof.
         assumption.
 Qed.
 
+(* In general, if E[M] ⇛ P, then there may be swaps and lifts within M
+   which result in a (behaviourally) different message.
+*)
 Lemma fill_hole_congruence :
   forall P P' E M, P = fill_hole E M -> P ⇛ P' ->
-    exists E' M', P' = fill_hole E' M' /\ E #⇛ E' /\ M !⇛ M'.
+    exists E' M', P' = fill_hole E' M' /\ E #⇛ E'.
 Proof.
   intros.
   generalize dependent E.
@@ -768,576 +871,164 @@ Proof.
       * simpl.
         apply directed_cong_in_struct_cong in H.
         apply future_equiv_future1 in H. rewrite H; auto.
-      * split; auto. econstructor.
+      * econstructor.
     - exists (nil_r n), ml2. split.
       * simpl.
         apply directed_cong_in_struct_cong in H0.
         apply future_equiv_future1 in H0. rewrite H0; auto.
-      * split; auto. econstructor.
+      * econstructor.
   + destruct E; simpl in H1; try congruence; inversion H1; subst.
     - exists (nil_r n), mr2. split.
       * simpl.
         apply directed_cong_in_struct_cong in H.
         apply future_equiv_future1 in H. rewrite H; auto.
-      * split; auto. econstructor.
+      * econstructor.
     - exists (nil_l n), ml2. split.
       * simpl.
         apply directed_cong_in_struct_cong in H0.
         apply future_equiv_future1 in H0. rewrite H0; auto.
-      * split; auto. econstructor.
+      * econstructor.
   + destruct E; simpl in H; try congruence; inversion H; subst.
-    - specialize IHdirected_congruence2 with (upM M) E.
-      destruct (IHdirected_congruence2 eq_refl) as [? [? [? [? ?]]]].
-      exists (cons_r x P'). exists (downM x0).
+    - specialize IHdirected_congruence2 with M E.
+      destruct (IHdirected_congruence2 eq_refl) as [? [? [? ?]]].
+      exists (cons_r x P'). exists x0.
       split.
-      * simpl.
-        assert (upM (downM x0) = x0).
-        {
-          unfold upM. unfold downM.
-          apply up_after_down_id.
-          unfold upM in H2.
-          assert (~ (occurs_free_message 0 (lift_message M 0 1))).
-          {
-            apply nfv_lift_n. lia.
-          }
-          apply directed_cong_in_struct_cong in H2.
-          apply (nfv_under_struct_congM _ _ 0 H2) in H3.
-          assumption.
-        }
-        rewrite H3.
-        rewrite <- H0.
-        reflexivity.
-      * split.
-        ** econstructor; eauto.
-        ** assert ((downM (upM M)) !⇛ (downM x0)).
-           {
-            unfold downM.
-            apply directed_cong_invariant_under_downshifting; auto.
-            apply nfv_lift_n; lia.
-           }
-           unfold downM, upM in H3.
-           rewrite (proj1 (proj2 down_after_up_id)) in H3.
-           assumption.
-    - specialize IHdirected_congruence1 with (upM M) E.
-      destruct (IHdirected_congruence1 eq_refl) as [? [? [? [? ?]]]].
-      exists (cons_l Q' x). exists (downM x0).
+      * simpl. rewrite H0. reflexivity.
+      * econstructor; eauto.
+    - specialize IHdirected_congruence1 with M E.
+      destruct (IHdirected_congruence1 eq_refl) as [? [? [? ?]]].
+      exists (cons_l Q' x). exists x0.
       split.
-      * simpl.
-        assert (upM (downM x0) = x0).
-        {
-          unfold upM. unfold downM.
-          apply up_after_down_id.
-          unfold upM in H2.
-          assert (~ (occurs_free_message 0 (lift_message M 0 1))).
-          {
-            apply nfv_lift_n. lia.
-          }
-          apply directed_cong_in_struct_cong in H2.
-          apply (nfv_under_struct_congM _ _ 0 H2) in H3.
-          assumption.
-        }
-        rewrite H3.
-        rewrite <- H0.
-        reflexivity.
-      * split.
-        ** econstructor; eauto.
-        ** assert ((downM (upM M)) !⇛ (downM x0)).
-           {
-            unfold downM.
-            apply directed_cong_invariant_under_downshifting; auto.
-            apply nfv_lift_n; lia.
-           }
-           unfold downM, upM in H3.
-           rewrite (proj1 (proj2 down_after_up_id)) in H3.
-           assumption.
+      * simpl. rewrite H0. reflexivity.
+      * econstructor; eauto.
   + destruct E; simpl in H3; try congruence.
     - inversion H3; subst.
       clear H3 IHdirected_congruence1 IHdirected_congruence2.
-      destruct (IHdirected_congruence3 (upM M) E eq_refl) as [E' [M' [? [? ?]]]].
+      destruct (IHdirected_congruence3 M E eq_refl) as [E' [M' [? ?]]].
       exists (
         cons_l (down (rename_process P1 swap01))
           (cons_l (rename_process Q1 swap01)
                   (rename_axcut_ctx (upE E') swap01))
       ).
-      exists (downM M').
+      exists (rename_message (lift_message M' (length_axcut_ctx E') 1)
+              (up_ren_n (length_axcut_ctx (upE E')) swap01)).
       split.
-      {
-        simpl. f_equal. f_equal.
-        assert ( upM (downM M') = M' ).
-        {
-          unfold upM, downM. rewrite (proj1 (proj2 up_after_down_id)); auto.
-          assert ( ~ (occurs_free_message 0 (upM M)) ).
-          { apply nfv_lift_n; lia. }
-          apply directed_cong_in_struct_cong in H2.
-          apply (nfv_under_struct_congM _ _ _ H2) in H3.
-          assumption.
-        }
-        rewrite H3.
-        assert ( rename_message (upM M') swap01 = upM M' ).
-        {
-          assert (~ (occurs_free_message 0 (upM M))).
-          { unfold upM, upM. apply nfv_lift_n; lia. }
-          assert (~ (occurs_free_message 0 M')).
-          {
-            apply directed_cong_in_struct_cong in H2.
-            apply (nfv_under_struct_congM _ _ _ H2) in H4.
-            auto.
-          }
-          assert (~ (occurs_free_message 0 (upM M'))).
-          { apply nfv_lift_n; lia. }
-          assert (~ (occurs_free_message 1 (upM M'))).
-          { intro Hfv. apply fv_up_Sn2' in Hfv; auto. }
-          apply (proj1 (proj2 renaming_idempotent_free_vars)).
-          intros. destruct n as [|[|]]; try congruence. reflexivity.
-        }
-        rewrite <- H4.
-        rewrite <- (rename_axcut_ctx_over_fill_hole (upE E') _ swap01 swap01_is_bijective).
-        assert (
-          fill_hole (upE E') (upM M') =
-            up (fill_hole E' M')
-        ).
-        { unfold upE, upM, up. rewrite up_ctx_over_fill_hole. reflexivity. }
-        rewrite H5.
-        rewrite <- H0.
+      * simpl. f_equal. f_equal.
+        rewrite H0.
+        unfold up.
+        rewrite up_ctx_over_fill_hole. rewrite <- plus_n_O.
+        replace (lift_ctx E' 0 1) with (upE E') by auto.
+        rewrite (rename_axcut_ctx_over_fill_hole _ _ swap01 swap01_is_bijective).
         reflexivity.
-      }
-      split. { eapply edc_assoc_cut_l; eauto. }
-      assert ( (downM (upM M)) !⇛ (downM M') ).
-      {
-        apply directed_cong_invariant_under_downshifting; auto.
-        apply nfv_lift_n. lia.
-      }
-      unfold upM, downM in H3.
-      rewrite ((proj1 (proj2 down_after_up_id)) _ _) in H3.
-      assumption.
+      * eapply edc_assoc_cut_l; eauto.
     - destruct E; simpl in H3; try congruence.
       * inversion H3; subst.
         clear H3 IHdirected_congruence1 IHdirected_congruence3.
-        destruct (IHdirected_congruence2 (upM (upM M)) E eq_refl) as [E' [M' [? [? ?]]]].
+        destruct (IHdirected_congruence2 M E eq_refl) as [E' [M' [? ?]]].
         exists (cons_l (down (rename_process P1 swap01))
                (cons_r (rename_axcut_ctx E' swap01)
                        (rename_process (up R1) swap01))).
-        exists (downM (downM M')).
+        exists (rename_message M' (up_ren_n (length_axcut_ctx E') swap01)).
         split.
         {
-          simpl.
-          assert ( (upM (upM (downM (downM M')))) = M' ).
-          {
-            unfold upM, downM.
-            rewrite (proj1 (proj2 up_after_down_id)).
-            + rewrite (proj1 (proj2 up_after_down_id)); auto.
-              apply directed_cong_in_struct_cong in H2.
-              apply (nfv_under_struct_congM _ _ _ H2).
-              unfold upM. rewrite (proj1 (proj2 shift_additive)); simpl.
-              apply nfv_lift_n; lia.
-            + assert ((downM (upM (upM M))) !⇛ (downM M')).
-              {
-                apply directed_cong_invariant_under_downshifting; auto.
-                unfold upM; rewrite (proj1 (proj2 shift_additive)); simpl.
-                apply nfv_lift_n. lia.
-              }
-              apply directed_cong_in_struct_cong in H3.
-              apply (nfv_under_struct_congM _ _ _ H3).
-              unfold upM, downM.
-              rewrite (proj1 (proj2 down_after_up_id)). apply nfv_lift_n. lia.
-          }
-          rewrite H3.
-          assert ( rename_message M' swap01 = M' ).
-          {
-            assert (~ (occurs_free_message 0 (upM (upM M)))).
-            {
-              unfold upM, upM. rewrite (proj1 (proj2 shift_additive)). simpl.
-              apply nfv_lift_n; lia.
-            }
-            assert (~ (occurs_free_message 1 (upM (upM M)))).
-            {
-              unfold upM, upM. rewrite (proj1 (proj2 shift_additive)). simpl.
-              apply nfv_lift_n; lia.
-            }
-            apply directed_cong_in_struct_cong in H2.
-            assert (~ (occurs_free_message 0 M')).
-            { apply (nfv_under_struct_congM _ _ _ H2) in H4. auto. }
-            assert (~ (occurs_free_message 1 M')).
-            { apply (nfv_under_struct_congM _ _ _ H2) in H5. auto. }
-            apply (proj1 (proj2 renaming_idempotent_free_vars)).
-            intros. destruct n as [|[|]]; try congruence. reflexivity.
-          }
-          rewrite <- H4.
-          rewrite <- (rename_axcut_ctx_over_fill_hole E' _ swap01 swap01_is_bijective).
-          rewrite <- H0.
+          simpl. rewrite H0. f_equal. f_equal.
+          rewrite (rename_axcut_ctx_over_fill_hole _ _ swap01 swap01_is_bijective).
           reflexivity.
         }
-        split.
-        { eapply edc_assoc_rl; eauto. }
-        {
-          assert ( (downM (downM (upM (upM M)))) !⇛ (downM (downM M')) ).
-          {
-            unfold upM, downM.
-            apply (proj1 (proj2 directed_cong_invariant_under_downshifting)).
-            + apply (proj1 (proj2 directed_cong_invariant_under_downshifting)).
-              assumption. rewrite (proj1 (proj2 shift_additive)); simpl.
-              apply nfv_lift_n. lia.
-            + rewrite (proj1 (proj2 (down_after_up_id))).
-              apply nfv_lift_n; lia.
-          }
-          unfold downM, upM in H3.
-          repeat rewrite (proj1 (proj2 down_after_up_id)) in H3.
-          assumption.
-        }
+        eapply edc_assoc_rl; eauto.
       * inversion H3; subst.
         clear H3 IHdirected_congruence2 IHdirected_congruence3.
-        destruct (IHdirected_congruence1 (upM (upM M)) E eq_refl) as [E' [M' [? [? ?]]]].
+        destruct (IHdirected_congruence1 M E eq_refl) as [E' [M' [? ?]]].
         exists (cons_r (downE (rename_axcut_ctx E' swap01)) (cut (rename_process Q1 swap01) (rename_process (up R1) swap01))).
-        exists (downM (downM M')).
+        exists (
+          down1_message
+            (rename_message M' (up_ren_n (length_axcut_ctx E') swap01))
+            (length_axcut_ctx (rename_axcut_ctx E' swap01))
+        ).
         split.
         {
           simpl.
-          assert ( (upM (downM (downM M'))) = downM M' ).
-          {
-            unfold upM, downM. rewrite (proj1 (proj2 up_after_down_id)); auto.
-            assert ( (downM (upM (upM M))) !⇛ (downM M') ).
-            {
-              apply directed_cong_invariant_under_downshifting. auto.
-              unfold upM. rewrite (proj1 (proj2 shift_additive)). apply nfv_lift_n; lia.
-            }
-            apply directed_cong_in_struct_cong in H3.
-            apply (nfv_under_struct_congM _ _ _ H3).
-            unfold downM, upM. rewrite (proj1 (proj2 down_after_up_id)).
-            apply nfv_lift_n; lia.
-          }
-          rewrite H3.
-          assert ( rename_message M' swap01 = M' ).
-          {
-            assert (~ (occurs_free_message 0 (upM (upM M)))).
-            {
-              unfold upM, upM. rewrite (proj1 (proj2 shift_additive)). simpl.
-              apply nfv_lift_n; lia.
-            }
-            assert (~ (occurs_free_message 1 (upM (upM M)))).
-            {
-              unfold upM, upM. rewrite (proj1 (proj2 shift_additive)). simpl.
-              apply nfv_lift_n; lia.
-            }
-            apply directed_cong_in_struct_cong in H2.
-            assert (~ (occurs_free_message 0 M')).
-            { apply (nfv_under_struct_congM _ _ _ H2) in H4. auto. }
-            assert (~ (occurs_free_message 1 M')).
-            { apply (nfv_under_struct_congM _ _ _ H2) in H5. auto. }
-            apply (proj1 (proj2 renaming_idempotent_free_vars)).
-            intros. destruct n as [|[|]]; try congruence. reflexivity.
-          }
-          rewrite <- H4.
-          assert (
-            (fill_hole (downE (rename_axcut_ctx E' swap01))
-                        (downM (rename_message M' swap01)))
-            = down (fill_hole (rename_axcut_ctx E' swap01) (rename_message M' swap01))
-          ).
-          { unfold downE, downM, down. rewrite down_ctx_over_fill_hole. reflexivity. }
-          rewrite H5.
-          rewrite <- (rename_axcut_ctx_over_fill_hole E' _ swap01 swap01_is_bijective).
-          rewrite <- H0.
+          rewrite H0. f_equal; f_equal.
+          rewrite (rename_axcut_ctx_over_fill_hole _ _ swap01 swap01_is_bijective).
+          unfold down. rewrite down_ctx_over_fill_hole.
+          rewrite <- plus_n_O.
           reflexivity.
         }
-        split.
-        {
-          eapply edc_assoc_rr; eauto.
-          intro Hfv. apply fv_ctx_fill_hole with (M := (upM (upM M))) in Hfv.
-          congruence.
-        }
-        {
-          assert ( (downM (downM (upM (upM M)))) !⇛ (downM (downM M')) ).
-          {
-            unfold upM, downM.
-            apply (proj1 (proj2 directed_cong_invariant_under_downshifting)).
-            + apply (proj1 (proj2 directed_cong_invariant_under_downshifting)).
-              assumption. rewrite (proj1 (proj2 shift_additive)); simpl.
-              apply nfv_lift_n. lia.
-            + rewrite (proj1 (proj2 (down_after_up_id))).
-              apply nfv_lift_n; lia.
-          }
-          unfold downM, upM in H3.
-          repeat rewrite (proj1 (proj2 down_after_up_id)) in H3.
-          assumption.
-        }
+        eapply edc_assoc_rr; eauto.
+        intro Hfv. apply fv_ctx_fill_hole with (M := M) in Hfv. congruence.
   + destruct E; simpl in H3; try congruence.
     - destruct E; simpl in H3; try congruence.
       * inversion H3; subst.
         clear H3 IHdirected_congruence1 IHdirected_congruence2.
-        destruct (IHdirected_congruence3 (upM (upM M)) E eq_refl) as [E' [M' [? [? ?]]]].
+        destruct (IHdirected_congruence3 M E eq_refl) as [E' [M' [? ?]]].
         exists (
           cons_l (cut (rename_process (up P1) swap01)
                       (rename_process Q1 swap01))
                  (downE (rename_axcut_ctx E' swap01))
         ).
-        exists (downM (downM M')).
+        exists (
+          down1_message
+            (rename_message M' (up_ren_n (length_axcut_ctx E') swap01))
+            (length_axcut_ctx (rename_axcut_ctx E' swap01))
+        ).
         split.
         {
           simpl. f_equal. f_equal.
-          assert ( (upM (downM (downM M'))) = (downM M') ).
-          {
-            unfold upM, downM. rewrite (proj1 (proj2 up_after_down_id)); auto.
-            assert ( (downM (upM (upM M))) !⇛ (downM M') ).
-            {
-              apply directed_cong_invariant_under_downshifting. auto.
-              unfold upM. rewrite (proj1 (proj2 shift_additive)). apply nfv_lift_n; lia.
-            }
-            apply directed_cong_in_struct_cong in H3.
-            apply (nfv_under_struct_congM _ _ _ H3).
-            unfold downM, upM. rewrite (proj1 (proj2 down_after_up_id)).
-            apply nfv_lift_n; lia.
-          }
-          rewrite H3.
-          assert ( rename_message M' swap01 = M' ).
-          {
-            assert (~ (occurs_free_message 0 (upM (upM M)))).
-            {
-              unfold upM, upM. rewrite (proj1 (proj2 shift_additive)). simpl.
-              apply nfv_lift_n; lia.
-            }
-            assert (~ (occurs_free_message 1 (upM (upM M)))).
-            {
-              unfold upM, upM. rewrite (proj1 (proj2 shift_additive)). simpl.
-              apply nfv_lift_n; lia.
-            }
-            apply directed_cong_in_struct_cong in H2.
-            assert (~ (occurs_free_message 0 M')).
-            { apply (nfv_under_struct_congM _ _ _ H2) in H4. auto. }
-            assert (~ (occurs_free_message 1 M')).
-            { apply (nfv_under_struct_congM _ _ _ H2) in H5. auto. }
-            apply (proj1 (proj2 renaming_idempotent_free_vars)).
-            intros. destruct n as [|[|]]; try congruence. reflexivity.
-          }
-          rewrite <- H4.
-          assert (
-            fill_hole (downE (rename_axcut_ctx E' swap01)) (downM (rename_message M' swap01))
-             = down (fill_hole (rename_axcut_ctx E' swap01) (rename_message M' swap01))
-          ).
-          { unfold down, downE, downM. rewrite down_ctx_over_fill_hole; reflexivity. }
-          rewrite H5.
-          rewrite <- (rename_axcut_ctx_over_fill_hole E' _ swap01 swap01_is_bijective).
-          rewrite <- H0.
+          rewrite H0.
+          rewrite (rename_axcut_ctx_over_fill_hole E' _ swap01 swap01_is_bijective).
+          unfold down. rewrite down_ctx_over_fill_hole. rewrite <- plus_n_O.
           reflexivity.
         }
-        split.
-        {
-          eapply edc_assoc_ll; eauto.
-          intro Hfv. apply fv_ctx_fill_hole with (M := (upM (upM M))) in Hfv.
-          congruence.
-        }
-        {
-          assert ( (downM (downM (upM (upM M)))) !⇛ (downM (downM M')) ).
-          {
-            unfold upM, downM.
-            apply (proj1 (proj2 directed_cong_invariant_under_downshifting)).
-            + apply (proj1 (proj2 directed_cong_invariant_under_downshifting)).
-              assumption. rewrite (proj1 (proj2 shift_additive)); simpl.
-              apply nfv_lift_n. lia.
-            + rewrite (proj1 (proj2 (down_after_up_id))).
-              apply nfv_lift_n; lia.
-          }
-          unfold downM, upM in H3.
-          repeat rewrite (proj1 (proj2 down_after_up_id)) in H3.
-          assumption.
-        }
+        eapply edc_assoc_ll; eauto.
+        intro Hfv. eapply fv_ctx_fill_hole with (M := M) in Hfv; congruence.
       * inversion H3; subst.
         clear H3 IHdirected_congruence1 IHdirected_congruence3.
-        destruct (IHdirected_congruence2 (upM (upM M)) E eq_refl) as [E' [M' [? [? ?]]]].
+        destruct (IHdirected_congruence2 M E eq_refl) as [E' [M' [? ?]]].
         exists (
           cons_r (cons_l (rename_process (up P1) swap01)
                          (rename_axcut_ctx E' swap01))
                  (down (rename_process R1 swap01))
         ).
-        exists (downM (downM M')).
+        exists (rename_message M' (up_ren_n (length_axcut_ctx E') swap01)).
         split.
         {
           simpl. f_equal; f_equal.
-          assert ( (upM (upM (downM (downM M')))) = M' ).
-          {
-            unfold upM, downM.
-            rewrite (proj1 (proj2 up_after_down_id)).
-            + rewrite (proj1 (proj2 up_after_down_id)); auto.
-              apply directed_cong_in_struct_cong in H2.
-              apply (nfv_under_struct_congM _ _ _ H2).
-              unfold upM. rewrite (proj1 (proj2 shift_additive)); simpl.
-              apply nfv_lift_n; lia.
-            + assert ((downM (upM (upM M))) !⇛ (downM M')).
-              {
-                apply directed_cong_invariant_under_downshifting; auto.
-                unfold upM; rewrite (proj1 (proj2 shift_additive)); simpl.
-                apply nfv_lift_n. lia.
-              }
-              apply directed_cong_in_struct_cong in H3.
-              apply (nfv_under_struct_congM _ _ _ H3).
-              unfold upM, downM.
-              rewrite (proj1 (proj2 down_after_up_id)). apply nfv_lift_n. lia.
-          }
-          rewrite H3.
-          assert ( rename_message M' swap01 = M' ).
-          {
-            assert (~ (occurs_free_message 0 (upM (upM M)))).
-            {
-              unfold upM, upM. rewrite (proj1 (proj2 shift_additive)). simpl.
-              apply nfv_lift_n; lia.
-            }
-            assert (~ (occurs_free_message 1 (upM (upM M)))).
-            {
-              unfold upM, upM. rewrite (proj1 (proj2 shift_additive)). simpl.
-              apply nfv_lift_n; lia.
-            }
-            apply directed_cong_in_struct_cong in H2.
-            assert (~ (occurs_free_message 0 M')).
-            { apply (nfv_under_struct_congM _ _ _ H2) in H4. auto. }
-            assert (~ (occurs_free_message 1 M')).
-            { apply (nfv_under_struct_congM _ _ _ H2) in H5. auto. }
-            apply (proj1 (proj2 renaming_idempotent_free_vars)).
-            intros. destruct n as [|[|]]; try congruence. reflexivity.
-          }
-          rewrite <- H4.
-          rewrite <- (rename_axcut_ctx_over_fill_hole E' _ swap01 swap01_is_bijective).
-          rewrite <- H0.
+          rewrite H0.
+          rewrite (rename_axcut_ctx_over_fill_hole E' _ swap01 swap01_is_bijective).
           reflexivity.
         }
-        split.
-        { eapply edc_assoc_lr; eauto. }
-        {
-          assert ( (downM (downM (upM (upM M)))) !⇛ (downM (downM M')) ).
-          {
-            unfold upM, downM.
-            apply (proj1 (proj2 directed_cong_invariant_under_downshifting)).
-            + apply (proj1 (proj2 directed_cong_invariant_under_downshifting)).
-              assumption. rewrite (proj1 (proj2 shift_additive)); simpl.
-              apply nfv_lift_n. lia.
-            + rewrite (proj1 (proj2 (down_after_up_id))).
-              apply nfv_lift_n; lia.
-          }
-          unfold downM, upM in H3.
-          repeat rewrite (proj1 (proj2 down_after_up_id)) in H3.
-          assumption.
-        }
+        eapply edc_assoc_lr; eauto.
     - inversion H3; subst.
       clear H3 IHdirected_congruence2 IHdirected_congruence3.
-      destruct (IHdirected_congruence1 (upM M) E eq_refl) as [E' [M' [? [? ?]]]].
+      destruct (IHdirected_congruence1 M E eq_refl) as [E' [M' [? ?]]].
       exists (
         cons_r (cons_r (rename_axcut_ctx (upE E') swap01)
                        (rename_process Q1 swap01))
                (down (rename_process R1 swap01))
       ).
-      exists (downM M').
+      eexists.
       split.
       {
         simpl. f_equal. f_equal.
-        assert ( upM (downM M') = M' ).
-        {
-          unfold upM, downM. rewrite (proj1 (proj2 up_after_down_id)); auto.
-          assert ( ~ (occurs_free_message 0 (upM M)) ).
-          { apply nfv_lift_n; lia. }
-          apply directed_cong_in_struct_cong in H2.
-          apply (nfv_under_struct_congM _ _ _ H2) in H3.
-          assumption.
-        }
-        rewrite H3.
-        assert ( rename_message (upM M') swap01 = upM M' ).
-        {
-          assert (~ (occurs_free_message 0 (upM M))).
-          { unfold upM, upM. apply nfv_lift_n; lia. }
-          assert (~ (occurs_free_message 0 M')).
-          {
-            apply directed_cong_in_struct_cong in H2.
-            apply (nfv_under_struct_congM _ _ _ H2) in H4.
-            auto.
-          }
-          assert (~ (occurs_free_message 0 (upM M'))).
-          { apply nfv_lift_n; lia. }
-          assert (~ (occurs_free_message 1 (upM M'))).
-          { intro Hfv. apply fv_up_Sn2' in Hfv; auto. }
-          apply (proj1 (proj2 renaming_idempotent_free_vars)).
-          intros. destruct n as [|[|]]; try congruence. reflexivity.
-        }
-        rewrite <- H4.
-        rewrite <- (rename_axcut_ctx_over_fill_hole (upE E') _ swap01 swap01_is_bijective).
-        assert (
-          fill_hole (upE E') (upM M') =
-            up (fill_hole E' M')
-        ).
-        { unfold upM, upE, up. rewrite up_ctx_over_fill_hole; reflexivity. }
-        rewrite H5.
-        rewrite <- H0.
+        rewrite H0.
+        unfold up. rewrite up_ctx_over_fill_hole.
+        rewrite (rename_axcut_ctx_over_fill_hole (upE E') _ swap01 swap01_is_bijective).
         reflexivity.
       }
-      split. { eapply edc_assoc_cut_r; eauto. }
-      assert ( (downM (upM M)) !⇛ (downM M') ).
-      {
-        apply directed_cong_invariant_under_downshifting; auto.
-        apply nfv_lift_n. lia.
-      }
-      unfold upM, downM in H3.
-      rewrite ((proj1 (proj2 down_after_up_id)) _ _) in H3.
-      assumption.
+      eapply edc_assoc_cut_r; eauto.
   + destruct E; simpl in H; try congruence; inversion H; subst.
-    - specialize IHdirected_congruence2 with (upM M) E.
-      destruct (IHdirected_congruence2 eq_refl) as [? [? [? [? ?]]]].
-      exists (cons_l P' x). exists (downM x0).
+    - specialize IHdirected_congruence2 with M E.
+      destruct (IHdirected_congruence2 eq_refl) as [? [? [? ?]]].
+      exists (cons_l P' x). exists x0.
       split.
-      * simpl.
-        assert (upM (downM x0) = x0).
-        {
-          unfold upM. unfold downM.
-          apply up_after_down_id.
-          unfold upM in H2.
-          assert (~ (occurs_free_message 0 (lift_message M 0 1))).
-          {
-            apply nfv_lift_n. lia.
-          }
-          apply directed_cong_in_struct_cong in H2.
-          apply (nfv_under_struct_congM _ _ 0 H2) in H3.
-          assumption.
-        }
-        rewrite H3.
-        rewrite <- H0.
-        reflexivity.
-      * split.
-        ** econstructor; eauto.
-        ** assert ((downM (upM M)) !⇛ (downM x0)).
-           {
-            unfold downM.
-            apply directed_cong_invariant_under_downshifting; auto.
-            apply nfv_lift_n; lia.
-           }
-           unfold downM, upM in H3.
-           rewrite (proj1 (proj2 down_after_up_id)) in H3.
-           assumption.
-    - specialize IHdirected_congruence1 with (upM M) E.
-      destruct (IHdirected_congruence1 eq_refl) as [? [? [? [? ?]]]].
-      exists (cons_r x Q'). exists (downM x0).
+      * simpl. rewrite H0. reflexivity.
+      * econstructor; eauto.
+    - specialize IHdirected_congruence1 with M E.
+      destruct (IHdirected_congruence1 eq_refl) as [? [? [? ?]]].
+      exists (cons_r x Q'). exists x0.
       split.
-      * simpl.
-        assert (upM (downM x0) = x0).
-        {
-          unfold upM. unfold downM.
-          apply up_after_down_id.
-          unfold upM in H2.
-          assert (~ (occurs_free_message 0 (lift_message M 0 1))).
-          {
-            apply nfv_lift_n. lia.
-          }
-          apply directed_cong_in_struct_cong in H2.
-          apply (nfv_under_struct_congM _ _ 0 H2) in H3.
-          assumption.
-        }
-        rewrite H3.
-        rewrite <- H0.
-        reflexivity.
-      * split.
-        ** econstructor; eauto.
-        ** assert ((downM (upM M)) !⇛ (downM x0)).
-           {
-            unfold downM.
-            apply directed_cong_invariant_under_downshifting; auto.
-            apply nfv_lift_n; lia.
-           }
-           unfold downM, upM in H3.
-           rewrite (proj1 (proj2 down_after_up_id)) in H3.
-           assumption.
+      * simpl. rewrite H0. reflexivity.
+      * econstructor; eauto.
   + destruct E; simpl in H1; congruence.
   + destruct E; simpl in H; congruence.
 Qed.
@@ -2363,11 +2054,77 @@ Proof.
       rewrite H8. auto.
 Qed.
 
+(* needs WF as premise + induction on size of E *)
 Lemma reduce_axcut_invariant_under_dc :
   forall E M P E' M' P',
-    E #⇛ E' -> M !⇛ M' -> P ⇛ P' ->
+    E #⇛ E' -> P ⇛ P' -> (fill_hole E M) ⇛ (fill_hole E' M') ->
     (reduce_axcut E M P) ⇛ (reduce_axcut E' M' P').
 Proof.
+  intros.
+  generalize dependent M.
+  generalize dependent M'.
+  generalize dependent P.
+  generalize dependent P'.
+  induction H; intros.
+  + admit.
+  + admit.
+  + admit.
+  + admit.
+  + simpl in H2. inversion H2; subst.
+    - (* not possible if WF context ?! *) admit.
+    - (* WTF *) admit.
+      (* exfalso using H6? *)
+    - admit.
+    - repeat rewrite reduce_axcut_equation_3.
+      apply dc_cong_cut. admit.
+      (* IH *) admit.
+  + (* define specialized inversions for ⇛ *)
+    admit.
+  + simpl in H2.
+    (* if P ⇛ P' and H: E #⇛ E', then show by induction on
+      H that if (cut P fill_hole E M) .... then ... *)
+    admit.
+  + admit.
+  + simpl in H7. inversion H7; subst.
+    - exfalso. admit.
+    - simpl.
+      repeat rewrite reduce_axcut_equation_4; simpl.
+      repeat rewrite reduce_axcut_equation_3; simpl.
+      repeat rewrite reduce_axcut_equation_4; simpl.
+      eapply dc_cut_assoc_l.
+      * admit.
+      * assert (
+          (down (rename_process (rename_process P (up_ren swap01)) swap01)) ⇛
+          (down (rename_process P' swap01))
+        ) by admit.
+        apply H3.
+      * admit.
+      * (* if WF, then ~ 2 ∈ P -> up_ren swap01 is no op *)
+        assert (
+          (down (rename_process Q swap01)) ⇛
+          (down (rename_process Q' swap01))
+        ) by admit.
+        apply H3.
+      * reflexivity.
+      * (* if swap01 (up ) = lift at 1
+          then swap 01 (up swap01 up) = lift at 1 increase 2
+          thus, if swa01 (reduce _axcut)
+          distribute using up_ren swap01 ->
+          renaming is no op  
+
+          IMPORTANT NOTE:
+            (up_ren swap01) swap01 (up_ren swap01) is also swap02
+      *)
+        admit.
+      * (* because of WF -> ~ 1 in Q -> 0, 2 not in up Q' 
+           -> swap01 (up_ren swap01) swap01 = swap02 -> thus noop
+           -> down .... = Q' *)
+        (* reflexivity. *) admit.
+    - exfalso. admit.
+    - exfalso. admit.
+  + admit.
+
+(* OLD VERSION
   intros.
   generalize dependent M.
   generalize dependent M'.
@@ -2486,56 +2243,5 @@ Proof.
   + admit.
 
   (* ? by induction on the size of E ? *)
-Admitted.
-
-Lemma up_ren_n_lt :
-  forall n k r, n < k -> up_ren_n k r n = n.
-Proof.
-  intros.
-  generalize dependent n. induction k; intros; simpl.
-  + inversion H.
-  + destruct (PeanoNat.Nat.eq_dec n k).
-    - subst. destruct k; auto.
-      simpl.
-      replace (up_ren (up_ren_n k r)) with (up_ren_n (S k) r) by auto.
-      rewrite IHk; auto.
-    - assert (n < k) by lia.
-      destruct n; auto; simpl.
-      rewrite IHk; auto. lia.
-Qed.
-
-Lemma up_after_down_nfvSn_is_swap :
-  (forall P,
-    forall k, ~ (S k) ∈ P ->
-      lift_process (down1_process P k) k 1 =
-        rename_process P (up_ren_n k swap01)) /\
-  (forall M,
-    forall k, ~ (occurs_free_message (S k) M) ->
-      lift_message (down1_message M k) k 1 =
-        rename_message M (up_ren_n k swap01)) /\
-  (forall s,
-    forall k, ~ (occurs_free_statement (S k) s) ->
-      lift_statement (down1_statement s k) k 1 =
-        rename_statement s (up_ren_n k swap01)).
-Proof.
-  apply syntax_ind; intros; simpl;
-  try replace (up_ren (up_ren_n k swap01)) with (up_ren_n (S k) swap01) by auto;
-  try rewrite H; try rewrite H0; auto;
-  try (intro Hfv; try apply H1; try apply H0; free_var_econstructor; auto).
-  destruct (Nat.ltb k n) eqn:E.
-  + apply PeanoNat.Nat.ltb_lt in E. destruct n; try (exfalso; lia).
-    simpl. unfold relocate.
-    destruct (PeanoNat.Nat.eq_dec k n).
-    - subst. exfalso; apply H; econstructor.
-    - assert (k <= n) by lia. apply PeanoNat.Nat.leb_le in H0. rewrite H0.
-      simpl.
-      admit.
-  + apply PeanoNat.Nat.ltb_nlt in E.
-    destruct (PeanoNat.Nat.eq_dec k n).
-    - simpl. unfold relocate. subst. rewrite PeanoNat.Nat.leb_refl.
-      simpl.
-      admit.
-    - rewrite up_ren_n_lt; try lia.
-      simpl. unfold relocate. assert (~ (k <= n)) by lia.
-      apply PeanoNat.Nat.leb_nle in H0. rewrite H0; auto.
+*)
 Admitted.

@@ -3,6 +3,8 @@ From FD Require Import FreeVars.
 From FD Require Import Renaming.
 From FD Require Import FreeVars.
 From FD Require Import StructCong.
+From FD Require Import Contexts.
+From FD Require Import Typing.
 From FD Require Import ConfluenceDefs.
 From FD Require Import DirectedCong.
 From FD Require Import Reduction.
@@ -17,63 +19,6 @@ Local Hint Rewrite
   up_after_down_process_id
     : up_down_rename_rewrites.
 
-Lemma link_directed_cong_equiv_red_commute :
-  forall ml mr P Q, (link ml mr) ⇛ P -> (link ml mr) ⊵ Q ->
-    exists R, P ⊵ R /\ Q ⇛ R.
-Proof.
-  intros. inversion H; inversion H0; subst;
-  try match goal with
-  | [ H1 : (prefix (send _ _))  !⇛ _,
-      H2 : (prefix (receive _)) !⇛ _
-      |- _ ] =>
-    apply directed_cong_inversion_prefix in H1; destruct H1 as [? [? H1']];
-    apply directed_cong_inversion_prefix in H2; destruct H2 as [? [? H2']];
-    apply directed_cong_inversion_send in H1'; destruct H1' as [? [? [? [? ?]]]];
-    apply directed_cong_inversion_receive in H2'; destruct H2' as [? [? ?]];
-    subst; eexists; split; 
-    [ try eapply rp_tensor_par_1; try eapply rp_tensor_par_2; auto
-    | apply dc_cong_cut; auto; apply dc_cong_cut; auto;
-      apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective;
-      apply directed_cong_invariant_under_upshifting; auto ]
-  | [ H1 : (prefix (choose_left _)) !⇛ _,
-      H2 : (prefix (offer_choice _ _)) !⇛ _
-      |- _ ] =>
-    apply directed_cong_inversion_prefix in H1; destruct H1 as [? [? H1']];
-    apply directed_cong_inversion_prefix in H2; destruct H2 as [? [? H2']];
-    apply directed_cong_inversion_choosel in H1'; destruct H1' as [? [? ?]];
-    apply directed_cong_inversion_choice in H2'; destruct H2' as [? [? [? [? ?]]]];
-    subst; eexists; split; 
-    [ try eapply rp_plus_with_l1; try eapply rp_plus_with_l2; auto
-    | apply dc_cong_cut; auto; apply dc_cong_cut; auto;
-      apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective;
-      apply directed_cong_invariant_under_upshifting; auto ]
-  | [ H1 : (prefix (choose_right _)) !⇛ _,
-      H2 : (prefix (offer_choice _ _)) !⇛ _
-      |- _ ] =>
-    apply directed_cong_inversion_prefix in H1; destruct H1 as [? [? H1']];
-    apply directed_cong_inversion_prefix in H2; destruct H2 as [? [? H2']];
-    apply directed_cong_inversion_chooser in H1'; destruct H1' as [? [? ?]];
-    apply directed_cong_inversion_choice in H2'; destruct H2' as [? [? [? [? ?]]]];
-    subst; eexists; split; 
-    [ try eapply rp_plus_with_r1; try eapply rp_plus_with_r2; auto
-    | apply dc_cong_cut; auto; apply dc_cong_cut; auto;
-      apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective;
-      apply directed_cong_invariant_under_upshifting; auto ]
-  | [ H1 : (prefix close) !⇛ _,
-      H2 : (prefix (wait _)) !⇛ _
-      |- _ ] =>
-    apply directed_cong_inversion_prefix in H1; destruct H1 as [? [? H1']];
-    apply directed_cong_inversion_prefix in H2; destruct H2 as [? [? H2']];
-    apply directed_cong_inversion_close in H1';
-    apply directed_cong_inversion_wait in H2'; destruct H2' as [? [? ?]];
-    subst; eexists; split; [ try eapply rp_one_bot1; try eapply rp_one_bot2; eauto | auto ]
-  end.
-  + eexists. split. apply rp_refl. apply dc_cong_link; auto.
-  + inversion H; subst.
-    - eexists. split. apply rp_refl. econstructor; auto.
-    - eexists. split. apply rp_refl. apply dc_link; auto.
-Qed.
-
 (* ⇛ and ⊵ commute *)
 (*
          P
@@ -83,9 +28,222 @@ Qed.
          R
 *)
 Lemma directed_cong_equiv_red_commute :
-  forall P Q1 Q2, P ⇛ Q1 -> P ⊵ Q2 -> exists R, Q1 ⊵ R /\ Q2 ≡ R.
+  forall Γ P Q1 Q2, Γ ⊢ P :# -> P ⇛ Q1 -> P ⊵ Q2 -> exists R, Q1 ⊵ R /\ Q2 ≡ R.
 Proof.
-  intros. generalize dependent Q2.
+  intros.
+  generalize dependent Γ.
+  generalize dependent Q2.
+  induction H0; intros.
+  (* link *)
+  + destruct (link_directed_cong_equiv_red_commute _ _ _ _ (dc_cong_link _ _ _ _  H H0) H1) as [? [? ?]].
+    eexists; split; eauto. apply directed_cong_in_struct_cong; auto.
+  + destruct (link_directed_cong_equiv_red_commute _ _ _ _ (dc_link _ _ _ _  H H0) H1) as [? [? ?]].
+    eexists; split; eauto. apply directed_cong_in_struct_cong; auto.
+  (* cut *)
+  + inversion H1; subst.
+    - eexists; split. apply rp_refl.
+      apply directed_cong_in_struct_cong. apply dc_cut_comm; auto.
+    - destruct (fill_hole_congruence _ _ _ _ eq_refl H0_) as [E' [M' [? ?]]].
+      eexists. split.
+      * rewrite H0. eapply rp_ax_cut_r; eauto. eapply edc_preserves_well_formedness; eauto.
+      * apply directed_cong_in_struct_cong. subst. apply reduce_axcut_invariant_under_dc; eauto.
+    - destruct (fill_hole_congruence _ _ _ _ eq_refl H0_0) as [E' [M' [? ?]]].
+      eexists. split.
+      * rewrite H0. eapply rp_ax_cut_l; eauto. eapply edc_preserves_well_formedness; eauto.
+      * apply directed_cong_in_struct_cong. subst. apply reduce_axcut_invariant_under_dc; eauto.
+    - inversion H; subst.
+      destruct (IHdirected_congruence1 _ H4 _ H6) as [? [? ?]].
+      eexists; split.
+      * apply rp_cong_cut_r; eauto.
+      * eapply c_trans. apply c_cut_comm. apply c_cong_cut; auto.
+        apply directed_cong_in_struct_cong; auto.
+    - inversion H; subst.
+      destruct (IHdirected_congruence2 _ H4 _ H7) as [? [? ?]].
+      eexists; split.
+      * apply rp_cong_cut_l; eauto.
+      * eapply c_trans. apply c_cut_comm. apply c_cong_cut; auto.
+        apply directed_cong_in_struct_cong; auto.
+  + inversion H3; subst.
+    - eexists. split. apply rp_refl.
+      apply directed_cong_in_struct_cong in H0_, H0_0, H0_1.
+      apply c_trans with (cut (cut P1 Q1) R1).
+      * repeat (apply c_cong_cut; auto).
+      * apply c_cut_assoc; auto. intro Hfv.
+        apply ((proj1 free_vars_under_struct_cong) _ _ H0_ 1) in Hfv. congruence.
+    - destruct E; simpl in H7; try congruence.
+      {
+        inversion H7; subst.
+        destruct (fill_hole_congruence _ _ _ _ eq_refl H0_0) as [E' [M' [? ?]]].
+        rewrite H0.
+        rewrite (rename_axcut_ctx_over_fill_hole _ _ swap01 swap01_is_bijective).
+        eexists; split.
+        + apply rp_cong_cut_r. eapply rp_ax_cut_l; auto.
+          inversion H8; subst.
+          replace swap01 with (up_ren_n 0 swap01) by auto.
+          replace 0 with ((up_ren_n 0 swap01) 1) at 1 by auto.
+          apply (edc_preserves_well_formedness _ _ _ H1) in H10.
+            apply well_formedness_preserved_under_swap01; assumption.
+        + rewrite reduce_axcut_equation_3. apply c_cong_cut.
+          - apply directed_cong_in_struct_cong.
+            apply directed_cong_invariant_under_downshifting.
+            apply directed_cong_invariant_under_renaming; auto; try apply swap01_is_bijective.
+            apply nfv_01_swap; auto.
+          - apply directed_cong_in_struct_cong.
+            apply reduce_axcut_invariant_under_dc.
+            * apply edc_invariant_under_renaming; auto; apply swap01_is_bijective.
+            * apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective.
+              apply directed_cong_invariant_under_upshifting; auto.
+            * repeat rewrite <- (rename_axcut_ctx_over_fill_hole _ _ swap01 swap01_is_bijective).
+              apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective.
+              rewrite <- H0. auto.
+      }
+      {
+        (* because of well-formedness, 0 must be free in (cons_r E P0)
+           in which case 1 ∈ E. However, because of association, ~ 1 ∈ P. *)
+        exfalso.
+        inversion H7; subst. inversion H8; subst.
+        apply well_formed_ctx_fv in H6.
+        apply (fv_ctx_fill_hole _ _ M) in H6.
+        congruence.
+      }
+    - admit.
+    - admit.
+    - inversion H4; subst.
+      destruct (IHdirected_congruence3 _ H8 _ H7) as [? [? ?]].
+      assert (
+        rename_process (up R1) swap01 ⊵ rename_process (up x) swap01
+      ).
+      {
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply directed_cong_in_struct_cong in H0_1.
+        apply ((proj1 struct_cong_preserves_typing) _ _ H0_1 _) in H7.
+        eapply equiv_red_invariant_under_swap; eauto.
+        + replace (Types.dual A .: Γ2) with (nil ++ (Types.dual A .: Γ2)) in H7; auto.
+          apply (proj1 up_shift_sound) in H7; eauto.
+        + eapply equiv_red_invariant_under_up; eauto.
+      }
+      eexists. split.
+      * apply rp_cong_cut_r. apply rp_cong_cut_r. apply H5.
+      * eapply c_trans with (cut (cut P1 Q1) x).
+        {
+          apply directed_cong_in_struct_cong in H0_.
+          apply directed_cong_in_struct_cong in H0_0.
+          apply c_cong_cut; auto. apply c_cong_cut; auto.
+        }
+        apply c_cut_assoc; auto.
+        apply directed_cong_in_struct_cong in H0_.
+        pose proof ((proj1 free_vars_under_struct_cong) _ _ H0_ 1).
+        intro Hfv. apply H9 in Hfv. congruence.
+  + inversion H3; subst.
+    - eexists. split. apply rp_refl.
+      apply directed_cong_in_struct_cong in H0_, H0_0, H0_1.
+      apply c_trans with (cut P1 (cut Q1 R1)).
+      * repeat (apply c_cong_cut; auto).
+      * eapply c_trans. apply c_cut_comm.
+        eapply c_trans. { apply c_cong_cut. apply c_cut_comm. apply c_refl. }
+        eapply c_trans. { apply c_cut_assoc; auto. intro Hfv. apply ((proj1 free_vars_under_struct_cong) _ _ H0_1 1) in Hfv. congruence. }
+        eapply c_trans. apply c_cut_comm.
+        apply c_cong_cut. apply c_cut_comm. apply c_refl.
+    - admit.
+    - destruct E; simpl in H7; try congruence.
+      {
+        (* because of well-formedness, 0 must be free in (cons_r E P0)
+           in which case 1 ∈ E. However, because of association, ~ 1 ∈ P. *)
+        exfalso.
+        inversion H7; subst. inversion H8; subst.
+        apply well_formed_ctx_fv in H6.
+        apply (fv_ctx_fill_hole _ _ M) in H6.
+        congruence.
+      }
+      {
+        inversion H7; subst.
+        destruct (fill_hole_congruence _ _ _ _ eq_refl H0_0) as [E' [M' [? ?]]].
+        rewrite H0.
+        rewrite (rename_axcut_ctx_over_fill_hole _ _ swap01 swap01_is_bijective).
+        eexists; split.
+        + apply rp_cong_cut_l. eapply rp_ax_cut_r; auto.
+          inversion H8; subst.
+          replace swap01 with (up_ren_n 0 swap01) by auto.
+          replace 0 with ((up_ren_n 0 swap01) 1) at 1 by auto.
+          apply (edc_preserves_well_formedness _ _ _ H1) in H10.
+          apply well_formedness_preserved_under_swap01; assumption.
+        + rewrite reduce_axcut_equation_4. apply c_cong_cut.
+          - apply directed_cong_in_struct_cong.
+            apply reduce_axcut_invariant_under_dc.
+            * apply edc_invariant_under_renaming; auto; apply swap01_is_bijective.
+            * apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective.
+              apply directed_cong_invariant_under_upshifting; auto.
+            * repeat rewrite <- (rename_axcut_ctx_over_fill_hole _ _ swap01 swap01_is_bijective).
+              apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective.
+              rewrite <- H0. auto.
+          - apply directed_cong_in_struct_cong.
+            apply directed_cong_invariant_under_downshifting.
+            apply directed_cong_invariant_under_renaming; auto; try apply swap01_is_bijective.
+            apply nfv_01_swap; auto.
+      }
+    - inversion H4; subst.
+      destruct (IHdirected_congruence1 _ H8 _ H6) as [? [? ?]].
+      assert (
+        rename_process (up P1) swap01 ⊵ rename_process (up x) swap01
+      ).
+      {
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply directed_cong_in_struct_cong in H0_.
+        apply ((proj1 struct_cong_preserves_typing) _ _ H0_ _) in H6.
+        eapply equiv_red_invariant_under_swap; eauto.
+        + replace (A .: Γ1) with (nil ++ (A .: Γ1)) in H6; auto.
+          apply (proj1 up_shift_sound) in H6; eauto.
+        + eapply equiv_red_invariant_under_up; eauto.
+      }
+      eexists. split.
+      * apply rp_cong_cut_l. apply rp_cong_cut_l. apply H5.
+      * eapply c_trans with (cut x (cut Q1 R1)).
+        {
+          apply directed_cong_in_struct_cong in H0_0.
+          apply directed_cong_in_struct_cong in H0_1.
+          apply c_cong_cut; auto. apply c_cong_cut; auto.
+        }
+        eapply c_trans. apply c_cut_comm. eapply c_trans. eapply c_cong_cut. apply c_cut_comm. apply c_refl.
+        eapply c_trans. { apply c_cut_assoc; eauto. apply directed_cong_in_struct_cong in H0_1. eapply nfv_under_struct_cong; eauto. }
+        eapply c_trans. apply c_cut_comm. apply c_cong_cut. apply c_cut_comm. apply c_refl.
+    - admit.
+  + inversion H1; subst.
+    - eexists; split. apply rp_refl. apply c_cong_cut; apply directed_cong_in_struct_cong; auto.
+    - destruct (fill_hole_congruence _ _ _ _ eq_refl H0_) as [E' [M' [? ?]]].
+      eexists. split.
+      * rewrite H0. eapply rp_ax_cut_l; eauto. eapply edc_preserves_well_formedness; eauto.
+      * apply directed_cong_in_struct_cong. subst. apply reduce_axcut_invariant_under_dc; eauto.
+    - destruct (fill_hole_congruence _ _ _ _ eq_refl H0_0) as [E' [M' [? ?]]].
+      eexists. split.
+      * rewrite H0. eapply rp_ax_cut_r; eauto. eapply edc_preserves_well_formedness; eauto.
+      * apply directed_cong_in_struct_cong. subst. apply reduce_axcut_invariant_under_dc; eauto.
+    - inversion H; subst.
+      destruct (IHdirected_congruence1 _ H4 _ H6) as [? [? ?]].
+      eexists; split.
+      * apply rp_cong_cut_l; eauto.
+      * eapply c_cong_cut; auto. apply directed_cong_in_struct_cong; auto.
+    - inversion H; subst.
+      destruct (IHdirected_congruence2 _ H4 _ H7) as [? [? ?]].
+      eexists; split.
+      * apply rp_cong_cut_r; eauto.
+      * eapply c_cong_cut; auto. apply directed_cong_in_struct_cong; auto.
+  (* seq *)
+  + inversion H1; subst.
+    - eexists. split. apply rp_refl.
+      apply directed_cong_in_struct_cong in H, H0.
+      apply c_cong_seq; auto.
+    - eexists. split. apply rp_seq. eapply directed_cong_in_struct_cong.
+      apply directed_cong_invariant_under_substitution; auto.
+      intros [|]; simpl. { econstructor; eauto. }
+      apply dc_cong_reflM.
+    - inversion H2; subst.
+      destruct (IHdirected_congruence _ H6 _ H8) as [? [? ?]].
+      eexists. split.
+      * apply rp_cong_seq. apply H3.
+      * apply directed_cong_in_struct_cong in H, H0. apply c_cong_seq; auto.
+  + inversion H1; subst. exists stop; split; eauto. apply c_refl.
+
+(* intros. generalize dependent Q2.
   induction H; intros.
   (* link *)
   + destruct (link_directed_cong_equiv_red_commute _ _ _ _ (dc_cong_link _ _ _ _  H H0) H1) as [? [? ?]].
@@ -343,7 +501,7 @@ Proof.
       eexists. split.
       * apply rp_cong_seq. apply H2.
       * apply directed_cong_in_struct_cong in H, H0. apply c_cong_seq; auto.
-  + inversion H0; subst. exists stop; split; eauto. apply c_refl.
+  + inversion H0; subst. exists stop; split; eauto. apply c_refl. *)
 Admitted.
 
 (* ≡ and ↠ commute *)
@@ -355,58 +513,123 @@ Admitted.
          R
 *)
 Lemma struct_cong_par_red_commute :
-  forall P Q1 Q2, P ≡ Q1 -> P ↠ Q2 -> exists R, Q1 ↠ R /\ Q2 ≡ R.
+  forall Γ P Q1 Q2, Γ ⊢ P :# -> P ≡ Q1 -> P ↠ Q2 -> exists R, Q1 ↠ R /\ Q2 ≡ R.
 Proof.
-  intros. destruct H0.
-  + apply struct_cong_in_trans_directed_cong in H.
+  intros. destruct H1.
+  + apply struct_cong_in_trans_directed_cong in H0.
     generalize dependent Q2.
-    induction H; intros.
-    - destruct (directed_cong_equiv_red_commute _ _ _ H H0) as [? [? ?]].
+    induction H0; intros.
+    - destruct (directed_cong_equiv_red_commute _ _ _ _ H H0 H1) as [? [? ?]].
       exists x0. split; auto. left; auto.
-    - destruct (directed_cong_equiv_red_commute _ _ _ H H1) as [? [? ?]].
-      destruct (IHclos_trans_1n _ H2) as [? [? ?]].
+    - destruct (directed_cong_equiv_red_commute _ _ _ _ H H0 H2) as [? [? ?]].
+      destruct (IHclos_trans_1n (directed_cong_preserves_typing _ _ _ H H0) _ H3) as [? [? ?]].
       exists x1. split; auto. eapply c_trans; eauto.
   + exists P. split.
     - right. apply c_comm; auto.
     - apply c_comm; auto.
 Qed.
 
-(* ⊵ can be reconciliated *)
+(* ⊵ can be reconciliated via ↠ *)
 Lemma equiv_red_diamond :
-  forall P Q1 Q2, P ⊵ Q1 -> P ⊵ Q2 ->
+  forall Γ P Q1 Q2, Γ ⊢ P :# -> P ⊵ Q1 -> P ⊵ Q2 ->
     exists R, Q1 ↠ R /\ Q2 ↠ R.
 Proof.
 Admitted.
 
 (* ↠ is confluent *)
+(*
+         P
+      ↠    ↠
+    Q1       Q2
+      ↠    ↠
+         R
+*)
 Lemma church_rosser_parallel_reduction :
-  diamond_property par_reduction.
+  forall Γ P Q1 Q2, Γ ⊢ P :# -> P ↠ Q1 -> P ↠ Q2 ->
+    exists R, Q1 ↠ R /\ Q2 ↠ R.
 Proof.
-  unfold diamond_property. intros.
-  destruct H eqn:E.
-  + destruct H0.
-    - clear - H0 e.
-      eapply equiv_red_diamond; eauto.
-    - destruct (struct_cong_par_red_commute _ _ _ H0 H) as [? [? ?]].
+  intros.
+  destruct H0 eqn:E.
+  + destruct H1.
+    - eapply equiv_red_diamond; eauto.
+    - destruct (struct_cong_par_red_commute _ _ _ _ H H1 H0) as [? [? ?]].
       eexists; split; eauto. right; auto.
-  + destruct (struct_cong_par_red_commute _ _ _ s H0) as [? [? ?]].
+  + destruct (struct_cong_par_red_commute _ _ _ _ H s H1) as [? [? ?]].
     eexists; split; eauto. right; auto.
 Qed.
 
-(* ▶ is confluent *)
-Lemma church_rosser :
-  diamond_property multi_step_reduction.
+(*
+         P
+      ↠   ↠*
+    Q1       Q2
+      ↠*  ↠*
+         R
+*)
+Lemma church_rosser_par_red_clos_trans_1n_par_red :
+  forall Γ P Q1 Q2, Γ ⊢ P :# ->
+    P ↠ Q1 ->
+    Relation_Operators.clos_trans_1n process par_reduction P Q2 ->
+    exists R,
+      Relation_Operators.clos_trans_1n process par_reduction Q1 R /\
+      Relation_Operators.clos_trans_1n process par_reduction Q2 R.
 Proof.
-  eapply diamond_preserved_under_eq.
-  + apply diamond_R_diamond_clos_trans_R.
-    apply church_rosser_parallel_reduction.
-  + apply par_reds_clos_trans_multi_step_red_coincide.
+  intros.
+  generalize dependent Q1.
+  induction H1; intros.
+  + destruct (church_rosser_parallel_reduction _ _ _ _ H H0 H1) as [? [? ?]].
+    eexists; split; econstructor; eauto.
+  + destruct (church_rosser_parallel_reduction _ _ _ _ H H0 H2) as [? [? ?]].
+    assert (Γ ⊢ y :#) by apply (par_red_preserves_typing _ _ _ H H0).
+    destruct (IHclos_trans_1n H5 _ H3) as [? [? ?]].
+    exists x1; split; auto.
+    eapply Relation_Operators.t1n_trans; eauto.
 Qed.
 
-Print Assumptions church_rosser.
-
-(* invariance for ⊵ under renaming, shifting, substitution must follow by induction on depth *)
-(* for invariance under subst: show that subst compose then argue by extensionality on composition 
-   (NB: always remember which variables occur bound/free; after traversing binder
-   substitutions may commute (consider M ⋅ id and (up_subst σ))
+(*
+         P
+      ↠*  ↠*
+    Q1       Q2
+      ↠*  ↠*
+         R
 *)
+Lemma church_rosser_par_red_clos_trans :
+  forall Γ P Q1 Q2, Γ ⊢ P :# ->
+    Relation_Operators.clos_trans process par_reduction P Q1 ->
+    Relation_Operators.clos_trans process par_reduction P Q2 ->
+    exists R,
+      Relation_Operators.clos_trans process par_reduction Q1 R /\
+      Relation_Operators.clos_trans process par_reduction Q2 R.
+Proof.
+  intros.
+  apply Operators_Properties.clos_trans_t1n_iff in H0, H1.
+  generalize dependent Q2.
+  induction H0; intros.
+  + destruct (church_rosser_par_red_clos_trans_1n_par_red _ _ _ _ H H0 H1) as [? [? ?]].
+    exists x0. apply Operators_Properties.clos_trans_t1n_iff in H2, H3.
+    split; auto.
+  + destruct (church_rosser_par_red_clos_trans_1n_par_red _ _ _ _ H H0 H2) as [? [? ?]].
+    assert (Γ ⊢ y :#) by apply (par_red_preserves_typing _ _ _ H H0).
+    destruct (IHclos_trans_1n H5 _ H3) as [? [? ?]].
+    exists x1. split; auto.
+  apply Operators_Properties.clos_trans_t1n_iff in H4.
+  eapply Relation_Operators.t_trans; eauto.
+Qed.
+
+(* ▶ is confluent *)
+(*
+         P
+      ▶    ▶
+    Q1       Q2
+      ▶    ▶
+         R
+*)
+Lemma church_rosser :
+  forall Γ P Q1 Q2, Γ ⊢ P :# -> P ▶ Q1 -> P ▶ Q2 ->
+    exists R, Q1 ▶ R /\ Q2 ▶ R.
+Proof.
+  intros.
+  apply multi_step_red_in_clos_trans_par_red in H0, H1.
+  destruct (church_rosser_par_red_clos_trans _ _ _ _ H H0 H1) as [R [? ?]].
+  apply clos_trans_par_red_in_multi_step_red in H2, H3.
+  eexists; eauto.
+Qed.
