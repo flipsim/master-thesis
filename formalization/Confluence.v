@@ -17,6 +17,10 @@ Local Hint Rewrite
   swap_swap_id
   down_after_up_process_id
   up_after_down_process_id
+  up_ren_swap_swap_idM
+  up_ren_swap_swap_idE
+  swap_swap_idE
+  down_after_up_idE
     : up_down_rename_rewrites.
 
 (* ⇛ and ⊵ commute *)
@@ -43,14 +47,14 @@ Proof.
   + inversion H1; subst.
     - eexists; split. apply rp_refl.
       apply directed_cong_in_struct_cong. apply dc_cut_comm; auto.
-    - destruct (fill_hole_congruence _ _ _ _ eq_refl H0_) as [E' [M' [? ?]]].
-      eexists. split.
+    - destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H4 H0_0 H0_) as [E' [M' [? [? ?]]]].
+      eexists; split.
       * rewrite H0. eapply rp_ax_cut_r; eauto. eapply edc_preserves_well_formedness; eauto.
-      * apply directed_cong_in_struct_cong. subst. apply reduce_axcut_invariant_under_dc; eauto.
-    - destruct (fill_hole_congruence _ _ _ _ eq_refl H0_0) as [E' [M' [? ?]]].
-      eexists. split.
+      * apply directed_cong_in_struct_cong. assumption.
+    - destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H4 H0_ H0_0) as [E' [M' [? [? ?]]]].
+      eexists; split.
       * rewrite H0. eapply rp_ax_cut_l; eauto. eapply edc_preserves_well_formedness; eauto.
-      * apply directed_cong_in_struct_cong. subst. apply reduce_axcut_invariant_under_dc; eauto.
+      * apply directed_cong_in_struct_cong. assumption.
     - inversion H; subst.
       destruct (IHdirected_congruence1 _ H4 _ H6) as [? [? ?]].
       eexists; split.
@@ -73,29 +77,32 @@ Proof.
     - destruct E; simpl in H7; try congruence.
       {
         inversion H7; subst.
-        destruct (fill_hole_congruence _ _ _ _ eq_refl H0_0) as [E' [M' [? ?]]].
-        rewrite H0.
-        rewrite (rename_axcut_ctx_over_fill_hole _ _ swap01 swap01_is_bijective).
+        rewrite reduce_axcut_equation_3.
+        assert (
+          (rename_process (fill_hole E M) swap01)
+            ⇛ (rename_process Q1 swap01)
+        ). { apply directed_cong_invariant_under_renaming; auto. apply swap01_is_bijective. }
+        rewrite rename_axcut_ctx_over_fill_hole in H0; try apply swap01_is_bijective.
+        assert (
+          (rename_process (up R) swap01) ⇛ (rename_process (up R1) swap01)
+        ). { apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective. apply directed_cong_invariant_under_upshifting; auto. }
+        assert (
+          well_formed_axcut_ctx 0 (rename_axcut_ctx E swap01)
+        ).
+        {
+          replace 0 with (swap01 1) by auto; replace swap01 with (up_ren_n 0 swap01) by auto.
+          apply well_formedness_preserved_under_swap01. inversion H8; auto.
+        }
+        destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H2 H1 H0) as [E' [M' [? [? ?]]]].
         eexists; split.
-        + apply rp_cong_cut_r. eapply rp_ax_cut_l; auto.
-          inversion H8; subst.
-          replace swap01 with (up_ren_n 0 swap01) by auto.
-          replace 0 with ((up_ren_n 0 swap01) 1) at 1 by auto.
-          apply (edc_preserves_well_formedness _ _ _ H1) in H10.
-            apply well_formedness_preserved_under_swap01; assumption.
-        + rewrite reduce_axcut_equation_3. apply c_cong_cut.
+        + apply rp_cong_cut_r. eapply rp_ax_cut_l; eauto.
+          eapply edc_preserves_well_formedness; eauto.
+        + apply c_cong_cut.
           - apply directed_cong_in_struct_cong.
             apply directed_cong_invariant_under_downshifting.
             apply directed_cong_invariant_under_renaming; auto; try apply swap01_is_bijective.
             apply nfv_01_swap; auto.
-          - apply directed_cong_in_struct_cong.
-            apply reduce_axcut_invariant_under_dc.
-            * apply edc_invariant_under_renaming; auto; apply swap01_is_bijective.
-            * apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective.
-              apply directed_cong_invariant_under_upshifting; auto.
-            * repeat rewrite <- (rename_axcut_ctx_over_fill_hole _ _ swap01 swap01_is_bijective).
-              apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective.
-              rewrite <- H0. auto.
+          - apply directed_cong_in_struct_cong. auto.
       }
       {
         (* because of well-formedness, 0 must be free in (cons_r E P0)
@@ -106,8 +113,213 @@ Proof.
         apply (fv_ctx_fill_hole _ _ M) in H6.
         congruence.
       }
-    - admit.
-    - admit.
+    - assert (
+        (cut P Q) ⇛ (cut P1 Q1)
+      ). { apply dc_cong_cut; auto. }
+      destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H8 H0 H0_1) as [E' [M' [? [? ?]]]].
+      rewrite H1.
+      unfold up. rewrite up_ctx_over_fill_hole; rewrite <- plus_n_O.
+      rewrite (rename_axcut_ctx_over_fill_hole _ _ swap01 swap01_is_bijective).
+      rewrite lift_ctx_preserves_length.
+      eexists. split.
+      * apply rp_cong_cut_r.
+        eapply rp_ax_cut_r; eauto.
+        replace 0 with (swap01 1) at 1 by auto.
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01.
+        apply upE_preserves_well_formedness.
+        eapply edc_preserves_well_formedness; eauto.
+      * subst. eapply c_trans.
+        {
+          apply directed_cong_in_struct_cong. apply H5.
+        }
+        {
+          eapply c_trans.
+          + assert (
+              well_formed_axcut_ctx 0 (rename_axcut_ctx (upE E') swap01)
+            ).
+            {
+              replace 0 with (swap01 1) by auto.
+              replace swap01 with (up_ren_n 0 swap01) by auto.
+              apply well_formedness_preserved_under_swap01.
+              apply upE_preserves_well_formedness.
+              eapply edc_preserves_well_formedness; eauto.
+            }
+            pose proof (
+              permute_cut_assoc_reduce_axcut
+                (down (rename_process P1 swap01))
+                (rename_axcut_ctx (upE E') swap01)
+                (rename_message (lift_message M' (length_axcut_ctx E') 1) (up_ren_n (length_axcut_ctx E') swap01))
+                (rename_process Q1 swap01)
+                H1
+            ).
+            eapply c_comm. eapply c_trans. apply H6; clear H6.
+            - apply nfv_ctx_10_swap. unfold upE.
+              apply nfv_lift_nE; lia.
+            - rewrite <- rename_axcut_ctx_preserves_length.
+              unfold upE; rewrite lift_ctx_preserves_length.
+              replace (length_axcut_ctx E')
+                 with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+                   at 1 by (rewrite up_ren_n_swap_Sn; auto).
+              apply nfv_under_renaming.
+              apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+              intro Hfv.
+              apply fv_up_Sn2' in Hfv; try lia.
+              inversion H4; subst.
+              apply directed_cong_in_struct_cong in H0_1.
+              apply ((proj1 struct_cong_preserves_typing) _ _ H0_1) in H12.
+              eapply edc_preserves_well_formedness in H8; eauto.
+              eapply nfv_well_typed_fill_hole; eauto. rewrite <- plus_n_O.
+              assumption.
+            - rewrite <- rename_axcut_ctx_preserves_length.
+              unfold upE; rewrite lift_ctx_preserves_length.
+              replace (S (length_axcut_ctx E'))
+                 with (up_ren_n (length_axcut_ctx E') swap01 (length_axcut_ctx E'))
+                   by (rewrite up_ren_n_swap_n; auto).
+              apply nfv_under_renaming.
+              apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+              apply nfv_lift_n; lia.
+            - rewrite swap_swap_id.
+              assert (
+                ~ 0 ∈ rename_process P1 swap01
+              ).
+              {
+                apply nfv_01_swap.
+                apply directed_cong_in_struct_cong in H0_.
+                eapply nfv_under_struct_cong; eauto.
+              }
+              rewrite <- rename_axcut_ctx_preserves_length with (r := swap01).
+              unfold upE, downE; rewrite lift_ctx_preserves_length.
+              autorewrite with up_down_rename_rewrites; eauto.
+              rewrite (proj1 (proj2 down_after_up_id)).
+              apply c_refl.
+          + apply c_refl.
+        }
+    - inversion H8; subst.
+      * eexists. split. apply rp_refl.
+        eapply c_trans.
+        ** apply directed_cong_in_struct_cong in H0_, H0_0, H0_1.
+           apply c_cong_cut; eauto; apply c_cong_cut; eauto.
+        ** apply c_cut_assoc; auto. apply directed_cong_in_struct_cong in H0_.
+           apply (nfv_under_struct_cong _ _ _ H0_); auto.
+      * assert (
+          (down (rename_process (fill_hole E M) swap01)) ⇛
+            (down (rename_process P1 swap01))
+        ) as Hcong_ctx.
+        {
+          apply directed_cong_invariant_under_downshifting.
+          + apply directed_cong_invariant_under_renaming; auto.
+            apply swap01_is_bijective.
+          + apply nfv_01_swap; auto.
+        }
+        rewrite rename_axcut_ctx_over_fill_hole in Hcong_ctx; try apply swap01_is_bijective.
+        unfold down in Hcong_ctx; rewrite down_ctx_over_fill_hole in Hcong_ctx.
+        assert (
+          (cut (rename_process (up R) swap01) (rename_process Q swap01))
+            ⇛ (cut (rename_process Q1 swap01) (rename_process (up R1) swap01))
+        ).
+        {
+          apply dc_cut_comm; apply directed_cong_invariant_under_renaming; auto;
+          try apply swap01_is_bijective. apply directed_cong_invariant_under_upshifting; auto.
+        }
+        assert (
+          well_formed_axcut_ctx 0 (down1_ctx (rename_axcut_ctx E swap01) 0)
+        ).
+        {
+          apply downE_preserves_well_formedness_nfv; try lia.
+          + apply nfv_ctx_01_swap.
+            apply (proj1 (nfv_fill_hole _ _ _ H)).
+          + replace 1 with (swap01 0) by auto; replace swap01 with (up_ren_n 0 swap01) by auto.
+            apply well_formedness_preserved_under_swap01; auto.
+        }
+        destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H1 H0 Hcong_ctx) as [E' [M' [? [? ?]]]].
+        eexists; split.
+        { eapply rp_ax_cut_l; eauto. eapply edc_preserves_well_formedness; eauto. }
+        {
+          eapply c_trans. apply c_cut_comm.
+          eapply c_trans.
+          + apply permute_cut_assoc_reduce_axcut; eauto.
+            - apply (proj1 (nfv_fill_hole _ _ _ H)).
+            - rewrite (plus_n_O (length_axcut_ctx E)).
+              inversion H4; subst. inversion H13; subst.
+              eapply nfv_well_typed_fill_hole; eauto.
+            - replace (S (length_axcut_ctx E)) with (length_axcut_ctx E + 1) by lia.
+              apply (proj2 (nfv_fill_hole _ _ _ H)).
+          + apply directed_cong_in_struct_cong.
+            rewrite <- plus_n_O in H7.
+            rewrite <- rename_axcut_ctx_preserves_length in H7.
+            apply H7.
+        }
+      * destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H5 H0_ H0_0) as [E' [M' [? [? ?]]]].
+        rewrite H0.
+        eexists; split.
+        ** rewrite rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+           eapply rp_ax_cut_r with
+            (E := cons_r (rename_axcut_ctx E' swap01) (rename_process (up R1) swap01))
+            (M := rename_message M' (up_ren_n (length_axcut_ctx E') swap01));
+           eauto.
+           econstructor.
+           -- apply nfv_10_swap. apply nfv_lift_n. lia.
+           -- replace 1 with (swap01 0) by auto.
+              replace swap01 with (up_ren_n 0 swap01) by auto.
+              apply well_formedness_preserved_under_swap01.
+              eapply edc_preserves_well_formedness; eauto.
+        ** remember (length_axcut_ctx E').
+           rewrite reduce_axcut_equation_4.
+           apply c_cong_cut.
+           -- rewrite swap_swap_idE.
+              autorewrite with up_down_rename_rewrites.
+              {
+                apply directed_cong_in_struct_cong.
+                rewrite <- rename_axcut_ctx_preserves_length.
+                rewrite <- Heqn.
+                rewrite up_ren_swap_swap_idM.
+                assumption.
+              }
+              {
+                apply nfv_01_swap. eapply nfv_under_struct_cong; eauto.
+                apply directed_cong_in_struct_cong; auto.
+              }
+           -- autorewrite with up_down_rename_rewrites.
+              apply directed_cong_in_struct_cong; auto.
+      * inversion H4; subst. inversion H7; subst.
+        destruct (IHdirected_congruence1 _ H5 _ H11) as [R' [? ?]].
+        eexists; split.
+        ** apply rp_cong_cut_l.
+           apply directed_cong_in_struct_cong in H0_.
+           apply ((proj1 struct_cong_preserves_typing) _ _ H0_) in H11.
+           destruct Γ3. inversion H6.
+           eapply equiv_red_invariant_under_down.
+           -- eapply swap01_preserves_typing. apply H11.
+           -- replace swap01 with (up_ren_n 0 swap01) by auto.
+              eapply equiv_red_invariant_under_swap; eauto.
+           -- apply nfv_01_swap. eapply nfv_under_struct_cong; eauto.
+        ** eapply c_trans.
+           { apply directed_cong_in_struct_cong in H0_0, H0_1.
+             apply c_cong_cut. apply c_cong_cut. apply H1. apply H0_0. apply H0_1. }
+           eapply c_cut_assoc; eauto. apply directed_cong_in_struct_cong in H0_1.
+           apply directed_cong_in_struct_cong in H0_.
+           pose proof (proj1 ((proj1 struct_cong_preserves_typing) _ _ H0_ _) H11).
+           apply (equiv_red_preserves_typing _ _ _ H10) in H0.
+           intro Hfv.
+           destruct ((proj1 free_var_in_ctx) _ _ Hfv _ H0) as [? ?].
+           apply ((proj1 formula_property) _ _ _ _ H11) in H13.
+           congruence.
+      * inversion H4; subst. inversion H7; subst.
+        destruct (IHdirected_congruence2 _ H5 _ H12) as [R' [? ?]].
+        eexists; split.
+        ** apply rp_cong_cut_r. apply rp_cong_cut_l.
+           replace swap01 with (up_ren_n 0 swap01) by auto.
+           eapply equiv_red_invariant_under_swap; eauto.
+           apply directed_cong_in_struct_cong in H0_0.
+           eapply struct_cong_preserves_typing. apply c_comm in H0_0.
+           eauto. eauto.
+        ** eapply c_trans.
+           { apply directed_cong_in_struct_cong in H0_, H0_1.
+             eapply c_cong_cut; eauto. apply c_cong_cut; eauto. }
+           simpl. apply c_cut_assoc; eauto.
+           apply directed_cong_in_struct_cong in H0_.
+           eapply nfv_under_struct_cong; eauto.
     - inversion H4; subst.
       destruct (IHdirected_congruence3 _ H8 _ H7) as [? [? ?]].
       assert (
@@ -144,7 +356,88 @@ Proof.
         eapply c_trans. { apply c_cut_assoc; auto. intro Hfv. apply ((proj1 free_vars_under_struct_cong) _ _ H0_1 1) in Hfv. congruence. }
         eapply c_trans. apply c_cut_comm.
         apply c_cong_cut. apply c_cut_comm. apply c_refl.
-    - admit.
+    - assert (
+        (cut Q R) ⇛ (cut R1 Q1)
+      ). { apply dc_cut_comm; auto. }
+      destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H8 H0 H0_) as [E' [M' [? [? ?]]]].
+      rewrite H1.
+      unfold up. rewrite up_ctx_over_fill_hole; rewrite <- plus_n_O.
+      rewrite (rename_axcut_ctx_over_fill_hole _ _ swap01 swap01_is_bijective).
+      rewrite lift_ctx_preserves_length.
+      eexists. split.
+      * apply rp_cong_cut_l.
+        eapply rp_ax_cut_l; eauto.
+        replace 0 with (swap01 1) at 1 by auto.
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01.
+        apply upE_preserves_well_formedness.
+        eapply edc_preserves_well_formedness; eauto.
+      * subst. eapply c_trans.
+        {
+          apply directed_cong_in_struct_cong. apply H5.
+        }
+        {
+          eapply c_trans.
+          + assert (
+              well_formed_axcut_ctx 0 (rename_axcut_ctx (upE E') swap01)
+            ).
+            {
+              replace 0 with (swap01 1) by auto.
+              replace swap01 with (up_ren_n 0 swap01) by auto.
+              apply well_formedness_preserved_under_swap01.
+              apply upE_preserves_well_formedness.
+              eapply edc_preserves_well_formedness; eauto.
+            }
+            pose proof (
+              permute_cut_assoc_reduce_axcut
+                (down (rename_process R1 swap01))
+                (rename_axcut_ctx (upE E') swap01)
+                (rename_message (lift_message M' (length_axcut_ctx E') 1) (up_ren_n (length_axcut_ctx E') swap01))
+                (rename_process Q1 swap01)
+                H1
+            ).
+            eapply c_comm. eapply c_trans. apply H6; clear H6.
+            - apply nfv_ctx_10_swap. unfold upE.
+              apply nfv_lift_nE; lia.
+            - rewrite <- rename_axcut_ctx_preserves_length.
+              unfold upE; rewrite lift_ctx_preserves_length.
+              replace (length_axcut_ctx E')
+                 with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+                   at 1 by (rewrite up_ren_n_swap_Sn; auto).
+              apply nfv_under_renaming.
+              apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+              intro Hfv.
+              apply fv_up_Sn2' in Hfv; try lia.
+              inversion H4; subst.
+              apply directed_cong_in_struct_cong in H0_.
+              apply ((proj1 struct_cong_preserves_typing) _ _ H0_) in H11.
+              eapply edc_preserves_well_formedness in H8; eauto.
+              eapply nfv_well_typed_fill_hole; eauto. rewrite <- plus_n_O.
+              assumption.
+            - rewrite <- rename_axcut_ctx_preserves_length.
+              unfold upE; rewrite lift_ctx_preserves_length.
+              replace (S (length_axcut_ctx E'))
+                 with (up_ren_n (length_axcut_ctx E') swap01 (length_axcut_ctx E'))
+                   by (rewrite up_ren_n_swap_n; auto).
+              apply nfv_under_renaming.
+              apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+              apply nfv_lift_n; lia.
+            - rewrite swap_swap_id.
+              assert (
+                ~ 0 ∈ rename_process R1 swap01
+              ).
+              {
+                apply nfv_01_swap.
+                apply directed_cong_in_struct_cong in H0_1.
+                eapply nfv_under_struct_cong; eauto.
+              }
+              rewrite <- rename_axcut_ctx_preserves_length with (r := swap01).
+              unfold upE, downE; rewrite lift_ctx_preserves_length.
+              autorewrite with up_down_rename_rewrites; eauto.
+              rewrite (proj1 (proj2 down_after_up_id)).
+              apply c_refl.
+          + apply c_cut_comm.
+        }
     - destruct E; simpl in H7; try congruence.
       {
         (* because of well-formedness, 0 must be free in (cons_r E P0)
@@ -157,25 +450,31 @@ Proof.
       }
       {
         inversion H7; subst.
-        destruct (fill_hole_congruence _ _ _ _ eq_refl H0_0) as [E' [M' [? ?]]].
-        rewrite H0.
-        rewrite (rename_axcut_ctx_over_fill_hole _ _ swap01 swap01_is_bijective).
+        inversion H7; subst.
+        rewrite reduce_axcut_equation_4.
+        assert (
+          (rename_process (fill_hole E M) swap01)
+            ⇛ (rename_process Q1 swap01)
+        ). { apply directed_cong_invariant_under_renaming; auto. apply swap01_is_bijective. }
+        rewrite rename_axcut_ctx_over_fill_hole in H0; try apply swap01_is_bijective.
+        assert (
+          (rename_process (up P) swap01) ⇛ (rename_process (up P1) swap01)
+        ). { apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective. apply directed_cong_invariant_under_upshifting; auto. }
+        assert (
+          well_formed_axcut_ctx 0 (rename_axcut_ctx E swap01)
+        ).
+        {
+          replace 0 with (swap01 1) by auto; replace swap01 with (up_ren_n 0 swap01) by auto.
+          apply well_formedness_preserved_under_swap01. inversion H8; auto.
+        }
+        destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H2 H1 H0) as [E' [M' [? [? ?]]]].
         eexists; split.
         + apply rp_cong_cut_l. eapply rp_ax_cut_r; auto.
           inversion H8; subst.
-          replace swap01 with (up_ren_n 0 swap01) by auto.
-          replace 0 with ((up_ren_n 0 swap01) 1) at 1 by auto.
-          apply (edc_preserves_well_formedness _ _ _ H1) in H10.
-          apply well_formedness_preserved_under_swap01; assumption.
-        + rewrite reduce_axcut_equation_4. apply c_cong_cut.
-          - apply directed_cong_in_struct_cong.
-            apply reduce_axcut_invariant_under_dc.
-            * apply edc_invariant_under_renaming; auto; apply swap01_is_bijective.
-            * apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective.
-              apply directed_cong_invariant_under_upshifting; auto.
-            * repeat rewrite <- (rename_axcut_ctx_over_fill_hole _ _ swap01 swap01_is_bijective).
-              apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective.
-              rewrite <- H0. auto.
+          replace swap01 with (up_ren_n 0 swap01) by auto. apply H5.
+          eapply edc_preserves_well_formedness; eauto.
+        + apply c_cong_cut.
+          - apply directed_cong_in_struct_cong. assumption.
           - apply directed_cong_in_struct_cong.
             apply directed_cong_invariant_under_downshifting.
             apply directed_cong_invariant_under_renaming; auto; try apply swap01_is_bijective.
@@ -206,17 +505,152 @@ Proof.
         eapply c_trans. apply c_cut_comm. eapply c_trans. eapply c_cong_cut. apply c_cut_comm. apply c_refl.
         eapply c_trans. { apply c_cut_assoc; eauto. apply directed_cong_in_struct_cong in H0_1. eapply nfv_under_struct_cong; eauto. }
         eapply c_trans. apply c_cut_comm. apply c_cong_cut. apply c_cut_comm. apply c_refl.
-    - admit.
+    - inversion H8; subst.
+      * eexists. split. apply rp_refl.
+        eapply c_trans.
+        ** apply directed_cong_in_struct_cong in H0_, H0_0, H0_1.
+           apply c_cong_cut; eauto; apply c_cong_cut; eauto.
+        ** eapply c_trans. apply c_cut_comm.
+           eapply c_trans. apply c_cong_cut. apply c_cut_comm. apply c_refl.
+           eapply c_trans. apply c_cut_assoc; auto.
+           apply directed_cong_in_struct_cong in H0_1. eapply nfv_under_struct_cong; eauto.
+           eapply c_trans. apply c_cut_comm. apply c_cong_cut. apply c_cut_comm. apply c_refl.
+      * destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H5 H0_1 H0_0) as [E' [M' [? [? ?]]]].
+        rewrite H0.
+        eexists; split.
+        ** rewrite rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+           eapply rp_ax_cut_l with
+            (E := cons_l (rename_process (up P1) swap01) (rename_axcut_ctx E' swap01))
+            (M := rename_message M' (up_ren_n (length_axcut_ctx E') swap01));
+           eauto.
+           econstructor.
+           -- apply nfv_10_swap. apply nfv_lift_n. lia.
+           -- replace 1 with (swap01 0) by auto.
+              replace swap01 with (up_ren_n 0 swap01) by auto.
+              apply well_formedness_preserved_under_swap01.
+              eapply edc_preserves_well_formedness; eauto.
+        ** remember (length_axcut_ctx E').
+           rewrite reduce_axcut_equation_3.
+           apply c_cong_cut.
+           -- autorewrite with up_down_rename_rewrites.
+              apply directed_cong_in_struct_cong; auto.
+           -- rewrite swap_swap_idE.
+              autorewrite with up_down_rename_rewrites.
+              {
+                apply directed_cong_in_struct_cong.
+                rewrite <- rename_axcut_ctx_preserves_length.
+                rewrite <- Heqn.
+                rewrite up_ren_swap_swap_idM.
+                assumption.
+              }
+              {
+                apply nfv_01_swap. eapply nfv_under_struct_cong; eauto.
+                apply directed_cong_in_struct_cong; auto.
+              }
+      * assert (
+          (down (rename_process (fill_hole E M) swap01)) ⇛
+            (down (rename_process R1 swap01))
+        ) as Hcong_ctx.
+        {
+          apply directed_cong_invariant_under_downshifting.
+          + apply directed_cong_invariant_under_renaming; auto.
+            apply swap01_is_bijective.
+          + apply nfv_01_swap; auto.
+        }
+        rewrite rename_axcut_ctx_over_fill_hole in Hcong_ctx; try apply swap01_is_bijective.
+        unfold down in Hcong_ctx; rewrite down_ctx_over_fill_hole in Hcong_ctx.
+        assert (
+          (cut (rename_process (up P) swap01) (rename_process Q swap01))
+            ⇛ (cut (rename_process (up P1) swap01) (rename_process Q1 swap01))
+        ).
+        {
+          apply dc_cong_cut; apply directed_cong_invariant_under_renaming; auto;
+          try apply swap01_is_bijective. apply directed_cong_invariant_under_upshifting; auto.
+        }
+        assert (
+          well_formed_axcut_ctx 0 (down1_ctx (rename_axcut_ctx E swap01) 0)
+        ).
+        {
+          apply downE_preserves_well_formedness_nfv; try lia.
+          + apply nfv_ctx_01_swap.
+            apply (proj1 (nfv_fill_hole _ _ _ H)).
+          + replace 1 with (swap01 0) by auto; replace swap01 with (up_ren_n 0 swap01) by auto.
+            apply well_formedness_preserved_under_swap01; auto.
+        }
+        destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H1 H0 Hcong_ctx) as [E' [M' [? [? ?]]]].
+        eexists; split.
+        { eapply rp_ax_cut_r; eauto. eapply edc_preserves_well_formedness; eauto. }
+        {
+          eapply c_trans. apply c_cut_comm.
+          eapply c_trans.
+          + eapply c_trans. apply c_cut_comm.
+            apply permute_cut_assoc_reduce_axcut; eauto.
+            - apply (proj1 (nfv_fill_hole _ _ _ H)).
+            - rewrite (plus_n_O (length_axcut_ctx E)).
+              inversion H4; subst. inversion H14; subst.
+              eapply nfv_well_typed_fill_hole; eauto.
+            - replace (S (length_axcut_ctx E)) with (length_axcut_ctx E + 1) by lia.
+              apply (proj2 (nfv_fill_hole _ _ _ H)).
+          + apply directed_cong_in_struct_cong.
+            rewrite <- plus_n_O in H7.
+            rewrite <- rename_axcut_ctx_preserves_length in H7.
+            apply H7.
+        }
+      * inversion H4; subst. inversion H9; subst.
+        destruct (IHdirected_congruence2 _ H5 _ H11) as [R' [? ?]].
+        eexists; split.
+        ** apply rp_cong_cut_l. apply rp_cong_cut_r.
+           replace swap01 with (up_ren_n 0 swap01) by auto.
+           eapply equiv_red_invariant_under_swap; eauto.
+           apply directed_cong_in_struct_cong in H0_0.
+           eapply struct_cong_preserves_typing. apply c_comm in H0_0.
+           eauto. eauto.
+        ** eapply c_trans.
+           { apply directed_cong_in_struct_cong in H0_, H0_1.
+             eapply c_cong_cut; eauto. apply c_cong_cut; eauto. }
+           simpl.
+           eapply c_trans. apply c_cut_comm. eapply c_trans. eapply c_cong_cut. apply c_cut_comm. apply c_refl.
+           eapply c_trans. apply c_cut_assoc; eauto.
+           apply directed_cong_in_struct_cong in H0_1.
+           eapply nfv_under_struct_cong; eauto.
+           eapply c_trans. apply c_cut_comm. apply c_cong_cut. apply c_cut_comm. apply c_refl.
+      * inversion H4; subst. inversion H9; subst.
+        destruct (IHdirected_congruence3 _ H5 _ H12) as [R' [? ?]].
+        eexists; split.
+        ** apply rp_cong_cut_r.
+           apply directed_cong_in_struct_cong in H0_1.
+           apply ((proj1 struct_cong_preserves_typing) _ _ H0_1) in H12.
+           destruct Γ4. inversion H6.
+           eapply equiv_red_invariant_under_down.
+           -- eapply swap01_preserves_typing; eauto.
+           -- replace swap01 with (up_ren_n 0 swap01) by auto.
+              eapply equiv_red_invariant_under_swap; eauto.
+           -- apply nfv_01_swap. eapply nfv_under_struct_cong; eauto.
+        ** eapply c_trans.
+           { apply directed_cong_in_struct_cong in H0_, H0_0.
+             apply c_cong_cut. apply H0_. apply c_cong_cut. apply H0_0. apply H1. }
+           eapply c_trans. apply c_cut_comm.
+           eapply c_trans. apply c_cong_cut. apply c_cut_comm. apply c_refl.
+           eapply c_trans. apply c_cut_assoc; auto.
+           -- apply directed_cong_in_struct_cong in H0_1.
+              pose proof (proj1 ((proj1 struct_cong_preserves_typing) _ _ H0_1 _) H12).
+              apply (equiv_red_preserves_typing _ _ _ H10) in H0.
+              intro Hfv.
+              destruct ((proj1 free_var_in_ctx) _ _ Hfv _ H0) as [? ?].
+              apply ((proj1 formula_property) _ _ _ _ H12) in H13.
+              congruence.
+           -- eapply c_trans. apply c_cut_comm. apply c_cong_cut.
+              apply c_cut_comm. apply c_refl.
   + inversion H1; subst.
     - eexists; split. apply rp_refl. apply c_cong_cut; apply directed_cong_in_struct_cong; auto.
-    - destruct (fill_hole_congruence _ _ _ _ eq_refl H0_) as [E' [M' [? ?]]].
+    - destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H4 H0_0 H0_) as [E' [M' [? [? ?]]]].
       eexists. split.
       * rewrite H0. eapply rp_ax_cut_l; eauto. eapply edc_preserves_well_formedness; eauto.
-      * apply directed_cong_in_struct_cong. subst. apply reduce_axcut_invariant_under_dc; eauto.
-    - destruct (fill_hole_congruence _ _ _ _ eq_refl H0_0) as [E' [M' [? ?]]].
+      * apply directed_cong_in_struct_cong. subst. auto.
+    - destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H4 H0_ H0_0) as [E' [M' [? [? ?]]]].
       eexists. split.
       * rewrite H0. eapply rp_ax_cut_r; eauto. eapply edc_preserves_well_formedness; eauto.
-      * apply directed_cong_in_struct_cong. subst. apply reduce_axcut_invariant_under_dc; eauto.
+      * apply directed_cong_in_struct_cong. subst. auto.
     - inversion H; subst.
       destruct (IHdirected_congruence1 _ H4 _ H6) as [? [? ?]].
       eexists; split.
@@ -242,267 +676,9 @@ Proof.
       * apply rp_cong_seq. apply H3.
       * apply directed_cong_in_struct_cong in H, H0. apply c_cong_seq; auto.
   + inversion H1; subst. exists stop; split; eauto. apply c_refl.
+Qed.
 
-(* intros. generalize dependent Q2.
-  induction H; intros.
-  (* link *)
-  + destruct (link_directed_cong_equiv_red_commute _ _ _ _ (dc_cong_link _ _ _ _  H H0) H1) as [? [? ?]].
-    eexists; split; eauto. apply directed_cong_in_struct_cong; auto.
-  + destruct (link_directed_cong_equiv_red_commute _ _ _ _ (dc_link _ _ _ _  H H0) H1) as [? [? ?]].
-    eexists; split; eauto. apply directed_cong_in_struct_cong; auto.
-
-  (* cut *)
-  + inversion H1; subst.
-    - eexists; split. apply rp_refl.
-      apply directed_cong_in_struct_cong. apply dc_cut_comm; auto.
-    - (* Helpful lemmas:
-         i.  If fill_hole E M ⇛ P, then exists E' M', s.t. P = fill_hole E' M'
-         ii. If Q ⇛ Q' and fill_hole E M ⇛ fill_hole E' M',
-             then reduce_axcut E M Q ⇛ reduce_axcut E' M' Q'
-
-             proof by induction on size of context (in ax cut case, IH holds
-             for renamed context)
-      *)
-      (* Idea: Define ⇛ on contexts, then show
-         E[M] ⇛ P, then P = E'[M'] and E ⇛ E' and M ⇛ M'
-
-         Then, show that if E ⇛ E', M ⇛ M', Q ⇛ Q' then
-          reduce_axcut E M Q ⇛ reduce_axcut E' M' Q'
-      *)
-      destruct (fill_hole_congruence _ _ _ _ eq_refl H) as [E' [M' [? [? ?]]]].
-      exists (reduce_axcut E' M' Q'). split.
-      {
-        rewrite H2. eapply rp_ax_cut_r; eauto.
-        eapply edc_preserves_well_formedness; eauto.
-      }
-      apply directed_cong_in_struct_cong.
-      apply reduce_axcut_invariant_under_dc; auto.
-    - destruct (fill_hole_congruence _ _ _ _ eq_refl H0) as [E' [M' [? [? ?]]]].
-      exists (reduce_axcut E' M' P'). split.
-      {
-        rewrite H2. eapply rp_ax_cut_l; eauto.
-        eapply edc_preserves_well_formedness; eauto.
-      }
-      apply directed_cong_in_struct_cong.
-      apply reduce_axcut_invariant_under_dc; auto.
-    - specialize IHdirected_congruence1 with P'0.
-      apply IHdirected_congruence1 in H5. destruct H5 as [? [? ?]].
-      exists (cut Q' x). split.
-      * apply rp_cong_cut_r; auto.
-      * eapply c_trans. apply c_cut_comm. apply c_cong_cut; auto.
-        apply directed_cong_in_struct_cong; auto.
-    - specialize IHdirected_congruence2 with Q'0.
-      apply IHdirected_congruence2 in H5. destruct H5 as [? [? ?]].
-      exists (cut x P'). split.
-      * apply rp_cong_cut_l; auto.
-      * eapply c_trans. apply c_cut_comm. apply c_cong_cut; auto.
-        apply directed_cong_in_struct_cong; auto.
-  + inversion H6; subst.
-    - eexists. split. apply rp_refl.
-      apply directed_cong_in_struct_cong in H0, H1, H2.
-      apply c_trans with (cut (cut P1 Q1) R1).
-      * repeat (apply c_cong_cut; auto).
-      * apply c_cut_assoc; auto. intro Hfv.
-        apply ((proj1 free_vars_under_struct_cong) _ _ H0 1) in Hfv. congruence.
-    - destruct E; simpl in H9; try congruence.
-      {
-        inversion H9; subst.
-        destruct (fill_hole_congruence _ _ _ _ eq_refl H1) as [E' [M' [? [? ?]]]].
-        rewrite H3.
-        rewrite rename_axcut_ctx_over_fill_hole.
-        eexists. split.
-        + apply rp_cong_cut_r. eapply rp_ax_cut_l.
-          - reflexivity.
-          - replace swap01 with (up_ren_n 0 swap01) by auto.
-            inversion H10; subst.
-            apply (edc_preserves_well_formedness _ _ _ H4) in H13.
-            replace 0 with ((up_ren_n 0 swap01) 1) at 1 by auto.
-            apply well_formedness_preserved_under_swap01; assumption.
-          - reflexivity.
-        + rewrite reduce_axcut_equation_3. apply c_cong_cut.
-          - apply directed_cong_in_struct_cong.
-            apply directed_cong_invariant_under_downshifting.
-            apply directed_cong_invariant_under_renaming; auto; try apply swap01_is_bijective.
-            apply nfv_01_swap; auto.
-          - apply directed_cong_in_struct_cong.
-            apply reduce_axcut_invariant_under_dc.
-            * apply edc_invariant_under_renaming; auto; apply swap01_is_bijective.
-            * apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective.
-              auto.
-            * apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective.
-              apply directed_cong_invariant_under_upshifting; auto.
-        + apply swap01_is_bijective.
-      }
-      {
-        (* because of well-formedness, 0 must be free in (cons_r E P0)
-           in which case 1 ∈ E. However, because of association, ~ 1 ∈ P. *)
-        exfalso.
-        inversion H9; subst. inversion H10; subst.
-        apply well_formed_ctx_fv in H8.
-        apply (fv_ctx_fill_hole _ _ (upM M)) in H8.
-        congruence.
-      }
-    - (* use more difficult reduce_axcut / assoc lemma *)
-      (*
-        (reduce_axcut E M (cut P Q)) ≡
-        (cut (down (swap01 P))
-             (reduce_axcut (swap01 up E) (swap01 up M) (swap01 Q)))
-        ≡
-        (cut (down (swap01 P1))
-             (reduce_axcut (swap01 up E') (swap01 up M') (swap01 Q1)))
-        Needs invariance of congruence of ctxs under swap01 and shifting
-      *)
-      admit.
-    - inversion H10; subst.
-      * eexists. split. apply rp_refl.
-        eapply c_trans.
-        ** apply directed_cong_in_struct_cong in H0, H1, H2.
-           apply c_cong_cut; eauto; apply c_cong_cut; eauto.
-        ** apply c_cut_assoc; auto. apply directed_cong_in_struct_cong in H0.
-           apply (nfv_under_struct_cong _ _ _ H0); auto.
-      * (* use reduce_axcut / assoc lemma *)
-        (* cut (reduce_axcut E M Q) R
-            ≡ cut (reduce_axcut (down E swap01) (cut Q1' R1')) *)
-        (* then use invariance of reduce_axcut under struct cong
-        *)
-        admit.
-      * (* might need well-typedness to conclude that 0 not in M so that down shift possible *)
-        
-        (* FUCK: definition of fill_hole does not work because in E[M], no free variable 
-            can be bound because we are upping at every stage! BAD!
-            instead rewrite, so that M is already upshifting accordingly (syntactically identically to what we
-            fill in the hole):
-            rename E[M] r = (rename E r)[rename M (up_ren_n (size E) r)]
-        *)
-        destruct (fill_hole_congruence _ _ _ _ eq_refl H1) as [E' [M' [? [? ?]]]].
-        assert (
-          (* Γ ⊢ E[M] and WF E j -> ~ j ∈ M *)
-          ~ (occurs_free_message 0 M')
-        ) by admit.
-        assert (
-          (* generalization :
-              ~ (S k) ∈ P
-              lift (down P k 1) k 1 = rename P (up_ren_n k swap01)
-          *)
-          upM (downM (rename_message M' swap01)) = M'
-        ).
-        {
-          admit.
-        }
-        assert (
-          (cut (rename_process Q1 swap01)
-               (rename_process (up R1) swap01)) =
-          fill_hole (cons_r (rename_axcut_ctx E' swap01) (rename_process (up R1) swap01))
-                    (downM (rename_message M' swap01))
-        ).
-        {
-          admit.
-        }
-        eexists. split.
-        ** rewrite H11. eapply rp_ax_cut_r; eauto.
-           econstructor.
-           { apply nfv_10_swap. apply nfv_lift_n; lia. }
-           replace swap01 with (up_ren_n 0 swap01) by auto.
-           replace 1 with ((up_ren_n 0 swap01) 0) by auto.
-           apply well_formedness_preserved_under_swap01.
-           eapply edc_preserves_well_formedness; eauto.
-        ** rewrite reduce_axcut_equation_4; simpl.
-           rewrite H9. autorewrite with up_down_rename_rewrites.
-           {
-              apply directed_cong_in_struct_cong in H2.
-              apply c_cong_cut; auto.
-              apply directed_cong_in_struct_cong.
-              rewrite swap_swap_idM.
-              rewrite rename_axcut_ctx_compose with (c := id); try (intros [|[|]]; simpl; auto).
-              rewrite rename_axcut_ctx_id; auto.
-              apply reduce_axcut_invariant_under_dc; auto.
-           }
-           apply nfv_01_swap. apply directed_cong_in_struct_cong in H0.
-           apply (nfv_under_struct_cong _ _ _ H0); auto.
-      * destruct (IHdirected_congruence1 _ H7) as [R' [? ?]].
-        eexists. split.
-        ** apply rp_cong_cut_l.
-           assert ( down (rename_process P1 swap01) ⊵ down (rename_process R' swap01) )
-            by admit.
-           (* show distribution of renaming over subst only for up_subst_n j swap01
-              forall n to simplify *)
-           apply H5.
-        ** eapply c_trans.
-           {
-            apply c_cong_cut. apply c_cong_cut. apply H4.
-            apply directed_cong_in_struct_cong in H1; apply H1.
-            apply directed_cong_in_struct_cong in H2; apply H2.
-           }
-           apply c_cut_assoc; auto.
-           apply (nfv_under_struct_cong _ _ _ H4).
-           (* set of free variables is preserved under reduction *)
-           (* does this need well-typedness? no:
-              show that set of free variables decreases during reduction,
-              but argument with WT is simpler *)
-           admit.
-      * admit.
-        (* needs invariances for ⊵ w.r.t. renaming/shifting *)
-    - destruct (IHdirected_congruence3 Q'0 H10) as [? [? ?]].
-      assert (
-        rename_process (up R1) swap01 ⊵ rename_process (up x) swap01
-      ) by admit.
-      eexists. split.
-      * apply rp_cong_cut_r. apply rp_cong_cut_r. apply H5.
-      * eapply c_trans with (cut (cut P1 Q1) x).
-        {
-          apply directed_cong_in_struct_cong in H0.
-          apply directed_cong_in_struct_cong in H1.
-          apply c_cong_cut; auto. apply c_cong_cut; auto.
-        }
-        apply c_cut_assoc; auto.
-        apply directed_cong_in_struct_cong in H0.
-        pose proof ((proj1 free_vars_under_struct_cong) _ _ H0 1).
-        intro Hfv. apply H7 in Hfv. congruence.
-  + admit.
-  + inversion H1; subst.
-    - eexists; split. apply rp_refl. apply c_cong_cut; apply directed_cong_in_struct_cong; auto.
-    - destruct (fill_hole_congruence _ _ _ _ eq_refl H) as [E' [M' [? [? ?]]]].
-      exists (reduce_axcut E' M' Q'). split.
-      {
-        rewrite H2. eapply rp_ax_cut_l; eauto.
-        eapply edc_preserves_well_formedness; eauto.
-      }
-      apply directed_cong_in_struct_cong.
-      apply reduce_axcut_invariant_under_dc; auto.
-    - destruct (fill_hole_congruence _ _ _ _ eq_refl H0) as [E' [M' [? [? ?]]]].
-      exists (reduce_axcut E' M' P'). split.
-      {
-        rewrite H2. eapply rp_ax_cut_r; eauto.
-        eapply edc_preserves_well_formedness; eauto.
-      }
-      apply directed_cong_in_struct_cong.
-      apply reduce_axcut_invariant_under_dc; auto.
-    - specialize IHdirected_congruence1 with P'0.
-      apply IHdirected_congruence1 in H5. destruct H5 as [? [? ?]].
-      exists (cut x Q'). split.
-      * apply rp_cong_cut_l; auto.
-      * apply c_cong_cut; auto. apply directed_cong_in_struct_cong; auto.
-    - specialize IHdirected_congruence2 with Q'0.
-      apply IHdirected_congruence2 in H5. destruct H5 as [? [? ?]].
-      exists (cut P' x). split.
-      * apply rp_cong_cut_r; auto.
-      * apply c_cong_cut; auto. apply directed_cong_in_struct_cong; auto.
-
-  (* seq *)
-  + inversion H1; subst.
-    - eexists. split. apply rp_refl.
-      apply directed_cong_in_struct_cong in H, H0.
-      apply c_cong_seq; auto.
-    - eexists. split. apply rp_seq. eapply directed_cong_in_struct_cong.
-      apply directed_cong_invariant_under_substitution; auto.
-      intros [|]; simpl. { econstructor; eauto. }
-      apply dc_cong_reflM.
-    - destruct (IHdirected_congruence _ H5) as [? [? ?]].
-      eexists. split.
-      * apply rp_cong_seq. apply H2.
-      * apply directed_cong_in_struct_cong in H, H0. apply c_cong_seq; auto.
-  + inversion H0; subst. exists stop; split; eauto. apply c_refl. *)
-Admitted.
+Print Assumptions directed_cong_equiv_red_commute.
 
 (* ≡ and ↠ commute *)
 (*

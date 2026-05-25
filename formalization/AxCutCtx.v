@@ -209,6 +209,13 @@ Proof.
   intro E; induction E; intros; simpl; auto.
 Qed.
 
+Lemma down_ctx_preserves_length :
+  forall E k,
+    length_axcut_ctx (down1_ctx E k) = length_axcut_ctx E.
+Proof.
+  intro E; induction E; intros; simpl; auto.
+Qed.
+
 Definition lt_axcut_ctx (E1 E2 : axcut_ctx) : Prop :=
   (length_axcut_ctx E1) < (length_axcut_ctx E2).
 
@@ -248,6 +255,204 @@ Proof.
   intros.
   induction n; auto.
   simpl. rewrite IHn. reflexivity.
+Qed.
+
+Lemma up_ren_n_swap_n :
+  forall n, up_ren_n n swap01 n = S n.
+Proof.
+  induction n; auto. simpl. rewrite IHn; auto.
+Qed.
+
+Lemma up_ren_n_swap_Sn :
+  forall n, up_ren_n n swap01 (S n) = n.
+Proof.
+  induction n; auto. simpl. rewrite IHn; auto.
+Qed.
+
+Lemma up_ren_n_swap_not_nSn :
+  forall n j, n <> j -> S n <> j -> up_ren_n n swap01 j = j.
+Proof.
+  induction n; intros; simpl.
+  + destruct j; try (exfalso; lia); destruct j; try (exfalso; lia).
+    auto.
+  + destruct j; auto; simpl.
+    assert (n <> j) by lia.
+    assert (S n <> j) by lia.
+    rewrite IHn; auto.
+Qed.
+
+Lemma up_ren_n_swap_down_down_Sn :
+  (forall P j,
+    ~ (S j) ∈ P ->
+    down1_process (rename_process P (up_ren_n j swap01)) j
+      = down1_process P (S j)) /\
+  (forall M j,
+    ~ (occurs_free_message (S j) M) ->
+    down1_message (rename_message M (up_ren_n j swap01)) j
+      = down1_message M (S j)) /\
+  (forall s j,
+    ~ (occurs_free_statement (S j) s) ->
+    down1_statement (rename_statement s (up_ren_n j swap01)) j
+      = down1_statement s (S j)).
+Proof.
+  apply syntax_ind; intros; simpl; auto;
+  try replace (up_ren (up_ren_n j swap01)) with (up_ren_n (S j) swap01) by auto;
+  try replace (up_ren (up_ren_n (S j) swap01)) with (up_ren_n (S (S j)) swap01) by auto;
+  try (rewrite H; try rewrite H0; auto; intro Hfv; try apply H0; try apply H1; free_var_econstructor; eauto).
+  destruct (PeanoNat.Nat.eq_dec j n).
+  + subst. rewrite up_ren_n_swap_n.
+    assert (n < (S n)) by lia. apply PeanoNat.Nat.ltb_lt in H0; rewrite H0; simpl.
+    assert (~ (S n) < n) by lia. apply PeanoNat.Nat.ltb_nlt in H1; rewrite H1.
+    reflexivity.
+  + destruct (PeanoNat.Nat.eq_dec (S j) n).
+    - subst. exfalso. apply H; econstructor.
+    - rewrite up_ren_n_swap_not_nSn; try lia.
+      destruct (Nat.ltb j n) eqn:E.
+      * apply PeanoNat.Nat.ltb_lt in E.
+        assert (S j < n) by lia. apply PeanoNat.Nat.ltb_lt in H0; rewrite H0. auto.
+      * apply PeanoNat.Nat.ltb_nlt in E.
+        assert (~ S j < n) by lia. apply PeanoNat.Nat.ltb_nlt in H0; rewrite H0; auto.
+Qed.
+
+Lemma up_ren_n_swap_down_down_Sn_ctx :
+  forall E j,
+    ~ (occurs_free_ctx (S j) E) ->
+    down1_ctx (rename_axcut_ctx E (up_ren_n j swap01)) j
+      = down1_ctx E (S j).
+Proof.
+  induction E; intros; simpl.
+  + destruct (PeanoNat.Nat.eq_dec j n).
+    - subst. rewrite up_ren_n_swap_n.
+      assert (n < (S n)) by lia. apply PeanoNat.Nat.ltb_lt in H0; rewrite H0; simpl.
+      assert (~ (S n) < n) by lia. apply PeanoNat.Nat.ltb_nlt in H1; rewrite H1.
+      reflexivity.
+    - destruct (PeanoNat.Nat.eq_dec (S j) n).
+      * subst. exfalso. apply H; econstructor.
+      * rewrite up_ren_n_swap_not_nSn; try lia.
+        destruct (Nat.ltb j n) eqn:E.
+        ** apply PeanoNat.Nat.ltb_lt in E.
+           assert (S j < n) by lia. apply PeanoNat.Nat.ltb_lt in H0; rewrite H0. auto.
+        ** apply PeanoNat.Nat.ltb_nlt in E.
+           assert (~ S j < n) by lia. apply PeanoNat.Nat.ltb_nlt in H0; rewrite H0; auto.
+  + destruct (PeanoNat.Nat.eq_dec j n).
+    - subst. rewrite up_ren_n_swap_n.
+      assert (n < (S n)) by lia. apply PeanoNat.Nat.ltb_lt in H0; rewrite H0; simpl.
+      assert (~ (S n) < n) by lia. apply PeanoNat.Nat.ltb_nlt in H1; rewrite H1.
+      reflexivity.
+    - destruct (PeanoNat.Nat.eq_dec (S j) n).
+      * subst. exfalso. apply H; econstructor.
+      * rewrite up_ren_n_swap_not_nSn; try lia.
+        destruct (Nat.ltb j n) eqn:E.
+        ** apply PeanoNat.Nat.ltb_lt in E.
+           assert (S j < n) by lia. apply PeanoNat.Nat.ltb_lt in H0; rewrite H0. auto.
+        ** apply PeanoNat.Nat.ltb_nlt in E.
+           assert (~ S j < n) by lia. apply PeanoNat.Nat.ltb_nlt in H0; rewrite H0; auto.
+  + replace (up_ren (up_ren_n j swap01)) with (up_ren_n (S j) swap01) by auto.
+    rewrite IHE.
+    - rewrite (proj1 up_ren_n_swap_down_down_Sn); auto.
+      intro Hfv; apply H. apply fv_ctx_cons_l1; auto.
+    - intro Hfv; apply H; apply fv_ctx_cons_l2; auto.
+  + replace (up_ren (up_ren_n j swap01)) with (up_ren_n (S j) swap01) by auto.
+    rewrite IHE.
+    - rewrite (proj1 up_ren_n_swap_down_down_Sn); auto.
+      intro Hfv; apply H. apply fv_ctx_cons_r1; auto.
+    - intro Hfv; apply H; apply fv_ctx_cons_r2; auto.
+Qed.
+
+Lemma up_ren_n_swap_lift_lift_Sn :
+  (forall P j,
+    rename_process (lift_process P j 1) (up_ren_n j swap01)
+      = lift_process P (S j) 1) /\
+  (forall M j,
+    rename_message (lift_message M j 1) (up_ren_n j swap01)
+      = lift_message M (S j) 1) /\
+  (forall s j,
+    rename_statement (lift_statement s j 1) (up_ren_n j swap01)
+      = lift_statement s (S j) 1).
+Proof.
+  apply syntax_ind; intros; simpl;
+  replace (up_ren (up_ren_n j swap01)) with (up_ren_n (S j) swap01) by auto;
+  replace (up_ren (up_ren_n (S j) swap01)) with (up_ren_n (S (S j)) swap01) by auto;
+  try rewrite H; try rewrite H0; auto. f_equal.
+  unfold relocate.
+  destruct (PeanoNat.Nat.eq_dec j n); subst.
+  + rewrite PeanoNat.Nat.leb_refl.
+    assert (~ (S n) <= n) by lia. apply PeanoNat.Nat.leb_nle in H; rewrite H.
+    simpl. rewrite up_ren_n_swap_Sn; auto.
+  + destruct (Nat.leb j n) eqn:E.
+    - apply PeanoNat.Nat.leb_le in E. assert ((S j) <= n) by lia.
+      apply PeanoNat.Nat.leb_le in H; rewrite H; simpl.
+      rewrite up_ren_n_swap_not_nSn; lia.
+    - apply PeanoNat.Nat.leb_nle in E.
+      assert (~ (S j) <= n) by lia. apply PeanoNat.Nat.leb_nle in H; rewrite H.
+      rewrite up_ren_n_swap_not_nSn; lia.
+Qed.
+
+Lemma down_at_k_rename_id_after_k_commute_ctx :
+  forall E,
+    forall k r, bijective r -> (forall j, k <= j -> r j = j) ->
+      down1_ctx (rename_axcut_ctx E r) k
+        = rename_axcut_ctx (down1_ctx E k) r.
+Proof.
+  induction E; intros; simpl.
+  + destruct (Nat.ltb k n) eqn:E; simpl.
+    - apply PeanoNat.Nat.ltb_lt in E.
+      assert (Nat.ltb k n = true) by (apply PeanoNat.Nat.ltb_lt in E; auto).
+      destruct n; try (exfalso; lia). simpl.
+      assert (k <= (S n)) by lia. rewrite (H0 (S n)); auto. simpl.
+      rewrite H1. rewrite H0; auto. lia.
+    - destruct (Nat.ltb k (r n)) eqn:E1; auto.
+      apply PeanoNat.Nat.leb_nle in E. assert (n <= k) by lia.
+      apply PeanoNat.Nat.leb_le in E1.
+      destruct (Compare_dec.le_gt_dec k n).
+      ++ exfalso.
+         rewrite (H0 n) in E1; auto.
+      ++ exfalso.
+         destruct H.
+         assert (r n = n).
+         {
+          assert (k <= r n) by lia.
+          specialize H0 with (r n). apply H0 in H.
+          assert (g0 (r (r n)) = g0 (r n)) by (rewrite H; auto).
+          repeat rewrite c in H2. auto.
+         }
+         rewrite H in E1. congruence.
+  + destruct (Nat.ltb k n) eqn:E; simpl.
+    - apply PeanoNat.Nat.ltb_lt in E.
+      assert (Nat.ltb k n = true) by (apply PeanoNat.Nat.ltb_lt in E; auto).
+      destruct n; try (exfalso; lia). simpl.
+      assert (k <= (S n)) by lia. rewrite (H0 (S n)); auto. simpl.
+      rewrite H1. rewrite H0; auto. lia.
+    - destruct (Nat.ltb k (r n)) eqn:E1; auto.
+      apply PeanoNat.Nat.leb_nle in E. assert (n <= k) by lia.
+      apply PeanoNat.Nat.leb_le in E1.
+      destruct (Compare_dec.le_gt_dec k n).
+      ++ exfalso.
+         rewrite (H0 n) in E1; auto.
+      ++ exfalso.
+         destruct H.
+         assert (r n = n).
+         {
+          assert (k <= r n) by lia.
+          specialize H0 with (r n). apply H0 in H.
+          assert (g0 (r (r n)) = g0 (r n)) by (rewrite H; auto).
+          repeat rewrite c in H2. auto.
+         }
+         rewrite H in E1. congruence.
+  + f_equal.
+    - rewrite (proj1 down_at_k_rename_id_after_k_commute); auto.
+      apply shift_preserves_bijection; auto.
+      intros; unfold up_ren; destruct j; auto; try rewrite H0; try rewrite H1; try rewrite H2; lia.
+    - rewrite IHE; auto.
+      apply shift_preserves_bijection; auto.
+      intros; unfold up_ren; destruct j; auto; try rewrite H0; try rewrite H1; try rewrite H2; lia.
+  + f_equal.
+    - rewrite IHE; auto.
+      apply shift_preserves_bijection; auto.
+      intros; unfold up_ren; destruct j; auto; try rewrite H0; try rewrite H1; try rewrite H2; lia.
+    - rewrite (proj1 down_at_k_rename_id_after_k_commute); auto.
+      apply shift_preserves_bijection; auto.
+      intros; unfold up_ren; destruct j; auto; try rewrite H0; try rewrite H1; try rewrite H2; lia.
 Qed.
 
 (******************************************************************************)
@@ -379,6 +584,39 @@ Proof.
     rewrite IHE. reflexivity.
 Qed.
 
+Lemma down_after_up_idE :
+  forall j E,
+    down1_ctx (lift_ctx E j 1) j = E.
+Proof.
+  intros.
+  generalize dependent j.
+  induction E; intros; simpl.
+  + unfold relocate.
+    destruct (Nat.leb j n) eqn:E.
+    - simpl.
+      apply PeanoNat.Nat.leb_le in E; assert (j < (S n)) by lia.
+      apply PeanoNat.Nat.ltb_lt in H; rewrite H.
+      reflexivity.
+    - apply PeanoNat.Nat.leb_nle in E. assert (~ (j < n)) by lia.
+      apply PeanoNat.Nat.ltb_nlt in H; rewrite H.
+      reflexivity.
+  + unfold relocate.
+    destruct (Nat.leb j n) eqn:E.
+    - simpl.
+      apply PeanoNat.Nat.leb_le in E; assert (j < (S n)) by lia.
+      apply PeanoNat.Nat.ltb_lt in H; rewrite H.
+      reflexivity.
+    - apply PeanoNat.Nat.leb_nle in E. assert (~ (j < n)) by lia.
+      apply PeanoNat.Nat.ltb_nlt in H; rewrite H.
+      reflexivity.
+  + rewrite (proj1 down_after_up_id).
+    rewrite IHE.
+    reflexivity.
+  + rewrite (proj1 down_after_up_id).
+    rewrite IHE.
+    reflexivity.
+Qed.
+
 Lemma fv_ctx_fill_hole :
   forall E n M, occurs_free_ctx n E -> n ∈ (fill_hole E M).
 Proof.
@@ -439,6 +677,41 @@ Proof.
     inversion H0; subst.
     replace (S (length_axcut_ctx E + j)) with (length_axcut_ctx E + (S j)) by lia.
     eapply IHE; eauto.
+Qed.
+
+Lemma nfv_fill_hole :
+  forall E M j,
+    ~ (j ∈ fill_hole E M) ->
+      ~ (occurs_free_ctx j E) /\ ~ (occurs_free_message (length_axcut_ctx E + j) M).
+Proof.
+  intros.
+  generalize dependent j.
+  induction E; intros; simpl in *.
+  + split; intros Hfv; apply H; free_var_econstructor; eauto.
+    inversion Hfv; subst. econstructor.
+  + split; intros Hfv; apply H.
+    - apply fv_link_r. inversion Hfv. econstructor.
+    - apply fv_link_l; auto.
+  + split; intros; intro Hfv; apply H.
+    - inversion Hfv; subst.
+      * apply fv_cut_l. assumption.
+      * apply fv_cut_r. eapply fv_ctx_fill_hole; auto.
+    - apply fv_cut_r.
+      assert (~ (S j) ∈ fill_hole E M).
+      { intro Hfv'; apply H; apply fv_cut_r; auto. }
+      pose proof (proj2 (IHE _ H0)).
+      replace (length_axcut_ctx E + S j) with (S (length_axcut_ctx E + j)) in H1 by lia.
+      congruence.
+  + split; intros; intro Hfv; apply H.
+    - inversion Hfv; subst.
+      * apply fv_cut_r. assumption.
+      * apply fv_cut_l. eapply fv_ctx_fill_hole; auto.
+    - apply fv_cut_r.
+      assert (~ (S j) ∈ fill_hole E M).
+      { intro Hfv'; apply H; apply fv_cut_l; auto. }
+      pose proof (proj2 (IHE _ H0)).
+      replace (length_axcut_ctx E + S j) with (S (length_axcut_ctx E + j)) in H1 by lia.
+      congruence.
 Qed.
 
 (* swap01 preserves well-formedness *)
@@ -601,6 +874,39 @@ Proof.
     - intro Hfv.
       apply n_fv_down_Sn in Hfv; auto. lia.
     - apply IHE; auto. lia.
+Qed.
+
+Lemma downE_preserves_well_formedness_nfv :
+  forall n k E,
+    k <= n ->
+    ~ (occurs_free_ctx k E) ->
+    well_formed_axcut_ctx (S n) E ->
+      well_formed_axcut_ctx n (down1_ctx E k).
+Proof.
+  intros n k E.
+  generalize dependent n.
+  generalize dependent k.
+  induction E; intros; simpl.
+  + inversion H1; subst.
+    assert (k < S n0) by lia. apply PeanoNat.Nat.ltb_lt in H2.
+    rewrite H2. simpl. econstructor.
+  + inversion H1; subst.
+    assert (k < S n0) by lia. apply PeanoNat.Nat.ltb_lt in H2.
+    rewrite H2. simpl. econstructor.
+  + inversion H1; subst.
+    econstructor.
+    - intro Hfv.
+      apply n_fv_down_Sn' in Hfv; auto. lia.
+      intro Hfv'. apply H0. apply fv_ctx_cons_l1. assumption.
+    - apply IHE; auto. lia.
+      intro Hfv'. apply H0. apply fv_ctx_cons_l2. assumption.
+  + inversion H1; subst.
+    econstructor.
+    - intro Hfv.
+      apply n_fv_down_Sn' in Hfv; auto. lia.
+      intro Hfv'. apply H0. apply fv_ctx_cons_r1. assumption.
+    - apply IHE; auto. lia.
+      intro Hfv'. apply H0. apply fv_ctx_cons_r2. assumption.
 Qed.
 
 Corollary downE_preserves_well_formedness :
@@ -1188,6 +1494,26 @@ Proof.
     - apply fv_ctx_cons_r1. apply (proj1 fv_up_Sn2) with (k := (S k)); auto.
       lia.
     - apply fv_ctx_cons_r2. apply IHE with (k := (S k)); auto. lia.
+Qed.
+
+Lemma nfv_lift_nE :
+  forall E k n j, k <= j /\ j < k + n -> ~ (occurs_free_ctx j (lift_ctx E k n)).
+Proof.
+  induction E; intros; simpl; intro Hfv.
+  + unfold relocate in Hfv.
+    destruct (Nat.leb k n) eqn:E.
+    - inversion Hfv; subst. apply PeanoNat.Nat.leb_le in E; lia.
+    - inversion Hfv; subst. apply PeanoNat.Nat.leb_nle in E; lia.
+  + unfold relocate in Hfv.
+    destruct (Nat.leb k n) eqn:E.
+    - inversion Hfv; subst. apply PeanoNat.Nat.leb_le in E; lia.
+    - inversion Hfv; subst. apply PeanoNat.Nat.leb_nle in E; lia.
+  + inversion Hfv; subst.
+    - apply nfv_lift_n in H2; auto. lia.
+    - apply (IHE (S k) n (S j)); auto. lia.
+  + inversion Hfv; subst.
+    - apply nfv_lift_n in H2; auto. lia.
+    - apply (IHE (S k) n (S j)); auto. lia.
 Qed.
 
 Lemma free_vars_ctx_under_directed_cong :
@@ -2054,8 +2380,20 @@ Proof.
       rewrite H8. auto.
 Qed.
 
+(* better version of reduce_axcut_invariant_under_dc *)
+Lemma reduce_axcut_invariant_under_directed_cong :
+  forall E M R P P',
+    well_formed_axcut_ctx 0 E ->
+    P ⇛ P' -> (fill_hole E M) ⇛ R ->
+      exists E' M',
+        R = fill_hole E' M' /\
+        E #⇛ E' /\
+        (reduce_axcut E M P) ⇛ (reduce_axcut E' M' P').
+Proof.
+Admitted.
+
 (* needs WF as premise + induction on size of E *)
-Lemma reduce_axcut_invariant_under_dc :
+(* Lemma reduce_axcut_invariant_under_dc :
   forall E M P E' M' P',
     E #⇛ E' -> P ⇛ P' -> (fill_hole E M) ⇛ (fill_hole E' M') ->
     (reduce_axcut E M P) ⇛ (reduce_axcut E' M' P').
@@ -2123,6 +2461,7 @@ Proof.
     - exfalso. admit.
     - exfalso. admit.
   + admit.
+Admitted. *)
 
 (* OLD VERSION
   intros.
@@ -2244,4 +2583,3 @@ Proof.
 
   (* ? by induction on the size of E ? *)
 *)
-Admitted.
