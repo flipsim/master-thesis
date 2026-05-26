@@ -909,6 +909,37 @@ Proof.
       intro Hfv'. apply H0. apply fv_ctx_cons_r2. assumption.
 Qed.
 
+Lemma downE_preserves_well_formedness_nfv2 :
+  forall n k E,
+    n < k ->
+    ~ (occurs_free_ctx k E) ->
+    well_formed_axcut_ctx n E ->
+      well_formed_axcut_ctx n (down1_ctx E k).
+Proof.
+  intros n k E.
+  generalize dependent n.
+  generalize dependent k.
+  induction E; intros; simpl.
+  + inversion H1; subst.
+    assert (k <> n). { destruct (PeanoNat.Nat.eq_dec k n); auto. subst; exfalso; apply H0; econstructor. }
+    assert (~ k < n) by lia. apply PeanoNat.Nat.ltb_nlt in H3; rewrite H3.
+    econstructor.
+  + inversion H1; subst.
+    assert (k <> n). { destruct (PeanoNat.Nat.eq_dec k n); auto. subst; exfalso; apply H0; econstructor. }
+    assert (~ k < n) by lia. apply PeanoNat.Nat.ltb_nlt in H3; rewrite H3.
+    econstructor.
+  + inversion H1; subst.
+    econstructor.
+    - apply nfv_down_lt; auto. lia.
+    - apply IHE; auto. lia.
+      intro Hfv'. apply H0. apply fv_ctx_cons_l2. assumption.
+  + inversion H1; subst.
+    econstructor.
+    - apply nfv_down_lt; auto. lia.
+    - apply IHE; auto. lia.
+      intro Hfv'. apply H0. apply fv_ctx_cons_r2. assumption.
+Qed.
+
 Corollary downE_preserves_well_formedness :
   forall n E,
     well_formed_axcut_ctx (S (S n)) E -> well_formed_axcut_ctx (S n) (downE E).
