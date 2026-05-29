@@ -469,6 +469,24 @@ Proof.
     destruct n; auto.
 Qed.
 
+Lemma swap01_preserves_well_typedness :
+  forall Γ p,
+    Γ ⊢ p :# -> exists Γ', Γ' ⊢ (rename_process p swap01) :#.
+Proof.
+  intros.
+  destruct Γ.
+  + exists nil.
+    eapply (proj1 context_renaming); eauto.
+    apply swap01_is_bijective.
+    intros; repeat rewrite lookup_ctx_nil; auto.
+  + destruct Γ.
+    - exists [None; o]. eapply (proj1 context_renaming); eauto.
+      apply swap01_is_bijective.
+      destruct n as [|[|]]; auto; simpl.
+      rewrite lookup_ctx_nil; auto.
+    - apply swap01_preserves_typing in H. eexists; eauto.
+Qed.
+
 (* upshifting identity remains identity *)
 Lemma up_id_is_id :
   forall (r : renaming),

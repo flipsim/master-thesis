@@ -388,6 +388,44 @@ Proof.
       rewrite up_ren_n_swap_not_nSn; lia.
 Qed.
 
+Lemma up_ren_n_swap_lift_lift_Sn_ctx :
+  forall E j,
+    rename_axcut_ctx (lift_ctx E j 1) (up_ren_n j swap01)
+      = lift_ctx E (S j) 1.
+Proof.
+  induction E; intros; simpl.
+  + f_equal. unfold relocate.
+    destruct (Nat.leb j n) eqn:E.
+    - apply PeanoNat.Nat.leb_le in E.
+      destruct (Nat.leb (S j) n) eqn:E1.
+      * apply PeanoNat.Nat.leb_le in E1.
+        rewrite up_ren_n_swap_not_nSn; lia.
+      * apply PeanoNat.Nat.leb_nle in E1. assert (n = j) by lia; subst.
+        rewrite up_ren_n_swap_Sn. reflexivity.
+    - apply PeanoNat.Nat.leb_nle in E. assert (~ (S j) <= n) by lia.
+      apply PeanoNat.Nat.leb_nle in H; rewrite H.
+      rewrite up_ren_n_swap_not_nSn; lia.
+  + f_equal. unfold relocate.
+    destruct (Nat.leb j n) eqn:E.
+    - apply PeanoNat.Nat.leb_le in E.
+      destruct (Nat.leb (S j) n) eqn:E1.
+      * apply PeanoNat.Nat.leb_le in E1.
+        rewrite up_ren_n_swap_not_nSn; lia.
+      * apply PeanoNat.Nat.leb_nle in E1. assert (n = j) by lia; subst.
+        rewrite up_ren_n_swap_Sn. reflexivity.
+    - apply PeanoNat.Nat.leb_nle in E. assert (~ (S j) <= n) by lia.
+      apply PeanoNat.Nat.leb_nle in H; rewrite H.
+      rewrite up_ren_n_swap_not_nSn; lia.
+  + replace (up_ren (up_ren_n j swap01)) with (up_ren_n (S j) swap01) by auto.
+    rewrite (proj1 up_ren_n_swap_lift_lift_Sn).
+    rewrite IHE.
+    reflexivity.
+  + replace (up_ren (up_ren_n j swap01)) with (up_ren_n (S j) swap01) by auto.
+    rewrite (proj1 up_ren_n_swap_lift_lift_Sn).
+    rewrite IHE.
+    reflexivity.
+Qed.
+
 Lemma down_at_k_rename_id_after_k_commute_ctx :
   forall E,
     forall k r, bijective r -> (forall j, k <= j -> r j = j) ->
@@ -1877,6 +1915,20 @@ Proof.
       apply up_shift_compose; auto.
 Qed.
 
+Lemma up_ren_swap_involutive :
+  forall n x,
+    id x = Basics.compose (up_ren_n n swap01) (up_ren_n n swap01) x.
+Proof.
+  intros; unfold Basics.compose.
+  destruct (PeanoNat.Nat.eq_dec n x).
+  + subst. rewrite up_ren_n_swap_n. rewrite up_ren_n_swap_Sn. reflexivity.
+  + destruct (PeanoNat.Nat.eq_dec (S n) x); subst.
+    - rewrite up_ren_n_swap_Sn. rewrite up_ren_n_swap_n. reflexivity.
+    - rewrite (up_ren_n_swap_not_nSn _ x); try lia.
+      rewrite up_ren_n_swap_not_nSn; try lia.
+      reflexivity.
+Qed.
+
 Lemma rename_axcut_ctx_id :
   forall E r, (forall x, r x = x) ->
     rename_axcut_ctx E r = E.
@@ -1884,6 +1936,33 @@ Proof.
   intros E; induction E; intros; simpl; try rewrite H; eauto.
   + rewrite (proj1 rename_id); try rewrite IHE; auto; intros [|]; auto; simpl; rewrite H; auto.
   + rewrite (proj1 rename_id); try rewrite IHE; auto; intros [|]; auto; simpl; rewrite H; auto.
+Qed.
+
+Lemma up_ren_swap_swap_idE :
+  forall n E,
+    rename_axcut_ctx (rename_axcut_ctx E (up_ren_n n swap01)) (up_ren_n n swap01) = E.
+Proof.
+  intros.
+  rewrite rename_axcut_ctx_compose with (c := id).
+  + rewrite rename_axcut_ctx_id; auto.
+  + intros. erewrite up_ren_swap_involutive; eauto.
+Qed.
+
+Corollary swap_swap_idE :
+  forall E, rename_axcut_ctx (rename_axcut_ctx E swap01) swap01 = E.
+Proof.
+  intros. replace swap01 with (up_ren_n 0 swap01) by reflexivity.
+  apply up_ren_swap_swap_idE.
+Qed.
+
+Lemma up_ren_swap_swap_idM :
+  forall n M,
+    rename_message (rename_message M (up_ren_n n swap01)) (up_ren_n n swap01) = M.
+Proof.
+  intros.
+  rewrite (proj1 (proj2 renamings_compose)) with (c := id).
+  + rewrite (proj1 (proj2 rename_id)); auto.
+  + intros. erewrite up_ren_swap_involutive; eauto.
 Qed.
 
 Lemma axcut_ctx_down_ren_up_ren_commute :
@@ -2410,207 +2489,3 @@ Proof.
       }
       rewrite H8. auto.
 Qed.
-
-(* better version of reduce_axcut_invariant_under_dc *)
-Lemma reduce_axcut_invariant_under_directed_cong :
-  forall E M R P P',
-    well_formed_axcut_ctx 0 E ->
-    P ⇛ P' -> (fill_hole E M) ⇛ R ->
-      exists E' M',
-        R = fill_hole E' M' /\
-        E #⇛ E' /\
-        (reduce_axcut E M P) ⇛ (reduce_axcut E' M' P').
-Proof.
-Admitted.
-
-(* needs WF as premise + induction on size of E *)
-(* Lemma reduce_axcut_invariant_under_dc :
-  forall E M P E' M' P',
-    E #⇛ E' -> P ⇛ P' -> (fill_hole E M) ⇛ (fill_hole E' M') ->
-    (reduce_axcut E M P) ⇛ (reduce_axcut E' M' P').
-Proof.
-  intros.
-  generalize dependent M.
-  generalize dependent M'.
-  generalize dependent P.
-  generalize dependent P'.
-  induction H; intros.
-  + admit.
-  + admit.
-  + admit.
-  + admit.
-  + simpl in H2. inversion H2; subst.
-    - (* not possible if WF context ?! *) admit.
-    - (* WTF *) admit.
-      (* exfalso using H6? *)
-    - admit.
-    - repeat rewrite reduce_axcut_equation_3.
-      apply dc_cong_cut. admit.
-      (* IH *) admit.
-  + (* define specialized inversions for ⇛ *)
-    admit.
-  + simpl in H2.
-    (* if P ⇛ P' and H: E #⇛ E', then show by induction on
-      H that if (cut P fill_hole E M) .... then ... *)
-    admit.
-  + admit.
-  + simpl in H7. inversion H7; subst.
-    - exfalso. admit.
-    - simpl.
-      repeat rewrite reduce_axcut_equation_4; simpl.
-      repeat rewrite reduce_axcut_equation_3; simpl.
-      repeat rewrite reduce_axcut_equation_4; simpl.
-      eapply dc_cut_assoc_l.
-      * admit.
-      * assert (
-          (down (rename_process (rename_process P (up_ren swap01)) swap01)) ⇛
-          (down (rename_process P' swap01))
-        ) by admit.
-        apply H3.
-      * admit.
-      * (* if WF, then ~ 2 ∈ P -> up_ren swap01 is no op *)
-        assert (
-          (down (rename_process Q swap01)) ⇛
-          (down (rename_process Q' swap01))
-        ) by admit.
-        apply H3.
-      * reflexivity.
-      * (* if swap01 (up ) = lift at 1
-          then swap 01 (up swap01 up) = lift at 1 increase 2
-          thus, if swa01 (reduce _axcut)
-          distribute using up_ren swap01 ->
-          renaming is no op  
-
-          IMPORTANT NOTE:
-            (up_ren swap01) swap01 (up_ren swap01) is also swap02
-      *)
-        admit.
-      * (* because of WF -> ~ 1 in Q -> 0, 2 not in up Q' 
-           -> swap01 (up_ren swap01) swap01 = swap02 -> thus noop
-           -> down .... = Q' *)
-        (* reflexivity. *) admit.
-    - exfalso. admit.
-    - exfalso. admit.
-  + admit.
-Admitted. *)
-
-(* OLD VERSION
-  intros.
-  generalize dependent M.
-  generalize dependent M'.
-  generalize dependent P.
-  generalize dependent P'.
-  induction H; intros.
-  + rewrite reduce_axcut_equation_1.
-    rewrite reduce_axcut_equation_2.
-    admit.
-  + admit.
-  + rewrite reduce_axcut_equation_1.
-    rewrite reduce_axcut_equation_1.
-    admit.
-  + admit.
-  + repeat rewrite reduce_axcut_equation_3.
-    apply dc_cong_cut.
-    - admit.
-    - (* need induction hypothesis for (rename_axcut_ctx E) instead of E *)
-      admit.
-  + admit.
-  + repeat rewrite reduce_axcut_equation_3; simpl.
-    repeat rewrite reduce_axcut_equation_4; simpl.
-    admit.
-  + admit.
-  + rewrite reduce_axcut_equation_3; simpl.
-    rewrite reduce_axcut_equation_4; simpl.
-    repeat rewrite reduce_axcut_equation_4; simpl.
-    (* equation 4 cannot commute for ⇛ to hold *)
-    admit.
-  + admit.
-  + (* From WF: ~ 1 ∈ P and ~ 2 ∈ Q*)
-    repeat (rewrite reduce_axcut_equation_4; simpl).
-    repeat (rewrite reduce_axcut_equation_3; simpl).
-    repeat (rewrite reduce_axcut_equation_4; simpl).
-    eapply dc_cut_assoc_r.
-    - admit.
-    - assert (
-        down (rename_process P swap01) = down P
-      ) by admit.
-      rewrite H8.
-      assert ( (down P) ⇛ (down P') ) by admit.
-      apply H9.
-    - (* use IH *)
-      assert (
-        (reduce_axcut
-          (rename_axcut_ctx (rename_axcut_ctx E (up_ren swap01)) swap01)
-          (rename_message (upM (rename_message (upM M) swap01)) swap01)
-          (rename_process (up (rename_process (up P0) swap01)) swap01))
-        ⇛
-        (reduce_axcut
-          (rename_axcut_ctx (rename_axcut_ctx E' (up_ren swap01)) swap01)
-          (rename_message (upM (rename_message (upM M') swap01)) swap01)
-          (rename_process (up (rename_process (up P'0) swap01)) swap01))
-      ) by admit.
-      apply H8.
-    - (* ~ (1 ∈ Q) /\ ~ (2 ∈ Q) *)
-      assert ( rename_process Q (up_ren swap01) = Q) by admit.
-      rewrite H8.
-      assert ( (down (rename_process Q swap01)) = Q ) by admit.
-      rewrite H9. apply H0.
-    - (* ~ (1 ∈ P'), thus 0 and 2 not in (up P')*)
-      rewrite H3. (* swap02 is no op *)
-      assert (
-        rename_process
-        (rename_process (rename_process (up P') swap01) (up_ren swap01))
-        swap01 = up P'
-      ) by admit. rewrite H8.
-      (* since ~ 1 ∈ P', the down shift is harmless: *)
-      assert (
-        rename_process (up (down P')) swap01
-          = rename_process (up P') swap01
-          (* = P' *)
-      ) by admit.
-      admit.
-    - admit.
-    - admit.
-  + admit.
-  + (* from WF: ~ (2 ∈ P) /\ ~ (2 ∈ Q) *)
-    rewrite reduce_axcut_equation_3; simpl.
-    rewrite reduce_axcut_equation_3; simpl.
-    rewrite reduce_axcut_equation_3; simpl.
-    eapply dc_cut_assoc_l.
-    - admit.
-    - assert (
-        (down1_process (rename_process P (up_ren swap01)) 1) = down P
-      ) by admit.
-      rewrite H8.
-      assert ((down P) ⇛ (down P')) by admit.
-      apply H9.
-    - (* if contexts WF -> ~ 2 ∈ Q *)
-      assert (
-        (down1_process (rename_process Q (up_ren swap01)) 1) = down Q
-      ) by admit.
-      assert ((down Q) ⇛ (down Q')) by admit.
-      rewrite H8.
-      apply H9.
-    - (* use IH *)
-      assert (
-        (reduce_axcut (rename_axcut_ctx E swap01)
-          (rename_message (upM M) swap01)
-          (rename_process (up P0) swap01)) ⇛
-        (reduce_axcut (rename_axcut_ctx E' swap01)
-          (rename_message (upM M') swap01)
-          (rename_process (up P'0) swap01))
-      ) by admit.
-      apply H8.
-    - (* use down swap01 nfv lemma to conlude: *)
-      assert (
-        down (rename_process P' swap01) = down P'
-      ) by admit.
-      rewrite H3. rewrite H8. reflexivity.
-    - (* rename_process (down Q') swap01 =
-         down (swap02 in Q') *)
-      admit.
-    - rewrite H5. admit.
-  + admit.
-
-  (* ? by induction on the size of E ? *)
-*)

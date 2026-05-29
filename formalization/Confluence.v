@@ -47,11 +47,13 @@ Proof.
   + inversion H1; subst.
     - eexists; split. apply rp_refl.
       apply directed_cong_in_struct_cong. apply dc_cut_comm; auto.
-    - destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H4 H0_0 H0_) as [E' [M' [? [? ?]]]].
+    - inversion H; subst.
+      destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ _ _ eq_refl H6 H4 H0_0 H0_) as [E' [M' [? [? ?]]]].
       eexists; split.
       * rewrite H0. eapply rp_ax_cut_r; eauto. eapply edc_preserves_well_formedness; eauto.
       * apply directed_cong_in_struct_cong. assumption.
-    - destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H4 H0_ H0_0) as [E' [M' [? [? ?]]]].
+    - inversion H; subst.
+      destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ _ _ eq_refl H7 H4 H0_ H0_0) as [E' [M' [? [? ?]]]].
       eexists; split.
       * rewrite H0. eapply rp_ax_cut_l; eauto. eapply edc_preserves_well_formedness; eauto.
       * apply directed_cong_in_struct_cong. assumption.
@@ -93,7 +95,18 @@ Proof.
           replace 0 with (swap01 1) by auto; replace swap01 with (up_ren_n 0 swap01) by auto.
           apply well_formedness_preserved_under_swap01. inversion H8; auto.
         }
-        destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H2 H1 H0) as [E' [M' [? [? ?]]]].
+        assert (
+          exists Γ,
+            Γ ⊢ (fill_hole (rename_axcut_ctx E swap01) (rename_message M (up_ren_n (length_axcut_ctx E) swap01))) :#
+        ).
+        {
+          rewrite <- rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+          inversion H4; subst. inversion H11; subst.
+          destruct (swap01_preserves_well_typedness _ _ H15).
+          eauto.
+        }
+        destruct H5.
+        destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ _ _ eq_refl H5 H2 H1 H0) as [E' [M' [? [? ?]]]].
         eexists; split.
         + apply rp_cong_cut_r. eapply rp_ax_cut_l; eauto.
           eapply edc_preserves_well_formedness; eauto.
@@ -116,7 +129,11 @@ Proof.
     - assert (
         (cut P Q) ⇛ (cut P1 Q1)
       ). { apply dc_cong_cut; auto. }
-      destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H8 H0 H0_1) as [E' [M' [? [? ?]]]].
+      assert (
+        exists Γ, Γ ⊢ fill_hole E M :#
+      ) as Hwtfh. { inversion H4; subst. eauto. }
+      destruct Hwtfh as [Γ' HΓ'].
+      destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ _ _ eq_refl HΓ' H8 H0 H0_1) as [E' [M' [? [? ?]]]].
       rewrite H1.
       unfold up. rewrite up_ctx_over_fill_hole; rewrite <- plus_n_O.
       rewrite (rename_axcut_ctx_over_fill_hole _ _ swap01 swap01_is_bijective).
@@ -232,7 +249,30 @@ Proof.
           + replace 1 with (swap01 0) by auto; replace swap01 with (up_ren_n 0 swap01) by auto.
             apply well_formedness_preserved_under_swap01; auto.
         }
-        destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H1 H0 Hcong_ctx) as [E' [M' [? [? ?]]]].
+        assert (
+          exists Γ,
+            Γ ⊢ (fill_hole (down1_ctx (rename_axcut_ctx E swap01) 0)
+                  (down1_message (rename_message M (up_ren_n (length_axcut_ctx E) swap01))
+                    (length_axcut_ctx (rename_axcut_ctx E swap01) + 0))) :#
+        ) as Hwtfh.
+        {
+          rewrite <- down_ctx_over_fill_hole.
+          rewrite <- rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+          inversion H4; subst. inversion H10; subst. destruct Γ3; try now inversion H9.
+          apply swap01_preserves_typing in H13.
+          assert (
+            ~ 0 ∈ rename_process (fill_hole E M) swap01
+          ). { apply nfv_01_swap; auto. }
+          destruct o.
+          + assert (lookup 0 (Some t :: Some A0 :: Γ3) = Some t) by auto.
+            pose proof ((proj1 formula_property) _ _ _ _ H13 H6).
+            congruence.
+          + replace (None :: Some A0 :: Γ3) with (nil ++ None :: Some A0 :: Γ3) in H13 by auto.
+            replace 0 with (@length (option Types.type) nil) in H2 by auto.
+            eapply ((proj1 down_shift_sound) _ _ _ H2) in H13. eauto.
+        }
+        destruct Hwtfh as [Γ' HΓ'].
+        destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ _ _ eq_refl HΓ' H1 H0 Hcong_ctx) as [E' [M' [? [? ?]]]].
         eexists; split.
         { eapply rp_ax_cut_l; eauto. eapply edc_preserves_well_formedness; eauto. }
         {
@@ -250,7 +290,11 @@ Proof.
             rewrite <- rename_axcut_ctx_preserves_length in H7.
             apply H7.
         }
-      * destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H5 H0_ H0_0) as [E' [M' [? [? ?]]]].
+      * assert (
+          exists Γ, Γ ⊢ fill_hole E M :#
+        ) as Hwtfh. { inversion H4; subst. inversion H7; subst. eauto. }
+        destruct Hwtfh as [Γ' HΓ'].
+        destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ _ _ eq_refl HΓ' H5 H0_ H0_0) as [E' [M' [? [? ?]]]].
         rewrite H0.
         eexists; split.
         ** rewrite rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
@@ -359,7 +403,11 @@ Proof.
     - assert (
         (cut Q R) ⇛ (cut R1 Q1)
       ). { apply dc_cut_comm; auto. }
-      destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H8 H0 H0_) as [E' [M' [? [? ?]]]].
+      assert (
+          exists Γ, Γ ⊢ fill_hole E M :#
+        ) as Hwtfh. { inversion H4; subst. eauto. }
+      destruct Hwtfh as [Γ' HΓ'].
+      destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ _ _ eq_refl HΓ' H8 H0 H0_) as [E' [M' [? [? ?]]]].
       rewrite H1.
       unfold up. rewrite up_ctx_over_fill_hole; rewrite <- plus_n_O.
       rewrite (rename_axcut_ctx_over_fill_hole _ _ swap01 swap01_is_bijective).
@@ -467,7 +515,18 @@ Proof.
           replace 0 with (swap01 1) by auto; replace swap01 with (up_ren_n 0 swap01) by auto.
           apply well_formedness_preserved_under_swap01. inversion H8; auto.
         }
-        destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H2 H1 H0) as [E' [M' [? [? ?]]]].
+        assert (
+          exists Γ,
+            Γ ⊢ (fill_hole (rename_axcut_ctx E swap01) (rename_message M (up_ren_n (length_axcut_ctx E) swap01))) :#
+        ) as Hwtfh.
+        {
+          rewrite <- rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+          inversion H4; subst. inversion H12; subst.
+          destruct (swap01_preserves_well_typedness _ _ H14).
+          eauto.
+        }
+        destruct Hwtfh as [Γ' HΓ'].
+        destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ _ _ eq_refl HΓ' H2 H1 H0) as [E' [M' [? [? ?]]]].
         eexists; split.
         + apply rp_cong_cut_l. eapply rp_ax_cut_r; auto.
           inversion H8; subst.
@@ -515,7 +574,11 @@ Proof.
            eapply c_trans. apply c_cut_assoc; auto.
            apply directed_cong_in_struct_cong in H0_1. eapply nfv_under_struct_cong; eauto.
            eapply c_trans. apply c_cut_comm. apply c_cong_cut. apply c_cut_comm. apply c_refl.
-      * destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H5 H0_1 H0_0) as [E' [M' [? [? ?]]]].
+      * assert (
+          exists Γ, Γ ⊢ fill_hole E M :#
+        ) as Hwtfh. { inversion H4; subst. inversion H9; subst. eauto. }
+        destruct Hwtfh as [Γ' HΓ'].
+        destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ _ _ eq_refl HΓ' H5 H0_1 H0_0) as [E' [M' [? [? ?]]]].
         rewrite H0.
         eexists; split.
         ** rewrite rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
@@ -577,7 +640,30 @@ Proof.
           + replace 1 with (swap01 0) by auto; replace swap01 with (up_ren_n 0 swap01) by auto.
             apply well_formedness_preserved_under_swap01; auto.
         }
-        destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H1 H0 Hcong_ctx) as [E' [M' [? [? ?]]]].
+        assert (
+          exists Γ,
+            Γ ⊢ (fill_hole (down1_ctx (rename_axcut_ctx E swap01) 0)
+                  (down1_message (rename_message M (up_ren_n (length_axcut_ctx E) swap01))
+                    (length_axcut_ctx (rename_axcut_ctx E swap01) + 0))) :#
+        ) as Hwtfh.
+        {
+          rewrite <- down_ctx_over_fill_hole.
+          rewrite <- rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+          inversion H4; subst. inversion H11; subst. destruct Γ4; try now inversion H9.
+          apply swap01_preserves_typing in H14.
+          assert (
+            ~ 0 ∈ rename_process (fill_hole E M) swap01
+          ). { apply nfv_01_swap; auto. }
+          destruct o.
+          + assert (lookup 0 (Some t :: Some (Types.dual A0) :: Γ4) = Some t) by auto.
+            pose proof ((proj1 formula_property) _ _ _ _ H14 H6).
+            congruence.
+          + replace (None :: Some (Types.dual A0) :: Γ4) with (nil ++ None :: Some (Types.dual A0) :: Γ4) in H14 by auto.
+            replace 0 with (@length (option Types.type) nil) in H2 by auto.
+            eapply ((proj1 down_shift_sound) _ _ _ H2) in H14. eauto.
+        }
+        destruct Hwtfh as [Γ' HΓ'].
+        destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ _ _ eq_refl HΓ' H1 H0 Hcong_ctx) as [E' [M' [? [? ?]]]].
         eexists; split.
         { eapply rp_ax_cut_r; eauto. eapply edc_preserves_well_formedness; eauto. }
         {
@@ -643,11 +729,13 @@ Proof.
               apply c_cut_comm. apply c_refl.
   + inversion H1; subst.
     - eexists; split. apply rp_refl. apply c_cong_cut; apply directed_cong_in_struct_cong; auto.
-    - destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H4 H0_0 H0_) as [E' [M' [? [? ?]]]].
+    - inversion H; subst.
+      destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ _ _ eq_refl H6 H4 H0_0 H0_) as [E' [M' [? [? ?]]]].
       eexists. split.
       * rewrite H0. eapply rp_ax_cut_l; eauto. eapply edc_preserves_well_formedness; eauto.
       * apply directed_cong_in_struct_cong. subst. auto.
-    - destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ H4 H0_ H0_0) as [E' [M' [? [? ?]]]].
+    - inversion H; subst.
+      destruct (reduce_axcut_invariant_under_directed_cong _ _ _ _ _ _ _ eq_refl H7 H4 H0_ H0_0) as [E' [M' [? [? ?]]]].
       eexists. split.
       * rewrite H0. eapply rp_ax_cut_r; eauto. eapply edc_preserves_well_formedness; eauto.
       * apply directed_cong_in_struct_cong. subst. auto.
