@@ -1955,6 +1955,16 @@ Proof.
   apply up_ren_swap_swap_idE.
 Qed.
 
+Lemma up_ren_swap_swap_idP :
+  forall n P,
+    rename_process (rename_process P (up_ren_n n swap01)) (up_ren_n n swap01) = P.
+Proof.
+  intros.
+  rewrite (proj1 renamings_compose) with (c := id).
+  + rewrite (proj1 rename_id); auto.
+  + intros. erewrite up_ren_swap_involutive; eauto.
+Qed.
+
 Lemma up_ren_swap_swap_idM :
   forall n M,
     rename_message (rename_message M (up_ren_n n swap01)) (up_ren_n n swap01) = M.
