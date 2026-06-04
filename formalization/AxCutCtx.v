@@ -97,6 +97,17 @@ Fixpoint down1_ctx (E : axcut_ctx) (k : nat) : axcut_ctx :=
 Definition downE E := down1_ctx E 0.
 
 (******************************************************************************)
+(* Substitution in Contexts                                                   *)
+(******************************************************************************)
+Fixpoint subst_ctx (E : axcut_ctx) (σ : substitution) : axcut_ctx :=
+  match E with
+  | nil_l i     => nil_l i
+  | nil_r i     => nil_r i
+  | cons_l P E' => cons_l (subst_process P (up_subst σ)) (subst_ctx E' (up_subst σ))
+  | cons_r E' P => cons_r (subst_ctx E' (up_subst σ)) (subst_process P (up_subst σ))
+  end.
+
+(******************************************************************************)
 (* Free Variables in a Context                                                *)
 (******************************************************************************)
 Inductive occurs_free_ctx : nat -> axcut_ctx -> Prop :=

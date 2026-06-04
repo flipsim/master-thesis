@@ -10,6 +10,7 @@ From FD Require Import DirectedCong.
 From FD Require Import Reduction.
 From FD Require Import ParallelReduction.
 From FD Require Import AxCutCtx.
+From FD Require Import EquivRedProperties.
 
 From Stdlib Require Import Lia.
 
@@ -798,6 +799,53 @@ Lemma equiv_red_diamond :
   forall Γ P Q1 Q2, Γ ⊢ P :# -> P ⊵ Q1 -> P ⊵ Q2 ->
     exists R, Q1 ↠ R /\ Q2 ↠ R.
 Proof.
+  intros.
+  generalize dependent Q2.
+  generalize dependent Γ.
+  induction H0; intros.
+  (* refl *)
+  + eexists; split; econstructor; eauto. apply rp_refl.
+  (* link *)
+  + inversion H1; subst; eexists; (split; econstructor; [apply rp_refl | econstructor; eauto]).
+  + inversion H1; subst; eexists; (split; econstructor; [apply rp_refl | econstructor; eauto]).
+  + inversion H1; subst; eexists; (split; econstructor; [apply rp_refl | econstructor; eauto]).
+  + inversion H1; subst; eexists; (split; econstructor; [apply rp_refl | econstructor; eauto]).
+  + inversion H1; subst; eexists; (split; econstructor; [apply rp_refl | econstructor; eauto]).
+  + inversion H1; subst; eexists; (split; econstructor; [apply rp_refl | econstructor; eauto]).
+  + inversion H1; subst; eexists; (split; econstructor; [apply rp_refl | econstructor; eauto]).
+  + inversion H1; subst; eexists; (split; econstructor; [apply rp_refl | econstructor; eauto]).
+  (* axcut *)
+  + inversion H3; subst; admit.
+  + inversion H3; subst; admit.
+  (* seq *)
+  + inversion H1; subst.
+    - eexists; split; econstructor.
+      * apply rp_refl.
+      * econstructor.
+    - eexists; split; econstructor; apply rp_refl.
+    - eexists; split.
+      * econstructor. inversion H; eapply equiv_red_invariant_under_substitution; eassumption.
+      * repeat econstructor.
+  (* cut cong *)
+  + inversion H1; subst; admit.
+  + inversion H1; subst; admit.
+  (* seq cong *)
+  + inversion H1; subst.
+    - eexists; split; econstructor.
+      * apply rp_refl.
+      * apply rp_cong_seq; eauto.
+    - eexists; split.
+      * econstructor. apply rp_seq.
+      * econstructor. inversion H; eapply equiv_red_invariant_under_substitution; eassumption.
+    - inversion H; subst.
+      destruct (IHequiv_reduces _ H7 _ H5) as [R [? ?]].
+      eexists; split.
+      * inversion H2;
+        [apply or_introl; eapply rp_cong_seq | apply or_intror; apply c_cong_seq];
+        eauto. apply struct_cong_reflS.
+      * inversion H3;
+        [apply or_introl; eapply rp_cong_seq | apply or_intror; apply c_cong_seq];
+        eauto. apply struct_cong_reflS.
 Admitted.
 
 (* ↠ is confluent *)
