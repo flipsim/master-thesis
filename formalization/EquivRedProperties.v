@@ -13,6 +13,17 @@ From FD Require Import AxCutCtx.
 From FD Require Import ParallelReduction.
 
 From Stdlib Require Import Lia.
+From Stdlib Require Import Arith.Wf_nat.
+
+Local Hint Rewrite
+  swap_swap_id
+  down_after_up_process_id
+  up_after_down_process_id
+  up_ren_swap_swap_idM
+  up_ren_swap_swap_idE
+  swap_swap_idE
+  down_after_up_idE
+    : up_down_rename_rewrites.
 
 (******************************************************************************)
 (* up_subst_n                                                                 *)
@@ -520,4 +531,1482 @@ Proof.
   + apply rp_cong_cut_l. inversion H; subst. eapply IHequiv_reduces; eauto.
   + apply rp_cong_cut_r. inversion H; subst. eapply IHequiv_reduces; eauto.
   + apply rp_cong_seq. inversion H; subst. eapply IHequiv_reduces; eauto.
+Qed.
+
+Lemma reduce_axcut_invariant_under_reduced_substituent' :
+  forall n Γ E M P P',
+    n = length_axcut_ctx E ->
+    Γ ⊢ P :# -> P ⊵ P' ->
+    reduce_axcut E M P ⊵ reduce_axcut E M P'.
+Proof.
+  induction n; intros; destruct E; simpl in H; try congruence.
+  + repeat rewrite reduce_axcut_equation_1.
+    eapply equiv_red_invariant_under_substitution; eauto.
+  + repeat rewrite reduce_axcut_equation_2.
+    eapply equiv_red_invariant_under_substitution; eauto.
+  + repeat rewrite reduce_axcut_equation_3.
+    apply rp_cong_cut_r.
+    assert (
+      exists Γ', Γ' ⊢ up P :#
+    ).
+    {
+      unfold up.
+      replace Γ with (nil ++ Γ) in H0 by auto.
+      apply (proj1 up_shift_sound) in H0.
+      eexists; eassumption.
+    }
+    destruct H2 as [Γ1 ?].
+    assert (
+      exists Γ', Γ' ⊢ rename_process (up P) swap01 :#
+    ).
+    {
+      destruct (swap01_preserves_well_typedness _ _ H2).
+      eexists; eauto.
+    }
+    destruct H3 as [Γ2 ?].
+    eapply IHn; eauto.
+    - rewrite <- rename_axcut_ctx_preserves_length.
+      inversion H; auto.
+    - replace swap01 with (up_ren_n 0 swap01) by auto.
+      eapply equiv_red_invariant_under_swap; eauto.
+      eapply equiv_red_invariant_under_up; eauto.
+  + repeat rewrite reduce_axcut_equation_4.
+    apply rp_cong_cut_l.
+    assert (
+      exists Γ', Γ' ⊢ up P :#
+    ).
+    {
+      unfold up.
+      replace Γ with (nil ++ Γ) in H0 by auto.
+      apply (proj1 up_shift_sound) in H0.
+      eexists; eassumption.
+    }
+    destruct H2 as [Γ1 ?].
+    assert (
+      exists Γ', Γ' ⊢ rename_process (up P) swap01 :#
+    ).
+    {
+      destruct (swap01_preserves_well_typedness _ _ H2).
+      eexists; eauto.
+    }
+    destruct H3 as [Γ2 ?].
+    eapply IHn; eauto.
+    - rewrite <- rename_axcut_ctx_preserves_length.
+      inversion H; auto.
+    - replace swap01 with (up_ren_n 0 swap01) by auto.
+      eapply equiv_red_invariant_under_swap; eauto.
+      eapply equiv_red_invariant_under_up; eauto.
+Qed.
+
+Lemma reduce_axcut_invariant_under_reduced_substituent :
+  forall Γ E M P P',
+    Γ ⊢ P :# -> P ⊵ P' ->
+    reduce_axcut E M P ⊵ reduce_axcut E M P'.
+Proof. intros. eapply reduce_axcut_invariant_under_reduced_substituent'; eauto. Qed.
+
+Lemma uniqueness_of_evaluation_context :
+  forall E E' M M' j Γ,
+    well_formed_axcut_ctx j E -> well_formed_axcut_ctx j E' ->
+    Γ ⊢ (fill_hole E M) :# ->
+    (fill_hole E M) = (fill_hole E' M') ->
+    E = E' /\ M = M'.
+Proof.
+  induction E; intros; destruct E'; simpl in H2; try congruence;
+  try (now (inversion H2; subst; auto)).
+  + inversion H2; subst. inversion H; inversion H0; subst; split; auto.
+    simpl in H1.
+    exfalso.
+    inversion H1; subst.
+    assert (occurs_free_message n0 (future n0)) by econstructor.
+    destruct ((proj1 (proj2 free_var_in_ctx)) _ _ H3 _ _ H7).
+    destruct ((proj1 (proj2 free_var_in_ctx)) _ _ H3 _ _ H8).
+    pose proof (ctx_split_lookup_in_partition _ _ _ _ _ H5 H4). symmetry in H9.
+    destruct (decide_ctx_split_partition _ _ _ _ _ H5 H9) as [[? ?] | [? ?]];
+    subst; try congruence.
+  + inversion H2; subst. inversion H; inversion H0; subst; split; auto.
+    simpl in H1.
+    exfalso.
+    inversion H1; subst.
+    assert (occurs_free_message n0 (future n0)) by econstructor.
+    destruct ((proj1 (proj2 free_var_in_ctx)) _ _ H3 _ _ H7).
+    destruct ((proj1 (proj2 free_var_in_ctx)) _ _ H3 _ _ H8).
+    pose proof (ctx_split_lookup_in_partition _ _ _ _ _ H5 H4). symmetry in H9.
+    destruct (decide_ctx_split_partition _ _ _ _ _ H5 H9) as [[? ?] | [? ?]];
+    subst; try congruence.
+  + inversion H2; subst. inversion H. inversion H0; subst.
+    simpl in H1; inversion H1; subst.
+    eapply IHE in H5; eauto. destruct H5; subst; split; auto.
+  + exfalso.
+    inversion H2; subst. simpl in H1. inversion H1; subst.
+    simpl in H; inversion H; subst.
+    simpl in H0; inversion H0; subst.
+    pose proof (well_formed_ctx_fv _ _ H10).
+    pose proof (well_formed_ctx_fv _ _ H12).
+    apply (fv_ctx_fill_hole _ _ M) in H3.
+    apply (fv_ctx_fill_hole _ _ M') in H4.
+    destruct ((proj1 free_var_in_ctx) _ _ H3 _ H8).
+    destruct ((proj1 free_var_in_ctx) _ _ H4 _ H7).
+    simpl in H6, H13.
+    pose proof (ctx_split_lookup_in_partition _ _ _ _ _ H5 H13). symmetry in H14.
+    destruct (decide_ctx_split_partition _ _ _ _ _ H5 H14) as [[? ?] | [? ?]];
+    subst; congruence.
+  + exfalso.
+    inversion H2; subst. simpl in H1. inversion H1; subst.
+    simpl in H; inversion H; subst.
+    simpl in H0; inversion H0; subst.
+    pose proof (well_formed_ctx_fv _ _ H10).
+    pose proof (well_formed_ctx_fv _ _ H12).
+    apply (fv_ctx_fill_hole _ _ M) in H3.
+    apply (fv_ctx_fill_hole _ _ M') in H4.
+    destruct ((proj1 free_var_in_ctx) _ _ H3 _ H7).
+    destruct ((proj1 free_var_in_ctx) _ _ H4 _ H8).
+    simpl in H6, H13.
+    pose proof (ctx_split_lookup_in_partition _ _ _ _ _ H5 H6). symmetry in H14.
+    destruct (decide_ctx_split_partition _ _ _ _ _ H5 H14) as [[? ?] | [? ?]];
+    subst; congruence.
+  + inversion H2; subst. inversion H. inversion H0; subst.
+    simpl in H1; inversion H1; subst.
+    eapply IHE in H4; eauto. destruct H4; subst; split; auto.
+Qed.
+
+(******************************************************************************)
+(* Confluence for Critical Pairs                                              *)
+(******************************************************************************)
+Lemma confluence_critical_pairs' :
+  forall n m E E' M M',
+    n = length_axcut_ctx E  ->
+    m = length_axcut_ctx E' ->
+    well_formed_axcut_ctx 0 E  ->
+    well_formed_axcut_ctx 0 E' ->
+    ~ (occurs_free_message (length_axcut_ctx E) M) ->
+    ~ (occurs_free_message (length_axcut_ctx E') M') ->
+    (reduce_axcut E M (fill_hole E' M')) ≡ (reduce_axcut E' M' (fill_hole E M)).
+Proof.
+  intros n m. pattern n, m.
+  apply lt_wf_double_ind.
+  intros.
+  destruct n0, m0.
+  + destruct E, E'; simpl in *; try congruence;
+    repeat rewrite reduce_axcut_equation_1; simpl;
+    repeat rewrite reduce_axcut_equation_2; simpl;
+    inversion H3; inversion H4; subst; simpl;
+    rewrite (proj1 (proj2 subst_nfv_down)) with (n := 0); auto;
+    try rewrite (proj1 (proj2 subst_nfv_down)) with (n := 0); auto;
+    try apply c_link; try apply c_refl; try (intros; exfalso; lia).
+  + destruct E, E'; simpl in *; try congruence.
+    - assert (
+        (cut (down (rename_process P swap01))
+             (reduce_axcut
+               (rename_axcut_ctx (upE (nil_l n0)) swap01)
+               (rename_message (upM M) swap01)
+               (rename_process (fill_hole E' M') swap01)))
+        ≡ (reduce_axcut (nil_l n0) M (cut P (fill_hole E' M')))
+      ).
+      {
+        inversion H3; inversion H4; subst.
+        eapply c_trans.
+        + apply permute_cut_assoc_reduce_axcut; simpl; auto.
+          - intro. inversion H7.
+          - replace 0 with (swap01 1) by auto; apply nfv_under_renaming.
+            apply swap01_is_bijective. unfold upM.
+            intro. apply fv_up_Sn2' in H7. congruence. lia.
+          - replace 1 with (swap01 0) by auto; apply nfv_under_renaming.
+            apply swap01_is_bijective. apply nfv_lift_n. lia.
+        + simpl. apply c_refl_inversion_eq. f_equal.
+          - rewrite swap_swap_idM.
+            unfold upM. rewrite (proj1 (proj2 down_after_up_id)). reflexivity.
+          - rewrite swap_swap_id. f_equal. unfold down, up.
+            rewrite (proj1 up_after_down_id).
+            rewrite swap_swap_id; auto.
+            apply nfv_01_swap; auto.
+      }
+      eapply c_trans. { apply c_comm. apply H7. }
+      rewrite reduce_axcut_equation_3. apply c_cong_cut. apply c_refl.
+      replace (rename_process (up (link (future n0) M)) swap01)
+         with (rename_process (up (fill_hole (nil_l n0) M)) swap01)
+           by auto.
+      unfold up. rewrite up_ctx_over_fill_hole.
+      repeat rewrite rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+      rewrite <- plus_n_O.
+      inversion H3; inversion H4; subst.
+      eapply H0; eauto.
+      * rewrite <- rename_axcut_ctx_preserves_length. inversion H2; auto.
+      * replace 0 with (swap01 1) by auto;
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01; auto.
+      * simpl. replace 0 with (swap01 1) by auto; apply nfv_under_renaming; try apply swap01_is_bijective.
+        simpl. intro. apply fv_up_Sn2' in H8. congruence. lia.
+      * rewrite <- rename_axcut_ctx_preserves_length.
+        replace (length_axcut_ctx E')
+           with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+             at 1 by (rewrite up_ren_n_swap_Sn; auto).
+        apply (proj1 (proj2 nfv_under_renaming)).
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        congruence.
+    - assert (
+        (cut (down (rename_process P swap01))
+             (reduce_axcut
+               (rename_axcut_ctx (upE (nil_l n0)) swap01)
+               (rename_message (upM M) swap01)
+               (rename_process (fill_hole E' M') swap01)))
+        ≡ (reduce_axcut (nil_l n0) M (cut P (fill_hole E' M')))
+      ).
+      {
+        inversion H3; inversion H4; subst.
+        eapply c_trans.
+        + apply permute_cut_assoc_reduce_axcut; simpl; auto.
+          - intro. inversion H7.
+          - replace 0 with (swap01 1) by auto; apply nfv_under_renaming.
+            apply swap01_is_bijective. unfold upM.
+            intro. apply fv_up_Sn2' in H7. congruence. lia.
+          - replace 1 with (swap01 0) by auto; apply nfv_under_renaming.
+            apply swap01_is_bijective. apply nfv_lift_n. lia.
+        + simpl. apply c_refl_inversion_eq. f_equal.
+          - rewrite swap_swap_idM.
+            unfold upM. rewrite (proj1 (proj2 down_after_up_id)). reflexivity.
+          - rewrite swap_swap_id. f_equal. unfold down, up.
+            rewrite (proj1 up_after_down_id).
+            rewrite swap_swap_id; auto.
+            apply nfv_01_swap; auto.
+      }
+      assert (
+        (reduce_axcut (nil_l n0) M (cut P (fill_hole E' M')))
+        ≡ (reduce_axcut (nil_l n0) M (cut (fill_hole E' M') P))
+      ).
+      { repeat rewrite reduce_axcut_equation_1; simpl. apply c_cut_comm. }
+      eapply c_trans. { apply c_comm. apply H8. }
+      eapply c_trans. { apply c_comm. apply H7. }
+      rewrite reduce_axcut_equation_4. eapply c_trans. apply c_cut_comm.
+      apply c_cong_cut; try apply c_refl.
+      replace (rename_process (up (link (future n0) M)) swap01)
+         with (rename_process (up (fill_hole (nil_l n0) M)) swap01)
+           by auto.
+      unfold up. rewrite up_ctx_over_fill_hole.
+      repeat rewrite rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+      rewrite <- plus_n_O.
+      inversion H3; inversion H4; subst.
+      eapply H0; eauto.
+      * rewrite <- rename_axcut_ctx_preserves_length. inversion H2; auto.
+      * replace 0 with (swap01 1) by auto;
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01; auto.
+      * simpl. replace 0 with (swap01 1) by auto; apply nfv_under_renaming; try apply swap01_is_bijective.
+        simpl. intro. apply fv_up_Sn2' in H9. congruence. lia.
+      * rewrite <- rename_axcut_ctx_preserves_length.
+        replace (length_axcut_ctx E')
+           with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+             at 1 by (rewrite up_ren_n_swap_Sn; auto).
+        apply (proj1 (proj2 nfv_under_renaming)).
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        congruence.
+    - assert (
+        (cut (down (rename_process P swap01))
+             (reduce_axcut
+               (rename_axcut_ctx (upE (nil_r n0)) swap01)
+               (rename_message (upM M) swap01)
+               (rename_process (fill_hole E' M') swap01)))
+        ≡ (reduce_axcut (nil_r n0) M (cut P (fill_hole E' M')))
+      ).
+      {
+        inversion H3; inversion H4; subst.
+        eapply c_trans.
+        + apply permute_cut_assoc_reduce_axcut; simpl; auto.
+          - intro. inversion H7.
+          - replace 0 with (swap01 1) by auto; apply nfv_under_renaming.
+            apply swap01_is_bijective. unfold upM.
+            intro. apply fv_up_Sn2' in H7. congruence. lia.
+          - replace 1 with (swap01 0) by auto; apply nfv_under_renaming.
+            apply swap01_is_bijective. apply nfv_lift_n. lia.
+        + simpl. apply c_refl_inversion_eq. f_equal.
+          - rewrite swap_swap_idM.
+            unfold upM. rewrite (proj1 (proj2 down_after_up_id)). reflexivity.
+          - rewrite swap_swap_id. f_equal. unfold down, up.
+            rewrite (proj1 up_after_down_id).
+            rewrite swap_swap_id; auto.
+            apply nfv_01_swap; auto.
+      }
+      eapply c_trans. { apply c_comm. apply H7. }
+      rewrite reduce_axcut_equation_3.
+      apply c_cong_cut; try apply c_refl.
+      replace (rename_process (up (link M (future n0))) swap01)
+         with (rename_process (up (fill_hole (nil_r n0) M)) swap01)
+           by auto.
+      unfold up. rewrite up_ctx_over_fill_hole.
+      repeat rewrite rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+      rewrite <- plus_n_O.
+      inversion H3; inversion H4; subst.
+      eapply H0; eauto.
+      * rewrite <- rename_axcut_ctx_preserves_length. inversion H2; auto.
+      * replace 0 with (swap01 1) by auto;
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01; auto.
+      * simpl. replace 0 with (swap01 1) by auto; apply nfv_under_renaming; try apply swap01_is_bijective.
+        simpl. intro. apply fv_up_Sn2' in H8. congruence. lia.
+      * rewrite <- rename_axcut_ctx_preserves_length.
+        replace (length_axcut_ctx E')
+           with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+             at 1 by (rewrite up_ren_n_swap_Sn; auto).
+        apply (proj1 (proj2 nfv_under_renaming)).
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        congruence.
+    - assert (
+        (cut (down (rename_process P swap01))
+             (reduce_axcut
+               (rename_axcut_ctx (upE (nil_r n0)) swap01)
+               (rename_message (upM M) swap01)
+               (rename_process (fill_hole E' M') swap01)))
+        ≡ (reduce_axcut (nil_r n0) M (cut P (fill_hole E' M')))
+      ).
+      {
+        inversion H3; inversion H4; subst.
+        eapply c_trans.
+        + apply permute_cut_assoc_reduce_axcut; simpl; auto.
+          - intro. inversion H7.
+          - replace 0 with (swap01 1) by auto; apply nfv_under_renaming.
+            apply swap01_is_bijective. unfold upM.
+            intro. apply fv_up_Sn2' in H7. congruence. lia.
+          - replace 1 with (swap01 0) by auto; apply nfv_under_renaming.
+            apply swap01_is_bijective. apply nfv_lift_n. lia.
+        + simpl. apply c_refl_inversion_eq. f_equal.
+          - rewrite swap_swap_idM.
+            unfold upM. rewrite (proj1 (proj2 down_after_up_id)). reflexivity.
+          - rewrite swap_swap_id. f_equal. unfold down, up.
+            rewrite (proj1 up_after_down_id).
+            rewrite swap_swap_id; auto.
+            apply nfv_01_swap; auto.
+      }
+      assert (
+        (reduce_axcut (nil_r n0) M (cut P (fill_hole E' M')))
+        ≡ (reduce_axcut (nil_r n0) M (cut (fill_hole E' M') P))
+      ).
+      { repeat rewrite reduce_axcut_equation_2; simpl. apply c_cut_comm. }
+      eapply c_trans. { apply c_comm. apply H8. }
+      eapply c_trans. { apply c_comm. apply H7. }
+      rewrite reduce_axcut_equation_4. eapply c_trans. apply c_cut_comm.
+      apply c_cong_cut; try apply c_refl.
+      replace (rename_process (up (link M (future n0))) swap01)
+         with (rename_process (up (fill_hole (nil_r n0) M)) swap01)
+           by auto.
+      unfold up. rewrite up_ctx_over_fill_hole.
+      repeat rewrite rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+      rewrite <- plus_n_O.
+      inversion H3; inversion H4; subst.
+      eapply H0; eauto.
+      * rewrite <- rename_axcut_ctx_preserves_length. inversion H2; auto.
+      * replace 0 with (swap01 1) by auto;
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01; auto.
+      * simpl. replace 0 with (swap01 1) by auto; apply nfv_under_renaming; try apply swap01_is_bijective.
+        simpl. intro. apply fv_up_Sn2' in H9. congruence. lia.
+      * rewrite <- rename_axcut_ctx_preserves_length.
+        replace (length_axcut_ctx E')
+           with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+             at 1 by (rewrite up_ren_n_swap_Sn; auto).
+        apply (proj1 (proj2 nfv_under_renaming)).
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        congruence.
+  + destruct E, E'; simpl in *; try congruence.
+    - apply c_comm.
+       assert (
+        (cut (down (rename_process P swap01))
+             (reduce_axcut
+               (rename_axcut_ctx (upE (nil_l n1)) swap01)
+               (rename_message (upM M') swap01)
+               (rename_process (fill_hole E M) swap01)))
+        ≡ (reduce_axcut (nil_l n1) M' (cut P (fill_hole E M)))
+      ).
+      {
+        inversion H3; inversion H4; subst.
+        eapply c_trans.
+        + apply permute_cut_assoc_reduce_axcut; simpl; auto.
+          - intro. inversion H7.
+          - replace 0 with (swap01 1) by auto; apply nfv_under_renaming.
+            apply swap01_is_bijective. unfold upM.
+            intro. apply fv_up_Sn2' in H7. congruence. lia.
+          - replace 1 with (swap01 0) by auto; apply nfv_under_renaming.
+            apply swap01_is_bijective. apply nfv_lift_n. lia.
+        + simpl. apply c_refl_inversion_eq. f_equal.
+          - rewrite swap_swap_idM.
+            unfold upM. rewrite (proj1 (proj2 down_after_up_id)). reflexivity.
+          - rewrite swap_swap_id. f_equal. unfold down, up.
+            rewrite (proj1 up_after_down_id).
+            rewrite swap_swap_id; auto.
+            apply nfv_01_swap; auto.
+      }
+      eapply c_trans. { apply c_comm. apply H7. }
+      rewrite reduce_axcut_equation_3. apply c_cong_cut. apply c_refl.
+      replace (rename_process (up (link (future n1) M')) swap01)
+         with (rename_process (up (fill_hole (nil_l n1) M')) swap01)
+           by auto.
+      unfold up. rewrite up_ctx_over_fill_hole.
+      repeat rewrite rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+      rewrite <- plus_n_O.
+      inversion H3; inversion H4; subst.
+      apply c_comm.
+      eapply H; eauto.
+      * rewrite <- rename_axcut_ctx_preserves_length. inversion H2; auto.
+      * replace 0 with (swap01 1) by auto;
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01; auto.
+      * rewrite <- rename_axcut_ctx_preserves_length.
+        replace (length_axcut_ctx E)
+           with (up_ren_n (length_axcut_ctx E) swap01 (S (length_axcut_ctx E)))
+             at 1 by (rewrite up_ren_n_swap_Sn; auto).
+        apply (proj1 (proj2 nfv_under_renaming)).
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        congruence.
+      * simpl. replace 0 with (swap01 1) by auto; apply nfv_under_renaming; try apply swap01_is_bijective.
+        simpl. intro. apply fv_up_Sn2' in H8. congruence. lia.
+    - apply c_comm.
+      assert (
+        (cut (down (rename_process P swap01))
+             (reduce_axcut
+               (rename_axcut_ctx (upE (nil_r n1)) swap01)
+               (rename_message (upM M') swap01)
+               (rename_process (fill_hole E M) swap01)))
+        ≡ (reduce_axcut (nil_r n1) M' (cut P (fill_hole E M)))
+      ).
+      {
+        inversion H3; inversion H4; subst.
+        eapply c_trans.
+        + apply permute_cut_assoc_reduce_axcut; simpl; auto.
+          - intro. inversion H7.
+          - replace 0 with (swap01 1) by auto; apply nfv_under_renaming.
+            apply swap01_is_bijective. unfold upM.
+            intro. apply fv_up_Sn2' in H7. congruence. lia.
+          - replace 1 with (swap01 0) by auto; apply nfv_under_renaming.
+            apply swap01_is_bijective. apply nfv_lift_n. lia.
+        + simpl. apply c_refl_inversion_eq. f_equal.
+          - rewrite swap_swap_idM.
+            unfold upM. rewrite (proj1 (proj2 down_after_up_id)). reflexivity.
+          - rewrite swap_swap_id. f_equal. unfold down, up.
+            rewrite (proj1 up_after_down_id).
+            rewrite swap_swap_id; auto.
+            apply nfv_01_swap; auto.
+      }
+      eapply c_trans. { apply c_comm. apply H7. }
+      rewrite reduce_axcut_equation_3.
+      apply c_cong_cut; try apply c_refl.
+      replace (rename_process (up (link M' (future n1))) swap01)
+         with (rename_process (up (fill_hole (nil_r n1) M')) swap01)
+           by auto.
+      unfold up. rewrite up_ctx_over_fill_hole.
+      repeat rewrite rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+      rewrite <- plus_n_O.
+      inversion H3; inversion H4; subst.
+      apply c_comm. eapply H; eauto.
+      * rewrite <- rename_axcut_ctx_preserves_length. inversion H2; auto.
+      * replace 0 with (swap01 1) by auto;
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01; auto.
+      * rewrite <- rename_axcut_ctx_preserves_length.
+        replace (length_axcut_ctx E)
+           with (up_ren_n (length_axcut_ctx E) swap01 (S (length_axcut_ctx E)))
+             at 1 by (rewrite up_ren_n_swap_Sn; auto).
+        apply (proj1 (proj2 nfv_under_renaming)).
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        congruence.
+      * simpl. replace 0 with (swap01 1) by auto; apply nfv_under_renaming; try apply swap01_is_bijective.
+        simpl. intro. apply fv_up_Sn2' in H8. congruence. lia.
+    - apply c_comm.
+      assert (
+        (cut (down (rename_process P swap01))
+             (reduce_axcut
+               (rename_axcut_ctx (upE (nil_l n1)) swap01)
+               (rename_message (upM M') swap01)
+               (rename_process (fill_hole E M) swap01)))
+        ≡ (reduce_axcut (nil_l n1) M' (cut P (fill_hole E M)))
+      ).
+      {
+        inversion H3; inversion H4; subst.
+        eapply c_trans.
+        + apply permute_cut_assoc_reduce_axcut; simpl; auto.
+          - intro. inversion H7.
+          - replace 0 with (swap01 1) by auto; apply nfv_under_renaming.
+            apply swap01_is_bijective. unfold upM.
+            intro. apply fv_up_Sn2' in H7. congruence. lia.
+          - replace 1 with (swap01 0) by auto; apply nfv_under_renaming.
+            apply swap01_is_bijective. apply nfv_lift_n. lia.
+        + simpl. apply c_refl_inversion_eq. f_equal.
+          - rewrite swap_swap_idM.
+            unfold upM. rewrite (proj1 (proj2 down_after_up_id)). reflexivity.
+          - rewrite swap_swap_id. f_equal. unfold down, up.
+            rewrite (proj1 up_after_down_id).
+            rewrite swap_swap_id; auto.
+            apply nfv_01_swap; auto.
+      }
+      assert (
+        (reduce_axcut (nil_l n1) M' (cut P (fill_hole E M)))
+        ≡ (reduce_axcut (nil_l n1) M' (cut (fill_hole E M) P))
+      ).
+      { repeat rewrite reduce_axcut_equation_1; simpl. apply c_cut_comm. }
+      eapply c_trans. { apply c_comm. apply H8. }
+      eapply c_trans. { apply c_comm. apply H7. }
+      rewrite reduce_axcut_equation_4. eapply c_trans. apply c_cut_comm.
+      apply c_cong_cut; try apply c_refl.
+      replace (rename_process (up (link (future n1) M')) swap01)
+         with (rename_process (up (fill_hole (nil_l n1) M')) swap01)
+           by auto.
+      unfold up. rewrite up_ctx_over_fill_hole.
+      repeat rewrite rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+      rewrite <- plus_n_O.
+      inversion H3; inversion H4; subst.
+      apply c_comm. eapply H; eauto.
+      * rewrite <- rename_axcut_ctx_preserves_length. inversion H2; auto.
+      * replace 0 with (swap01 1) by auto;
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01; auto.
+      * rewrite <- rename_axcut_ctx_preserves_length.
+        replace (length_axcut_ctx E)
+           with (up_ren_n (length_axcut_ctx E) swap01 (S (length_axcut_ctx E)))
+             at 1 by (rewrite up_ren_n_swap_Sn; auto).
+        apply (proj1 (proj2 nfv_under_renaming)).
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        congruence.
+      * simpl. replace 0 with (swap01 1) by auto; apply nfv_under_renaming; try apply swap01_is_bijective.
+        simpl. intro. apply fv_up_Sn2' in H9. congruence. lia.
+    - apply c_comm.
+      assert (
+        (cut (down (rename_process P swap01))
+             (reduce_axcut
+               (rename_axcut_ctx (upE (nil_r n1)) swap01)
+               (rename_message (upM M') swap01)
+               (rename_process (fill_hole E M) swap01)))
+        ≡ (reduce_axcut (nil_r n1) M' (cut P (fill_hole E M)))
+      ).
+      {
+        inversion H3; inversion H4; subst.
+        eapply c_trans.
+        + apply permute_cut_assoc_reduce_axcut; simpl; auto.
+          - intro. inversion H7.
+          - replace 0 with (swap01 1) by auto; apply nfv_under_renaming.
+            apply swap01_is_bijective. unfold upM.
+            intro. apply fv_up_Sn2' in H7. congruence. lia.
+          - replace 1 with (swap01 0) by auto; apply nfv_under_renaming.
+            apply swap01_is_bijective. apply nfv_lift_n. lia.
+        + simpl. apply c_refl_inversion_eq. f_equal.
+          - rewrite swap_swap_idM.
+            unfold upM. rewrite (proj1 (proj2 down_after_up_id)). reflexivity.
+          - rewrite swap_swap_id. f_equal. unfold down, up.
+            rewrite (proj1 up_after_down_id).
+            rewrite swap_swap_id; auto.
+            apply nfv_01_swap; auto.
+      }
+      assert (
+        (reduce_axcut (nil_r n1) M' (cut P (fill_hole E M)))
+        ≡ (reduce_axcut (nil_r n1) M' (cut (fill_hole E M) P))
+      ).
+      { repeat rewrite reduce_axcut_equation_2; simpl. apply c_cut_comm. }
+      eapply c_trans. { apply c_comm. apply H8. }
+      eapply c_trans. { apply c_comm. apply H7. }
+      rewrite reduce_axcut_equation_4. eapply c_trans. apply c_cut_comm.
+      apply c_cong_cut; try apply c_refl.
+      replace (rename_process (up (link M' (future n1))) swap01)
+         with (rename_process (up (fill_hole (nil_r n1) M')) swap01)
+           by auto.
+      unfold up. rewrite up_ctx_over_fill_hole.
+      repeat rewrite rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+      rewrite <- plus_n_O.
+      inversion H3; inversion H4; subst.
+      apply c_comm. eapply H; eauto.
+      * rewrite <- rename_axcut_ctx_preserves_length. inversion H2; auto.
+      * replace 0 with (swap01 1) by auto;
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01; auto.
+      * rewrite <- rename_axcut_ctx_preserves_length.
+        replace (length_axcut_ctx E)
+           with (up_ren_n (length_axcut_ctx E) swap01 (S (length_axcut_ctx E)))
+             at 1 by (rewrite up_ren_n_swap_Sn; auto).
+        apply (proj1 (proj2 nfv_under_renaming)).
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        congruence.
+      * simpl. replace 0 with (swap01 1) by auto; apply nfv_under_renaming; try apply swap01_is_bijective.
+        simpl. intro. apply fv_up_Sn2' in H9. congruence. lia.
+  + destruct E, E'; simpl in *; try congruence.
+    - assert (
+        (cut (down (rename_process P0 swap01))
+             (reduce_axcut
+                (rename_axcut_ctx (upE (cons_l P E)) swap01)
+                (rename_message (lift_message M (S (length_axcut_ctx E)) 1) (up_ren_n (S (length_axcut_ctx E)) swap01))
+                (rename_process (fill_hole E' M') swap01)))
+        ≡ (reduce_axcut (cons_l P E) M (cut P0 (fill_hole E' M')))
+      ).
+      {
+        eapply c_trans.
+        + apply permute_cut_assoc_reduce_axcut.
+          - replace 0 with (swap01 1);
+            replace swap01 with (up_ren_n 0 swap01); auto.
+            apply well_formedness_preserved_under_swap01.
+            unfold upE. apply upE_preserves_well_formedness'; auto.
+          - apply nfv_ctx_10_swap.
+            apply nfv_lift_nE. lia.
+          - rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; rewrite lift_ctx_preserves_length; simpl.
+            replace (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01); auto.
+            replace (S (length_axcut_ctx E))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01 (S (S (length_axcut_ctx E))))
+                 at 1
+                 by (rewrite up_ren_n_swap_Sn; auto).
+            apply nfv_under_renaming.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            intro. apply fv_up_Sn2' in H7. congruence. lia.
+          - rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; rewrite lift_ctx_preserves_length; simpl.
+            replace (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01); auto.
+            replace (S (S (length_axcut_ctx E)))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01 (S (length_axcut_ctx E)))
+                 at 1
+                 by (rewrite up_ren_n_swap_n; auto).
+            apply nfv_under_renaming.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            apply nfv_lift_n. lia.
+        + apply c_refl_inversion_eq; f_equal.
+          - rewrite swap_swap_idE.
+            unfold downE,upE. rewrite down_after_up_idE.
+            reflexivity.
+          - simpl. rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; repeat rewrite lift_ctx_preserves_length.
+            replace (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01) by auto.
+            rewrite up_ren_swap_swap_idM.
+            rewrite (proj1 (proj2 down_after_up_id)).
+            reflexivity.
+          - rewrite swap_swap_id; f_equal.
+            unfold up, down. rewrite (proj1 up_after_down_id).
+            rewrite swap_swap_id; auto.
+            apply nfv_01_swap. inversion H4; auto.
+      }
+      eapply c_trans. { apply c_comm. apply H7. }
+      rewrite reduce_axcut_equation_3. apply c_cong_cut; try apply c_refl.
+      apply c_comm. simpl.
+      assert (
+        (cut (down (rename_process (rename_process (lift_process P 1 1) (up_ren swap01)) swap01))
+            (reduce_axcut
+              (rename_axcut_ctx (upE (rename_axcut_ctx E' swap01)) swap01)
+              (rename_message
+                (lift_message (rename_message M' (up_ren_n (length_axcut_ctx E') swap01))
+                              (length_axcut_ctx E') 1)
+                (up_ren_n (length_axcut_ctx E') swap01))
+              (rename_process (rename_process (lift_process (fill_hole E M) 1 1) (up_ren swap01)) swap01)))
+        ≡
+        (reduce_axcut (rename_axcut_ctx E' swap01)
+                      (rename_message M' (up_ren_n (length_axcut_ctx E') swap01))
+                      (cut (rename_process (lift_process P 1 1) (up_ren swap01))
+                           (rename_process (lift_process (fill_hole E M) 1 1) (up_ren swap01))))
+      ).
+      {
+        eapply c_trans.
+        + apply permute_cut_assoc_reduce_axcut.
+          - replace 0 with (swap01 1); replace swap01 with (up_ren_n 0 swap01); auto.
+            apply well_formedness_preserved_under_swap01.
+            unfold upE. apply upE_preserves_well_formedness'. lia.
+            replace 0 with (up_ren_n 0 swap01 1) at 1 by auto.
+            apply well_formedness_preserved_under_swap01.
+            inversion H4; auto.
+          - apply nfv_ctx_10_swap.
+            apply nfv_lift_nE. lia.
+          - rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; rewrite lift_ctx_preserves_length.
+            rewrite <- rename_axcut_ctx_preserves_length.
+            replace (length_axcut_ctx E')
+               with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+                 at 1 by (rewrite up_ren_n_swap_Sn; auto).
+            apply (proj1 (proj2 nfv_under_renaming)).
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            intro. apply fv_up_Sn2' in H8; try lia.
+            replace (length_axcut_ctx E')
+               with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+                 in H8
+                 at 1
+                 by (rewrite up_ren_n_swap_Sn; auto).
+            apply nfv_under_renaming in H8.
+            contradiction.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            assumption.
+          - rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; rewrite lift_ctx_preserves_length.
+            rewrite <- rename_axcut_ctx_preserves_length.
+            replace (S (length_axcut_ctx E'))
+               with (up_ren_n (length_axcut_ctx E') swap01 (length_axcut_ctx E'))
+                 at 1 by (rewrite up_ren_n_swap_n; auto).
+            apply nfv_under_renaming.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            apply nfv_lift_n. lia.
+        + apply c_refl_inversion_eq; f_equal.
+          - rewrite swap_swap_idE.
+            unfold downE,upE. rewrite down_after_up_idE.
+            reflexivity.
+          - repeat rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; repeat rewrite lift_ctx_preserves_length.
+            repeat rewrite <- rename_axcut_ctx_preserves_length.
+            rewrite up_ren_swap_swap_idM.
+            rewrite (proj1 (proj2 down_after_up_id)). auto.
+          - rewrite swap_swap_id; f_equal.
+            unfold up, down. rewrite (proj1 up_after_down_id).
+            rewrite swap_swap_id; auto.
+            apply nfv_01_swap.
+            replace 1 with (up_ren swap01 2) by auto.
+            apply nfv_under_renaming. apply shift_preserves_bijection; apply swap01_is_bijective.
+            simpl. intro. apply fv_up_Sn2' in H8.
+            inversion H3; congruence. lia.
+      }
+      eapply c_trans. { apply c_comm. apply H8. }
+      clear H7 H8.
+      rewrite reduce_axcut_equation_3.
+      apply c_cong_cut; try apply c_refl.
+      unfold up. repeat rewrite up_ctx_over_fill_hole.
+      repeat rewrite rename_axcut_ctx_over_fill_hole;
+      try apply shift_preserves_bijection; try apply swap01_is_bijective.
+      rewrite up_ctx_over_fill_hole.
+      rewrite rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+      rewrite PeanoNat.Nat.add_1_r.
+      rewrite <- plus_n_O.
+      assert (
+        (up_ren_n (length_axcut_ctx (lift_ctx E 1 1)) (up_ren swap01))
+          = (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+      ).
+      {
+        rewrite lift_ctx_preserves_length.
+        replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+        rewrite up_ren_n_additive.
+        rewrite PeanoNat.Nat.add_1_r.
+        reflexivity.
+      }
+      rewrite H7.
+      repeat rewrite lift_ctx_preserves_length.
+      repeat rewrite <- rename_axcut_ctx_preserves_length.
+      apply c_comm. eapply H.
+      * assert (length_axcut_ctx E < S n0) by lia.
+        apply H8.
+      * repeat rewrite <- rename_axcut_ctx_preserves_length.
+        rewrite lift_ctx_preserves_length.
+        reflexivity.
+      * rewrite <- rename_axcut_ctx_preserves_length.
+        unfold upE. rewrite lift_ctx_preserves_length.
+        rewrite <- rename_axcut_ctx_preserves_length.
+        reflexivity.
+      * replace 0 with (swap01 1) by auto.
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01; simpl.
+        replace 1 with (up_ren swap01 2) by auto.
+        replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+        apply well_formedness_preserved_under_swap01; simpl.
+        apply upE_preserves_well_formedness'. lia.
+        inversion H3; auto.
+      * replace 0 with (swap01 1) by auto;
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01.
+        unfold upE. apply upE_preserves_well_formedness'. lia.
+        replace 0 with (up_ren_n 0 swap01 1) by auto.
+        apply well_formedness_preserved_under_swap01.
+        inversion H4; auto.
+      * repeat rewrite <- rename_axcut_ctx_preserves_length.
+        repeat rewrite lift_ctx_preserves_length.
+        replace (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+           with (up_ren_n (S (length_axcut_ctx E)) swap01)
+             by auto.
+        replace (length_axcut_ctx E)
+           with (up_ren_n (length_axcut_ctx E) swap01 (S (length_axcut_ctx E)))
+             at 1
+             by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        replace (S (length_axcut_ctx E))
+           with (up_ren_n (S (length_axcut_ctx E)) swap01 (S (S (length_axcut_ctx E))))
+             at 1
+             by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        intro. apply fv_up_Sn2' in H8. congruence. lia.
+      * unfold upE.
+        repeat rewrite <- rename_axcut_ctx_preserves_length.
+        repeat rewrite lift_ctx_preserves_length.
+        repeat rewrite <- rename_axcut_ctx_preserves_length.
+        replace (length_axcut_ctx E')
+           with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+             at 1
+             by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        intro. apply fv_up_Sn2' in H8; try lia.
+        apply H6.
+        replace (length_axcut_ctx E')
+           with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+             in H8
+             at 1
+             by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming in H8; auto.
+        contradiction.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+    - assert (
+        (cut (down (rename_process P0 swap01))
+             (reduce_axcut
+                (rename_axcut_ctx (upE (cons_l P E)) swap01)
+                (rename_message (lift_message M (S (length_axcut_ctx E)) 1) (up_ren_n (S (length_axcut_ctx E)) swap01))
+                (rename_process (fill_hole E' M') swap01)))
+        ≡ (reduce_axcut (cons_l P E) M (cut (fill_hole E' M') P0))
+      ).
+      {
+        eapply c_trans.
+        + apply permute_cut_assoc_reduce_axcut2.
+          - replace 0 with (swap01 1);
+            replace swap01 with (up_ren_n 0 swap01); auto.
+            apply well_formedness_preserved_under_swap01.
+            unfold upE. apply upE_preserves_well_formedness'; auto.
+          - apply nfv_ctx_10_swap.
+            apply nfv_lift_nE. lia.
+          - rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; rewrite lift_ctx_preserves_length; simpl.
+            replace (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01); auto.
+            replace (S (length_axcut_ctx E))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01 (S (S (length_axcut_ctx E))))
+                 at 1
+                 by (rewrite up_ren_n_swap_Sn; auto).
+            apply nfv_under_renaming.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            intro. apply fv_up_Sn2' in H7. congruence. lia.
+          - rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; rewrite lift_ctx_preserves_length; simpl.
+            replace (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01); auto.
+            replace (S (S (length_axcut_ctx E)))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01 (S (length_axcut_ctx E)))
+                 at 1
+                 by (rewrite up_ren_n_swap_n; auto).
+            apply nfv_under_renaming.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            apply nfv_lift_n. lia.
+        + apply c_refl_inversion_eq; f_equal.
+          - rewrite swap_swap_idE.
+            unfold downE,upE. rewrite down_after_up_idE.
+            reflexivity.
+          - simpl. rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; repeat rewrite lift_ctx_preserves_length.
+            replace (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01) by auto.
+            rewrite up_ren_swap_swap_idM.
+            rewrite (proj1 (proj2 down_after_up_id)).
+            reflexivity.
+          - rewrite swap_swap_id; f_equal.
+            unfold up, down. rewrite (proj1 up_after_down_id).
+            rewrite swap_swap_id; auto.
+            apply nfv_01_swap. inversion H4; auto.
+      }
+      eapply c_trans. { apply c_comm. apply H7. }
+      rewrite reduce_axcut_equation_4.
+      eapply c_trans. apply c_cut_comm.
+      apply c_cong_cut; try apply c_refl.
+      apply c_comm. simpl.
+      assert (
+        (cut (down (rename_process (rename_process (lift_process P 1 1) (up_ren swap01)) swap01))
+            (reduce_axcut
+              (rename_axcut_ctx (upE (rename_axcut_ctx E' swap01)) swap01)
+              (rename_message
+                (lift_message (rename_message M' (up_ren_n (length_axcut_ctx E') swap01))
+                              (length_axcut_ctx E') 1)
+                (up_ren_n (length_axcut_ctx E') swap01))
+              (rename_process (rename_process (lift_process (fill_hole E M) 1 1) (up_ren swap01)) swap01)))
+        ≡
+        (reduce_axcut (rename_axcut_ctx E' swap01)
+                      (rename_message M' (up_ren_n (length_axcut_ctx E') swap01))
+                      (cut (rename_process (lift_process P 1 1) (up_ren swap01))
+                           (rename_process (lift_process (fill_hole E M) 1 1) (up_ren swap01))))
+      ).
+      {
+        eapply c_trans.
+        + apply permute_cut_assoc_reduce_axcut.
+          - replace 0 with (swap01 1); replace swap01 with (up_ren_n 0 swap01); auto.
+            apply well_formedness_preserved_under_swap01.
+            unfold upE. apply upE_preserves_well_formedness'. lia.
+            replace 0 with (up_ren_n 0 swap01 1) at 1 by auto.
+            apply well_formedness_preserved_under_swap01.
+            inversion H4; auto.
+          - apply nfv_ctx_10_swap.
+            apply nfv_lift_nE. lia.
+          - rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; rewrite lift_ctx_preserves_length.
+            rewrite <- rename_axcut_ctx_preserves_length.
+            replace (length_axcut_ctx E')
+               with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+                 at 1 by (rewrite up_ren_n_swap_Sn; auto).
+            apply (proj1 (proj2 nfv_under_renaming)).
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            intro. apply fv_up_Sn2' in H8; try lia.
+            replace (length_axcut_ctx E')
+               with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+                 in H8
+                 at 1
+                 by (rewrite up_ren_n_swap_Sn; auto).
+            apply nfv_under_renaming in H8.
+            contradiction.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            assumption.
+          - rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; rewrite lift_ctx_preserves_length.
+            rewrite <- rename_axcut_ctx_preserves_length.
+            replace (S (length_axcut_ctx E'))
+               with (up_ren_n (length_axcut_ctx E') swap01 (length_axcut_ctx E'))
+                 at 1 by (rewrite up_ren_n_swap_n; auto).
+            apply nfv_under_renaming.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            apply nfv_lift_n. lia.
+        + apply c_refl_inversion_eq; f_equal.
+          - rewrite swap_swap_idE.
+            unfold downE,upE. rewrite down_after_up_idE.
+            reflexivity.
+          - repeat rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; repeat rewrite lift_ctx_preserves_length.
+            repeat rewrite <- rename_axcut_ctx_preserves_length.
+            rewrite up_ren_swap_swap_idM.
+            rewrite (proj1 (proj2 down_after_up_id)). auto.
+          - rewrite swap_swap_id; f_equal.
+            unfold up, down. rewrite (proj1 up_after_down_id).
+            rewrite swap_swap_id; auto.
+            apply nfv_01_swap.
+            replace 1 with (up_ren swap01 2) by auto.
+            apply nfv_under_renaming. apply shift_preserves_bijection; apply swap01_is_bijective.
+            simpl. intro. apply fv_up_Sn2' in H8.
+            inversion H3; congruence. lia.
+      }
+      eapply c_trans. { apply c_comm. apply H8. }
+      clear H7 H8.
+      rewrite reduce_axcut_equation_3.
+      apply c_cong_cut; try apply c_refl.
+      unfold up. repeat rewrite up_ctx_over_fill_hole.
+      repeat rewrite rename_axcut_ctx_over_fill_hole;
+      try apply shift_preserves_bijection; try apply swap01_is_bijective.
+      rewrite up_ctx_over_fill_hole.
+      rewrite rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+      rewrite PeanoNat.Nat.add_1_r.
+      rewrite <- plus_n_O.
+      assert (
+        (up_ren_n (length_axcut_ctx (lift_ctx E 1 1)) (up_ren swap01))
+          = (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+      ).
+      {
+        rewrite lift_ctx_preserves_length.
+        replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+        rewrite up_ren_n_additive.
+        rewrite PeanoNat.Nat.add_1_r.
+        reflexivity.
+      }
+      rewrite H7.
+      repeat rewrite lift_ctx_preserves_length.
+      repeat rewrite <- rename_axcut_ctx_preserves_length.
+      apply c_comm. eapply H.
+      * assert (length_axcut_ctx E < S n0) by lia.
+        apply H8.
+      * repeat rewrite <- rename_axcut_ctx_preserves_length.
+        rewrite lift_ctx_preserves_length.
+        reflexivity.
+      * rewrite <- rename_axcut_ctx_preserves_length.
+        unfold upE. rewrite lift_ctx_preserves_length.
+        rewrite <- rename_axcut_ctx_preserves_length.
+        reflexivity.
+      * replace 0 with (swap01 1) by auto.
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01; simpl.
+        replace 1 with (up_ren swap01 2) by auto.
+        replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+        apply well_formedness_preserved_under_swap01; simpl.
+        apply upE_preserves_well_formedness'. lia.
+        inversion H3; auto.
+      * replace 0 with (swap01 1) by auto;
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01.
+        unfold upE. apply upE_preserves_well_formedness'. lia.
+        replace 0 with (up_ren_n 0 swap01 1) by auto.
+        apply well_formedness_preserved_under_swap01.
+        inversion H4; auto.
+      * repeat rewrite <- rename_axcut_ctx_preserves_length.
+        repeat rewrite lift_ctx_preserves_length.
+        replace (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+           with (up_ren_n (S (length_axcut_ctx E)) swap01)
+             by auto.
+        replace (length_axcut_ctx E)
+           with (up_ren_n (length_axcut_ctx E) swap01 (S (length_axcut_ctx E)))
+             at 1
+             by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        replace (S (length_axcut_ctx E))
+           with (up_ren_n (S (length_axcut_ctx E)) swap01 (S (S (length_axcut_ctx E))))
+             at 1
+             by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        intro. apply fv_up_Sn2' in H8. congruence. lia.
+      * unfold upE.
+        repeat rewrite <- rename_axcut_ctx_preserves_length.
+        repeat rewrite lift_ctx_preserves_length.
+        repeat rewrite <- rename_axcut_ctx_preserves_length.
+        replace (length_axcut_ctx E')
+           with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+             at 1
+             by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        intro. apply fv_up_Sn2' in H8; try lia.
+        apply H6.
+        replace (length_axcut_ctx E')
+           with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+             in H8
+             at 1
+             by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming in H8; auto.
+        contradiction.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+    - assert (
+        (cut (down (rename_process P0 swap01))
+             (reduce_axcut
+                (rename_axcut_ctx (upE (cons_r E P)) swap01)
+                (rename_message (lift_message M (S (length_axcut_ctx E)) 1) (up_ren_n (S (length_axcut_ctx E)) swap01))
+                (rename_process (fill_hole E' M') swap01)))
+        ≡ (reduce_axcut (cons_r E P) M (cut P0 (fill_hole E' M')))
+      ).
+      {
+        eapply c_trans.
+        + apply permute_cut_assoc_reduce_axcut.
+          - replace 0 with (swap01 1);
+            replace swap01 with (up_ren_n 0 swap01); auto.
+            apply well_formedness_preserved_under_swap01.
+            unfold upE. apply upE_preserves_well_formedness'; auto.
+          - apply nfv_ctx_10_swap.
+            apply nfv_lift_nE. lia.
+          - rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; rewrite lift_ctx_preserves_length; simpl.
+            replace (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01); auto.
+            replace (S (length_axcut_ctx E))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01 (S (S (length_axcut_ctx E))))
+                 at 1
+                 by (rewrite up_ren_n_swap_Sn; auto).
+            apply nfv_under_renaming.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            intro. apply fv_up_Sn2' in H7. congruence. lia.
+          - rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; rewrite lift_ctx_preserves_length; simpl.
+            replace (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01); auto.
+            replace (S (S (length_axcut_ctx E)))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01 (S (length_axcut_ctx E)))
+                 at 1
+                 by (rewrite up_ren_n_swap_n; auto).
+            apply nfv_under_renaming.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            apply nfv_lift_n. lia.
+        + apply c_refl_inversion_eq; f_equal.
+          - rewrite swap_swap_idE.
+            unfold downE,upE. rewrite down_after_up_idE.
+            reflexivity.
+          - simpl. rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; repeat rewrite lift_ctx_preserves_length.
+            replace (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01) by auto.
+            rewrite up_ren_swap_swap_idM.
+            rewrite (proj1 (proj2 down_after_up_id)).
+            reflexivity.
+          - rewrite swap_swap_id; f_equal.
+            unfold up, down. rewrite (proj1 up_after_down_id).
+            rewrite swap_swap_id; auto.
+            apply nfv_01_swap. inversion H4; auto.
+      }
+      eapply c_trans. { apply c_comm. apply H7. }
+      rewrite reduce_axcut_equation_3.
+      apply c_cong_cut; try apply c_refl.
+      apply c_comm. simpl.
+      assert (
+        (cut (down (rename_process (rename_process (lift_process P 1 1) (up_ren swap01)) swap01))
+            (reduce_axcut
+              (rename_axcut_ctx (upE (rename_axcut_ctx E' swap01)) swap01)
+              (rename_message
+                (lift_message (rename_message M' (up_ren_n (length_axcut_ctx E') swap01))
+                              (length_axcut_ctx E') 1)
+                (up_ren_n (length_axcut_ctx E') swap01))
+              (rename_process (rename_process (lift_process (fill_hole E M) 1 1) (up_ren swap01)) swap01)))
+        ≡
+        (reduce_axcut (rename_axcut_ctx E' swap01)
+                      (rename_message M' (up_ren_n (length_axcut_ctx E') swap01))
+                      (cut (rename_process (lift_process (fill_hole E M) 1 1) (up_ren swap01))
+                           (rename_process (lift_process P 1 1) (up_ren swap01))))
+      ).
+      {
+        eapply c_trans.
+        + apply permute_cut_assoc_reduce_axcut2.
+          - replace 0 with (swap01 1); replace swap01 with (up_ren_n 0 swap01); auto.
+            apply well_formedness_preserved_under_swap01.
+            unfold upE. apply upE_preserves_well_formedness'. lia.
+            replace 0 with (up_ren_n 0 swap01 1) at 1 by auto.
+            apply well_formedness_preserved_under_swap01.
+            inversion H4; auto.
+          - apply nfv_ctx_10_swap.
+            apply nfv_lift_nE. lia.
+          - rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; rewrite lift_ctx_preserves_length.
+            rewrite <- rename_axcut_ctx_preserves_length.
+            replace (length_axcut_ctx E')
+               with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+                 at 1 by (rewrite up_ren_n_swap_Sn; auto).
+            apply (proj1 (proj2 nfv_under_renaming)).
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            intro. apply fv_up_Sn2' in H8; try lia.
+            replace (length_axcut_ctx E')
+               with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+                 in H8
+                 at 1
+                 by (rewrite up_ren_n_swap_Sn; auto).
+            apply nfv_under_renaming in H8.
+            contradiction.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            assumption.
+          - rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; rewrite lift_ctx_preserves_length.
+            rewrite <- rename_axcut_ctx_preserves_length.
+            replace (S (length_axcut_ctx E'))
+               with (up_ren_n (length_axcut_ctx E') swap01 (length_axcut_ctx E'))
+                 at 1 by (rewrite up_ren_n_swap_n; auto).
+            apply nfv_under_renaming.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            apply nfv_lift_n. lia.
+        + apply c_refl_inversion_eq; f_equal.
+          - rewrite swap_swap_idE.
+            unfold downE,upE. rewrite down_after_up_idE.
+            reflexivity.
+          - repeat rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; repeat rewrite lift_ctx_preserves_length.
+            repeat rewrite <- rename_axcut_ctx_preserves_length.
+            rewrite up_ren_swap_swap_idM.
+            rewrite (proj1 (proj2 down_after_up_id)). auto.
+          - rewrite swap_swap_id; f_equal.
+            unfold up, down. rewrite (proj1 up_after_down_id).
+            rewrite swap_swap_id; auto.
+            apply nfv_01_swap.
+            replace 1 with (up_ren swap01 2) by auto.
+            apply nfv_under_renaming. apply shift_preserves_bijection; apply swap01_is_bijective.
+            simpl. intro. apply fv_up_Sn2' in H8.
+            inversion H3; congruence. lia.
+      }
+      eapply c_trans. { apply c_comm. apply H8. }
+      clear H7 H8.
+      rewrite reduce_axcut_equation_4.
+      eapply c_trans. apply c_cut_comm.
+      apply c_cong_cut; try apply c_refl.
+      unfold up. repeat rewrite up_ctx_over_fill_hole.
+      repeat rewrite rename_axcut_ctx_over_fill_hole;
+      try apply shift_preserves_bijection; try apply swap01_is_bijective.
+      rewrite up_ctx_over_fill_hole.
+      rewrite rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+      rewrite PeanoNat.Nat.add_1_r.
+      rewrite <- plus_n_O.
+      assert (
+        (up_ren_n (length_axcut_ctx (lift_ctx E 1 1)) (up_ren swap01))
+          = (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+      ).
+      {
+        rewrite lift_ctx_preserves_length.
+        replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+        rewrite up_ren_n_additive.
+        rewrite PeanoNat.Nat.add_1_r.
+        reflexivity.
+      }
+      rewrite H7.
+      repeat rewrite lift_ctx_preserves_length.
+      repeat rewrite <- rename_axcut_ctx_preserves_length.
+      apply c_comm. eapply H.
+      * assert (length_axcut_ctx E < S n0) by lia.
+        apply H8.
+      * repeat rewrite <- rename_axcut_ctx_preserves_length.
+        rewrite lift_ctx_preserves_length.
+        reflexivity.
+      * rewrite <- rename_axcut_ctx_preserves_length.
+        unfold upE. rewrite lift_ctx_preserves_length.
+        rewrite <- rename_axcut_ctx_preserves_length.
+        reflexivity.
+      * replace 0 with (swap01 1) by auto.
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01; simpl.
+        replace 1 with (up_ren swap01 2) by auto.
+        replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+        apply well_formedness_preserved_under_swap01; simpl.
+        apply upE_preserves_well_formedness'. lia.
+        inversion H3; auto.
+      * replace 0 with (swap01 1) by auto;
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01.
+        unfold upE. apply upE_preserves_well_formedness'. lia.
+        replace 0 with (up_ren_n 0 swap01 1) by auto.
+        apply well_formedness_preserved_under_swap01.
+        inversion H4; auto.
+      * repeat rewrite <- rename_axcut_ctx_preserves_length.
+        repeat rewrite lift_ctx_preserves_length.
+        replace (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+           with (up_ren_n (S (length_axcut_ctx E)) swap01)
+             by auto.
+        replace (length_axcut_ctx E)
+           with (up_ren_n (length_axcut_ctx E) swap01 (S (length_axcut_ctx E)))
+             at 1
+             by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        replace (S (length_axcut_ctx E))
+           with (up_ren_n (S (length_axcut_ctx E)) swap01 (S (S (length_axcut_ctx E))))
+             at 1
+             by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        intro. apply fv_up_Sn2' in H8. congruence. lia.
+      * unfold upE.
+        repeat rewrite <- rename_axcut_ctx_preserves_length.
+        repeat rewrite lift_ctx_preserves_length.
+        repeat rewrite <- rename_axcut_ctx_preserves_length.
+        replace (length_axcut_ctx E')
+           with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+             at 1
+             by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        intro. apply fv_up_Sn2' in H8; try lia.
+        apply H6.
+        replace (length_axcut_ctx E')
+           with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+             in H8
+             at 1
+             by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming in H8; auto.
+        contradiction.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+    - assert (
+        (cut (down (rename_process P0 swap01))
+             (reduce_axcut
+                (rename_axcut_ctx (upE (cons_r E P)) swap01)
+                (rename_message (lift_message M (S (length_axcut_ctx E)) 1) (up_ren_n (S (length_axcut_ctx E)) swap01))
+                (rename_process (fill_hole E' M') swap01)))
+        ≡ (reduce_axcut (cons_r E P) M (cut (fill_hole E' M') P0))
+      ).
+      {
+        eapply c_trans.
+        + apply permute_cut_assoc_reduce_axcut2.
+          - replace 0 with (swap01 1);
+            replace swap01 with (up_ren_n 0 swap01); auto.
+            apply well_formedness_preserved_under_swap01.
+            unfold upE. apply upE_preserves_well_formedness'; auto.
+          - apply nfv_ctx_10_swap.
+            apply nfv_lift_nE. lia.
+          - rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; rewrite lift_ctx_preserves_length; simpl.
+            replace (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01); auto.
+            replace (S (length_axcut_ctx E))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01 (S (S (length_axcut_ctx E))))
+                 at 1
+                 by (rewrite up_ren_n_swap_Sn; auto).
+            apply nfv_under_renaming.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            intro. apply fv_up_Sn2' in H7. congruence. lia.
+          - rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; rewrite lift_ctx_preserves_length; simpl.
+            replace (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01); auto.
+            replace (S (S (length_axcut_ctx E)))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01 (S (length_axcut_ctx E)))
+                 at 1
+                 by (rewrite up_ren_n_swap_n; auto).
+            apply nfv_under_renaming.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            apply nfv_lift_n. lia.
+        + apply c_refl_inversion_eq; f_equal.
+          - rewrite swap_swap_idE.
+            unfold downE,upE. rewrite down_after_up_idE.
+            reflexivity.
+          - simpl. rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; repeat rewrite lift_ctx_preserves_length.
+            replace (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+               with (up_ren_n (S (length_axcut_ctx E)) swap01) by auto.
+            rewrite up_ren_swap_swap_idM.
+            rewrite (proj1 (proj2 down_after_up_id)).
+            reflexivity.
+          - rewrite swap_swap_id; f_equal.
+            unfold up, down. rewrite (proj1 up_after_down_id).
+            rewrite swap_swap_id; auto.
+            apply nfv_01_swap. inversion H4; auto.
+      }
+      eapply c_trans. { apply c_comm. apply H7. }
+      rewrite reduce_axcut_equation_4.
+      eapply c_trans. apply c_cut_comm.
+      apply c_cong_cut; try apply c_refl.
+      apply c_comm. simpl.
+      assert (
+        (cut (down (rename_process (rename_process (lift_process P 1 1) (up_ren swap01)) swap01))
+            (reduce_axcut
+              (rename_axcut_ctx (upE (rename_axcut_ctx E' swap01)) swap01)
+              (rename_message
+                (lift_message (rename_message M' (up_ren_n (length_axcut_ctx E') swap01))
+                              (length_axcut_ctx E') 1)
+                (up_ren_n (length_axcut_ctx E') swap01))
+              (rename_process (rename_process (lift_process (fill_hole E M) 1 1) (up_ren swap01)) swap01)))
+        ≡
+        (reduce_axcut (rename_axcut_ctx E' swap01)
+                      (rename_message M' (up_ren_n (length_axcut_ctx E') swap01))
+                      (cut (rename_process (lift_process (fill_hole E M) 1 1) (up_ren swap01))
+                           (rename_process (lift_process P 1 1) (up_ren swap01))))
+      ).
+      {
+        eapply c_trans.
+        + apply permute_cut_assoc_reduce_axcut2.
+          - replace 0 with (swap01 1); replace swap01 with (up_ren_n 0 swap01); auto.
+            apply well_formedness_preserved_under_swap01.
+            unfold upE. apply upE_preserves_well_formedness'. lia.
+            replace 0 with (up_ren_n 0 swap01 1) at 1 by auto.
+            apply well_formedness_preserved_under_swap01.
+            inversion H4; auto.
+          - apply nfv_ctx_10_swap.
+            apply nfv_lift_nE. lia.
+          - rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; rewrite lift_ctx_preserves_length.
+            rewrite <- rename_axcut_ctx_preserves_length.
+            replace (length_axcut_ctx E')
+               with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+                 at 1 by (rewrite up_ren_n_swap_Sn; auto).
+            apply (proj1 (proj2 nfv_under_renaming)).
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            intro. apply fv_up_Sn2' in H8; try lia.
+            replace (length_axcut_ctx E')
+               with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+                 in H8
+                 at 1
+                 by (rewrite up_ren_n_swap_Sn; auto).
+            apply nfv_under_renaming in H8.
+            contradiction.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            assumption.
+          - rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; rewrite lift_ctx_preserves_length.
+            rewrite <- rename_axcut_ctx_preserves_length.
+            replace (S (length_axcut_ctx E'))
+               with (up_ren_n (length_axcut_ctx E') swap01 (length_axcut_ctx E'))
+                 at 1 by (rewrite up_ren_n_swap_n; auto).
+            apply nfv_under_renaming.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            apply nfv_lift_n. lia.
+        + apply c_refl_inversion_eq; f_equal.
+          - rewrite swap_swap_idE.
+            unfold downE,upE. rewrite down_after_up_idE.
+            reflexivity.
+          - repeat rewrite <- rename_axcut_ctx_preserves_length.
+            unfold upE; repeat rewrite lift_ctx_preserves_length.
+            repeat rewrite <- rename_axcut_ctx_preserves_length.
+            rewrite up_ren_swap_swap_idM.
+            rewrite (proj1 (proj2 down_after_up_id)). auto.
+          - rewrite swap_swap_id; f_equal.
+            unfold up, down. rewrite (proj1 up_after_down_id).
+            rewrite swap_swap_id; auto.
+            apply nfv_01_swap.
+            replace 1 with (up_ren swap01 2) by auto.
+            apply nfv_under_renaming. apply shift_preserves_bijection; apply swap01_is_bijective.
+            simpl. intro. apply fv_up_Sn2' in H8.
+            inversion H3; congruence. lia.
+      }
+      eapply c_trans. { apply c_comm. apply H8. }
+      clear H7 H8.
+      rewrite reduce_axcut_equation_4.
+      eapply c_trans. apply c_cut_comm.
+      apply c_cong_cut; try apply c_refl.
+      unfold up. repeat rewrite up_ctx_over_fill_hole.
+      repeat rewrite rename_axcut_ctx_over_fill_hole;
+      try apply shift_preserves_bijection; try apply swap01_is_bijective.
+      rewrite up_ctx_over_fill_hole.
+      rewrite rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+      rewrite PeanoNat.Nat.add_1_r.
+      rewrite <- plus_n_O.
+      assert (
+        (up_ren_n (length_axcut_ctx (lift_ctx E 1 1)) (up_ren swap01))
+          = (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+      ).
+      {
+        rewrite lift_ctx_preserves_length.
+        replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+        rewrite up_ren_n_additive.
+        rewrite PeanoNat.Nat.add_1_r.
+        reflexivity.
+      }
+      rewrite H7.
+      repeat rewrite lift_ctx_preserves_length.
+      repeat rewrite <- rename_axcut_ctx_preserves_length.
+      apply c_comm. eapply H.
+      * assert (length_axcut_ctx E < S n0) by lia.
+        apply H8.
+      * repeat rewrite <- rename_axcut_ctx_preserves_length.
+        rewrite lift_ctx_preserves_length.
+        reflexivity.
+      * rewrite <- rename_axcut_ctx_preserves_length.
+        unfold upE. rewrite lift_ctx_preserves_length.
+        rewrite <- rename_axcut_ctx_preserves_length.
+        reflexivity.
+      * replace 0 with (swap01 1) by auto.
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01; simpl.
+        replace 1 with (up_ren swap01 2) by auto.
+        replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+        apply well_formedness_preserved_under_swap01; simpl.
+        apply upE_preserves_well_formedness'. lia.
+        inversion H3; auto.
+      * replace 0 with (swap01 1) by auto;
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01.
+        unfold upE. apply upE_preserves_well_formedness'. lia.
+        replace 0 with (up_ren_n 0 swap01 1) by auto.
+        apply well_formedness_preserved_under_swap01.
+        inversion H4; auto.
+      * repeat rewrite <- rename_axcut_ctx_preserves_length.
+        repeat rewrite lift_ctx_preserves_length.
+        replace (up_ren (up_ren_n (length_axcut_ctx E) swap01))
+           with (up_ren_n (S (length_axcut_ctx E)) swap01)
+             by auto.
+        replace (length_axcut_ctx E)
+           with (up_ren_n (length_axcut_ctx E) swap01 (S (length_axcut_ctx E)))
+             at 1
+             by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        replace (S (length_axcut_ctx E))
+           with (up_ren_n (S (length_axcut_ctx E)) swap01 (S (S (length_axcut_ctx E))))
+             at 1
+             by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        intro. apply fv_up_Sn2' in H8. congruence. lia.
+      * unfold upE.
+        repeat rewrite <- rename_axcut_ctx_preserves_length.
+        repeat rewrite lift_ctx_preserves_length.
+        repeat rewrite <- rename_axcut_ctx_preserves_length.
+        replace (length_axcut_ctx E')
+           with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+             at 1
+             by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        intro. apply fv_up_Sn2' in H8; try lia.
+        apply H6.
+        replace (length_axcut_ctx E')
+           with (up_ren_n (length_axcut_ctx E') swap01 (S (length_axcut_ctx E')))
+             in H8
+             at 1
+             by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming in H8; auto.
+        contradiction.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+Qed.
+
+Lemma confluence_critical_pairs :
+  forall E E' M M',
+    well_formed_axcut_ctx 0 E  ->
+    well_formed_axcut_ctx 0 E' ->
+    ~ (occurs_free_message (length_axcut_ctx E) M) ->
+    ~ (occurs_free_message (length_axcut_ctx E') M') ->
+    (reduce_axcut E M (fill_hole E' M')) ≡ (reduce_axcut E' M' (fill_hole E M)).
+Proof.
+  intros; eapply confluence_critical_pairs'; eauto.
 Qed.

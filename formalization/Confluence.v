@@ -767,8 +767,6 @@ Proof.
   + inversion H1; subst. exists stop; split; eauto. apply c_refl.
 Qed.
 
-Print Assumptions directed_cong_equiv_red_commute.
-
 (* ≡ and ↠ commute *)
 (*
          P
@@ -815,8 +813,45 @@ Proof.
   + inversion H1; subst; eexists; (split; econstructor; [apply rp_refl | econstructor; eauto]).
   + inversion H1; subst; eexists; (split; econstructor; [apply rp_refl | econstructor; eauto]).
   (* axcut *)
-  + inversion H3; subst; admit.
-  + inversion H3; subst; admit.
+  + inversion H3; subst.
+    - eexists; split; econstructor. apply rp_refl. econstructor; eauto.
+    - inversion H2; subst.
+      destruct (uniqueness_of_evaluation_context _ _ _ _ _ _ H0 H7 H8 H6) as [? ?].
+      subst. eexists; split; econstructor; apply rp_refl.
+    - eexists; split.
+      * econstructor; apply rp_refl.
+      * apply or_intror. apply confluence_critical_pairs; auto.
+        ** inversion H2; subst.
+           replace (length_axcut_ctx E0) with (length_axcut_ctx E0 + 0) by lia.
+           eapply nfv_well_typed_fill_hole; eauto.
+        ** inversion H2; subst.
+           replace (length_axcut_ctx E) with (length_axcut_ctx E + 0) by lia.
+           eapply nfv_well_typed_fill_hole; eauto.
+    - (* TODO: invariance under reduced context *)
+      admit.
+    - inversion H2; subst.
+      eexists; split; econstructor.
+      * eapply reduce_axcut_invariant_under_reduced_substituent; eauto.
+      * eapply rp_ax_cut_l; eauto.
+  + inversion H3; subst.
+    - eexists; split; econstructor. apply rp_refl. eapply rp_ax_cut_r; eauto.
+    - eexists; split.
+      * econstructor; apply rp_refl.
+      * apply or_intror. apply confluence_critical_pairs; auto.
+        ** inversion H2; subst.
+           replace (length_axcut_ctx E0) with (length_axcut_ctx E0 + 0) by lia.
+           eapply nfv_well_typed_fill_hole; eauto.
+        ** inversion H2; subst.
+           replace (length_axcut_ctx E) with (length_axcut_ctx E + 0) by lia.
+           eapply nfv_well_typed_fill_hole; eauto.
+    - inversion H2; subst.
+      destruct (uniqueness_of_evaluation_context _ _ _ _ _ _ H0 H7 H9 H6) as [? ?].
+      subst. eexists; split; econstructor; apply rp_refl.
+    - inversion H2; subst.
+      eexists; split; econstructor.
+      * eapply reduce_axcut_invariant_under_reduced_substituent; eauto.
+      * eapply rp_ax_cut_r; eauto.
+    - (* TODO: invariance under reduced context *) admit.
   (* seq *)
   + inversion H1; subst.
     - eexists; split; econstructor.
@@ -827,8 +862,44 @@ Proof.
       * econstructor. inversion H; eapply equiv_red_invariant_under_substitution; eassumption.
       * repeat econstructor.
   (* cut cong *)
-  + inversion H1; subst; admit.
-  + inversion H1; subst; admit.
+  + inversion H1; subst.
+    - eexists; split; econstructor. apply rp_refl. apply rp_cong_cut_l; auto.
+    - (* TODO: invariance under reduced context *) admit.
+    - inversion H; subst.
+      eexists; split; econstructor.
+      * eapply rp_ax_cut_r; eauto.
+      * eapply reduce_axcut_invariant_under_reduced_substituent; eauto.
+    - inversion H; subst.
+      destruct (IHequiv_reduces _ H7 _ H5) as [R [? ?]].
+      eexists; split.
+      * destruct H2;
+        [ apply or_introl; apply rp_cong_cut_l; eauto
+        | apply or_intror; apply c_cong_cut; eauto; apply c_refl ].
+      * destruct H3;
+        [ apply or_introl; apply rp_cong_cut_l; eauto
+        | apply or_intror; apply c_cong_cut; eauto; apply c_refl ].
+    - eexists; split; econstructor.
+      * apply rp_cong_cut_r; eauto.
+      * apply rp_cong_cut_l; eauto.
+  + inversion H1; subst.
+    - eexists; split; econstructor. apply rp_refl. apply rp_cong_cut_r; auto.
+    - inversion H; subst.
+      eexists; split; econstructor.
+      * eapply rp_ax_cut_l; eauto.
+      * eapply reduce_axcut_invariant_under_reduced_substituent; eauto.
+    - (* TODO: invariance under reduced context *) admit.
+    - eexists; split; econstructor.
+      * apply rp_cong_cut_l; eauto.
+      * apply rp_cong_cut_r; eauto.
+    - inversion H; subst.
+      destruct (IHequiv_reduces _ H8 _ H5) as [R [? ?]].
+      eexists; split.
+      * destruct H2;
+        [ apply or_introl; apply rp_cong_cut_r; eauto
+        | apply or_intror; apply c_cong_cut; eauto; apply c_refl ].
+      * destruct H3;
+        [ apply or_introl; apply rp_cong_cut_r; eauto
+        | apply or_intror; apply c_cong_cut; eauto; apply c_refl ].
   (* seq cong *)
   + inversion H1; subst.
     - eexists; split; econstructor.
@@ -945,3 +1016,5 @@ Proof.
   apply clos_trans_par_red_in_multi_step_red in H2, H3.
   eexists; eauto.
 Qed.
+
+Print Assumptions church_rosser.

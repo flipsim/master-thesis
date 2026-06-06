@@ -2686,6 +2686,32 @@ Proof.
   intros. eapply permute_cut_assoc_reduce_axcut'; eauto.
 Qed.
 
+Lemma permute_cut_assoc_reduce_axcut2 :
+  forall P E M Q,
+    well_formed_axcut_ctx 0 E ->
+    ~ (occurs_free_ctx 1 E) ->
+    ~ occurs_free_message (length_axcut_ctx E) M ->
+    ~ occurs_free_message (S (length_axcut_ctx E)) M ->
+    (cut P (reduce_axcut E M Q)) ≡
+    (reduce_axcut
+      (downE (rename_axcut_ctx E swap01))
+      (down1_message (rename_message M (up_ren_n (length_axcut_ctx E) swap01)) (length_axcut_ctx E))
+      (cut (rename_process Q swap01) (rename_process (up P) swap01))
+    ).
+Proof.
+  intros.
+  eapply c_trans.
+  + eapply permute_cut_assoc_reduce_axcut; eauto.
+  + apply directed_cong_in_struct_cong.
+    apply reduce_axcut_invariant_under_congruent_substituent.
+    - apply dc_cut_comm; apply directed_cong_reflexive.
+    - unfold downE. apply downE_preserves_well_formedness_nfv.
+      * lia.
+      * apply nfv_ctx_01_swap; auto.
+      * replace 1 with (swap01 0); replace swap01 with (up_ren_n 0 swap01); auto.
+        apply well_formedness_preserved_under_swap01; auto.
+Qed.
+
 Lemma nfv_under_substitution_extensional :
   (forall P σ i,
     (forall n, n ∈ P -> ~ (occurs_free_message i (σ n)))

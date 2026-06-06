@@ -2510,3 +2510,54 @@ Proof.
       }
       rewrite H8. auto.
 Qed.
+
+Lemma reduce_axcut_invariant_under_congruent_substituent' :
+  forall n E M P P',
+    n = length_axcut_ctx E ->
+    well_formed_axcut_ctx 0 E ->
+    P ⇛ P' ->
+    (reduce_axcut E M P) ⇛ (reduce_axcut E M P').
+Proof.
+  induction n; intros; destruct E; simpl in H; try congruence.
+  + repeat rewrite reduce_axcut_equation_1.
+    apply directed_cong_invariant_under_substitution; auto.
+    intro. apply dc_cong_reflM.
+  + repeat rewrite reduce_axcut_equation_2.
+    apply directed_cong_invariant_under_substitution; auto.
+    intro. apply dc_cong_reflM.
+  + repeat rewrite reduce_axcut_equation_3.
+    apply dc_cong_cut.
+    - apply directed_cong_invariant_under_downshifting.
+      apply directed_cong_invariant_under_renaming.
+      apply directed_cong_reflexive.
+      apply swap01_is_bijective.
+      inversion H0; apply nfv_01_swap; auto.
+    - apply IHn.
+      rewrite <- rename_axcut_ctx_preserves_length; inversion H; auto.
+      replace 0 with (swap01 1); replace swap01 with (up_ren_n 0 swap01); auto;
+      apply well_formedness_preserved_under_swap01; inversion H0; auto.
+      apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective.
+      apply directed_cong_invariant_under_upshifting; auto.
+  + repeat rewrite reduce_axcut_equation_4.
+    apply dc_cong_cut.
+    - apply IHn.
+      rewrite <- rename_axcut_ctx_preserves_length; inversion H; auto.
+      replace 0 with (swap01 1); replace swap01 with (up_ren_n 0 swap01); auto;
+      apply well_formedness_preserved_under_swap01; inversion H0; auto.
+      apply directed_cong_invariant_under_renaming; try apply swap01_is_bijective.
+      apply directed_cong_invariant_under_upshifting; auto.
+    - apply directed_cong_invariant_under_downshifting.
+      apply directed_cong_invariant_under_renaming.
+      apply directed_cong_reflexive.
+      apply swap01_is_bijective.
+      inversion H0; apply nfv_01_swap; auto.
+Qed.
+
+Lemma reduce_axcut_invariant_under_congruent_substituent :
+  forall E M P P',
+    P ⇛ P' ->
+    well_formed_axcut_ctx 0 E ->
+    (reduce_axcut E M P) ⇛ (reduce_axcut E M P').
+Proof.
+  intros. eapply reduce_axcut_invariant_under_congruent_substituent'; auto.
+Qed.
