@@ -504,6 +504,67 @@ Proof.
       intros; unfold up_ren; destruct j; auto; try rewrite H0; try rewrite H1; try rewrite H2; lia.
 Qed.
 
+Lemma lift_at_k_rename_id_after_k_commute_ctx :
+  forall E,
+    forall k r, bijective r -> (forall j, k <= j -> r j = j) ->
+      lift_ctx (rename_axcut_ctx E r) k 1
+        = rename_axcut_ctx (lift_ctx E k 1) r.
+Proof.
+  induction E; intros; simpl.
+  + f_equal. unfold relocate.
+    simpl. destruct (Nat.leb k n) eqn:E.
+    * rewrite (H0 n); auto; try rewrite E;
+      apply PeanoNat.Nat.leb_le in E; try lia.
+      rewrite (H0 (S n)); auto.
+    * destruct (Nat.leb k (r n)) eqn:E1; auto.
+      apply PeanoNat.Nat.leb_nle in E. assert (k > n) by lia.
+      apply PeanoNat.Nat.leb_le in E1.
+      destruct (Compare_dec.le_gt_dec k n).
+      ++ exfalso. lia.
+      ++ exfalso.
+         destruct H.
+         assert (r n = n).
+         {
+          specialize H0 with (r n). apply H0 in E1.
+          assert (g0 (r (r n)) = g0 (r n)) by (rewrite E1; auto).
+          repeat rewrite c in H. auto.
+         }
+         rewrite H in E1. congruence.
+  + f_equal. unfold relocate.
+    simpl. destruct (Nat.leb k n) eqn:E.
+    * rewrite (H0 n); auto; try rewrite E;
+      apply PeanoNat.Nat.leb_le in E; try lia.
+      rewrite (H0 (S n)); auto.
+    * destruct (Nat.leb k (r n)) eqn:E1; auto.
+      apply PeanoNat.Nat.leb_nle in E. assert (k > n) by lia.
+      apply PeanoNat.Nat.leb_le in E1.
+      destruct (Compare_dec.le_gt_dec k n).
+      ++ exfalso. lia.
+      ++ exfalso.
+         destruct H.
+         assert (r n = n).
+         {
+          specialize H0 with (r n). apply H0 in E1.
+          assert (g0 (r (r n)) = g0 (r n)) by (rewrite E1; auto).
+          repeat rewrite c in H. auto.
+         }
+         rewrite H in E1. congruence.
+  + f_equal.
+    - rewrite (proj1 lift_at_k_rename_id_after_k_commute); auto.
+      apply shift_preserves_bijection; auto.
+      intros; unfold up_ren; destruct j; auto; try rewrite H0; try rewrite H1; try rewrite H2; lia.
+    - rewrite IHE; auto.
+      apply shift_preserves_bijection; auto.
+      intros; unfold up_ren; destruct j; auto; try rewrite H0; try rewrite H1; try rewrite H2; lia.
+  + f_equal.
+    - rewrite IHE; auto.
+      apply shift_preserves_bijection; auto.
+      intros; unfold up_ren; destruct j; auto; try rewrite H0; try rewrite H1; try rewrite H2; lia.
+    - rewrite (proj1 lift_at_k_rename_id_after_k_commute); auto.
+      apply shift_preserves_bijection; auto.
+      intros; unfold up_ren; destruct j; auto; try rewrite H0; try rewrite H1; try rewrite H2; lia.
+Qed.
+
 (******************************************************************************)
 (* Reduct of an AxCut Redex                                                   *)
 (******************************************************************************)

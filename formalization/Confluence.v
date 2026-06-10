@@ -827,8 +827,17 @@ Proof.
         ** inversion H2; subst.
            replace (length_axcut_ctx E) with (length_axcut_ctx E + 0) by lia.
            eapply nfv_well_typed_fill_hole; eauto.
-    - (* TODO: invariance under reduced context *)
-      admit.
+    - inversion H2; subst.
+      destruct (reduce_axcut_invariant_under_reduced_context
+                  _ _ _ _ _ _ _
+                  eq_refl
+                  H0
+                  H6
+                  H8
+                  H7) as [E' [M' [? [? ?]]]].
+      eexists. split.
+      * econstructor. eassumption.
+      * econstructor. rewrite H. eapply rp_ax_cut_l; auto.
     - inversion H2; subst.
       eexists; split; econstructor.
       * eapply reduce_axcut_invariant_under_reduced_substituent; eauto.
@@ -851,7 +860,17 @@ Proof.
       eexists; split; econstructor.
       * eapply reduce_axcut_invariant_under_reduced_substituent; eauto.
       * eapply rp_ax_cut_r; eauto.
-    - (* TODO: invariance under reduced context *) admit.
+    - inversion H2; subst.
+      destruct (reduce_axcut_invariant_under_reduced_context
+                  _ _ _ _ _ _ _
+                  eq_refl
+                  H0
+                  H8
+                  H6
+                  H7) as [E' [M' [? [? ?]]]].
+      eexists. split.
+      * econstructor. eassumption.
+      * econstructor. rewrite H. eapply rp_ax_cut_r; auto.
   (* seq *)
   + inversion H1; subst.
     - eexists; split; econstructor.
@@ -864,7 +883,17 @@ Proof.
   (* cut cong *)
   + inversion H1; subst.
     - eexists; split; econstructor. apply rp_refl. apply rp_cong_cut_l; auto.
-    - (* TODO: invariance under reduced context *) admit.
+    - inversion H; subst.
+      destruct (reduce_axcut_invariant_under_reduced_context
+                  _ _ _ _ _ _ _
+                  eq_refl
+                  H5
+                  H7
+                  H8
+                  H0) as [E' [M' [? [? ?]]]].
+      eexists. split.
+      * econstructor. rewrite H2. eapply rp_ax_cut_l; auto.
+      * econstructor. eassumption.
     - inversion H; subst.
       eexists; split; econstructor.
       * eapply rp_ax_cut_r; eauto.
@@ -887,7 +916,17 @@ Proof.
       eexists; split; econstructor.
       * eapply rp_ax_cut_l; eauto.
       * eapply reduce_axcut_invariant_under_reduced_substituent; eauto.
-    - (* TODO: invariance under reduced context *) admit.
+    - inversion H; subst.
+      destruct (reduce_axcut_invariant_under_reduced_context
+                  _ _ _ _ _ _ _
+                  eq_refl
+                  H5
+                  H8
+                  H7
+                  H0) as [E' [M' [? [? ?]]]].
+      eexists. split.
+      * econstructor. rewrite H2. eapply rp_ax_cut_r; auto.
+      * econstructor. eassumption.
     - eexists; split; econstructor.
       * apply rp_cong_cut_l; eauto.
       * apply rp_cong_cut_r; eauto.
@@ -917,7 +956,7 @@ Proof.
       * inversion H3;
         [apply or_introl; eapply rp_cong_seq | apply or_intror; apply c_cong_seq];
         eauto. apply struct_cong_reflS.
-Admitted.
+Qed.
 
 (* ↠ is confluent *)
 (*

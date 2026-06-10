@@ -1371,6 +1371,28 @@ Proof.
       apply ctx_empty_insert_none; auto.
 Qed.
 
+Corollary shift_at_1_preserves_well_typedness :
+  forall Γ P, Γ ⊢ P :# ->
+    exists Γ', Γ' ⊢ (lift_process P 1 1) :#.
+Proof.
+  intros. destruct Γ.
+  + assert (
+      [None] ++ [] ⊢ P :#
+    ).
+    {
+      simpl.
+      replace P with (rename_process P id) by (rewrite (proj1 rename_id); auto).
+      eapply (proj1 context_renaming); eauto.
+      + apply (Bijective id id); intro; auto.
+      + intros [|]; auto; simpl. rewrite lookup_ctx_nil; auto.
+    }
+    apply (proj1 up_shift_sound) in H0. simpl in H0.
+    eauto.
+  + replace (o :: Γ) with ([o] ++ Γ) in H by auto.
+    apply (proj1 up_shift_sound) in H. simpl in H.
+    eauto.
+Qed.
+
 (******************************************************************************)
 (* Up and Downshift cancel each other                                         *)
 (******************************************************************************)

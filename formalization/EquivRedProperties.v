@@ -228,6 +228,40 @@ Proof.
     - simpl. rewrite H0. auto.
 Qed.
 
+Fixpoint axcut_ctx_update_index (E : axcut_ctx) (k : nat) :=
+  match E with
+  | nil_l _     => nil_l k
+  | nil_r _     => nil_r k
+  | cons_l P E' => cons_l P (axcut_ctx_update_index E' (S k))
+  | cons_r E' P => cons_r (axcut_ctx_update_index E' (S k)) P
+  end.
+
+Lemma subst_over_fill_hole2 :
+  forall E M j k σ,
+    well_formed_axcut_ctx j E ->
+    σ j = future k ->
+    subst_process (fill_hole E M) σ
+      = fill_hole (subst_ctx (axcut_ctx_update_index E k) σ) (subst_message M (up_subst_n (length_axcut_ctx E) σ)).
+Proof.
+  induction E; intros; simpl.
+  + inversion H; subst. rewrite H0; auto.
+  + inversion H; subst. rewrite H0; auto.
+  + f_equal. rewrite IHE with (j := S j) (k := S k).
+    - f_equal; f_equal.
+      replace (up_subst σ) with (up_subst_n 1 σ) by auto.
+      rewrite up_subst_n_additive. rewrite PeanoNat.Nat.add_1_r.
+      auto.
+    - inversion H; auto.
+    - simpl. rewrite H0. auto.
+  + f_equal. rewrite IHE with (j := S j) (k := S k).
+    - f_equal; f_equal.
+      replace (up_subst σ) with (up_subst_n 1 σ) by auto.
+      rewrite up_subst_n_additive. rewrite PeanoNat.Nat.add_1_r.
+      auto.
+    - inversion H; auto.
+    - simpl. rewrite H0. auto.
+Qed.
+
 Lemma ren_subst_ctx_commute :
   forall E, forall r σ k,
     bijective r -> (forall j, j >= k -> r j = j) ->
@@ -2009,4 +2043,1282 @@ Lemma confluence_critical_pairs :
     (reduce_axcut E M (fill_hole E' M')) ≡ (reduce_axcut E' M' (fill_hole E M)).
 Proof.
   intros; eapply confluence_critical_pairs'; eauto.
+Qed.
+
+(******************************************************************************)
+(* reduce_axcut is invariant under reduced context                            *)
+(******************************************************************************)
+Lemma nfv_under_equiv_red :
+  forall Γ P P' j,
+    Γ ⊢ P :# -> ~ j ∈ P -> P ⊵ P' -> ~ j ∈ P'.
+Proof.
+  intros.
+  destruct ((proj1 free_vars_decidable) P' j); auto.
+  pose proof (equiv_red_preserves_typing _ _ _ H H1).
+  apply ((proj1 free_var_in_ctx) _ _ H2) in H3. destruct H3.
+  pose proof ((proj1 formula_property) _ _ _ _ H H3).
+  congruence.
+Qed.
+
+Lemma subst_ctx_extensional :
+  forall E, forall σ1 σ2, (forall x, σ1 x = σ2 x) ->
+    subst_ctx E σ1 = subst_ctx E σ2.
+Proof.
+  induction E; intros; simpl; auto.
+  + f_equal.
+    - eapply (proj1 subst_extensional); intros [|]; auto; simpl; rewrite H; auto.
+    - apply IHE. intros [|]; auto; simpl; rewrite H; auto.
+  + f_equal.
+    - apply IHE. intros [|]; auto; simpl; rewrite H; auto.
+    - eapply (proj1 subst_extensional); intros [|]; auto; simpl; rewrite H; auto.
+Qed.
+
+Lemma up_ren_swap_subst_cancel_ctx :
+  forall E n σ,
+    well_formed_axcut_ctx (S n) E ->
+    σ (S n) = future n ->
+    subst_ctx (rename_axcut_ctx E (up_ren_n n swap01))
+              (swap_subst σ n (S n))
+      = subst_ctx (axcut_ctx_update_index E n) σ.
+Proof.
+  induction E; intros; simpl.
+  + inversion H; subst. rewrite up_ren_n_swap_Sn. auto.
+  + inversion H; subst. rewrite up_ren_n_swap_Sn. auto.
+  + f_equal.
+    - replace (up_ren (up_ren_n n swap01)) with (up_ren_n (S n) swap01) by auto.
+      assert (
+        forall x,
+          (up_subst (swap_subst σ n (S n))) x =
+          (swap_subst (up_subst σ) (S n) (S (S n))) x
+      ).
+      {
+        intros [|]; simpl.
+        + reflexivity.
+        + unfold swap_subst.
+          destruct (PeanoNat.Nat.eq_dec n0 n); subst.
+          - repeat rewrite PeanoNat.Nat.eqb_refl. reflexivity.
+          - assert (S n0 <> S n) by lia.
+            apply PeanoNat.Nat.eqb_neq in n1, H1.
+            rewrite n1, H1.
+            destruct (PeanoNat.Nat.eq_dec n0 (S n)); subst.
+            * repeat rewrite PeanoNat.Nat.eqb_refl. reflexivity.
+            * assert (S n0 <> S (S n)) by lia.
+              apply PeanoNat.Nat.eqb_neq in n2, H2.
+              rewrite n2, H2.
+              reflexivity.
+      }
+      erewrite (proj1 subst_extensional); eauto.
+      rewrite (proj1 up_ren_swap_subst_cancel). auto.
+    - replace (up_ren (up_ren_n n swap01)) with (up_ren_n (S n) swap01) by auto.
+      assert (
+        forall x,
+          (up_subst (swap_subst σ n (S n))) x =
+          (swap_subst (up_subst σ) (S n) (S (S n))) x
+      ).
+      {
+        intros [|]; simpl.
+        + reflexivity.
+        + unfold swap_subst.
+          destruct (PeanoNat.Nat.eq_dec n0 n); subst.
+          - repeat rewrite PeanoNat.Nat.eqb_refl. reflexivity.
+          - assert (S n0 <> S n) by lia.
+            apply PeanoNat.Nat.eqb_neq in n1, H1.
+            rewrite n1, H1.
+            destruct (PeanoNat.Nat.eq_dec n0 (S n)); subst.
+            * repeat rewrite PeanoNat.Nat.eqb_refl. reflexivity.
+            * assert (S n0 <> S (S n)) by lia.
+              apply PeanoNat.Nat.eqb_neq in n2, H2.
+              rewrite n2, H2.
+              reflexivity.
+      }
+      erewrite subst_ctx_extensional; eauto.
+      rewrite IHE; auto.
+      * inversion H; auto.
+      * simpl. rewrite H0. auto.
+  + f_equal.
+    - replace (up_ren (up_ren_n n swap01)) with (up_ren_n (S n) swap01) by auto.
+      assert (
+        forall x,
+          (up_subst (swap_subst σ n (S n))) x =
+          (swap_subst (up_subst σ) (S n) (S (S n))) x
+      ).
+      {
+        intros [|]; simpl.
+        + reflexivity.
+        + unfold swap_subst.
+          destruct (PeanoNat.Nat.eq_dec n0 n); subst.
+          - repeat rewrite PeanoNat.Nat.eqb_refl. reflexivity.
+          - assert (S n0 <> S n) by lia.
+            apply PeanoNat.Nat.eqb_neq in n1, H1.
+            rewrite n1, H1.
+            destruct (PeanoNat.Nat.eq_dec n0 (S n)); subst.
+            * repeat rewrite PeanoNat.Nat.eqb_refl. reflexivity.
+            * assert (S n0 <> S (S n)) by lia.
+              apply PeanoNat.Nat.eqb_neq in n2, H2.
+              rewrite n2, H2.
+              reflexivity.
+      }
+      erewrite subst_ctx_extensional; eauto.
+      rewrite IHE; auto.
+      * inversion H; auto.
+      * simpl. rewrite H0. auto.
+    - replace (up_ren (up_ren_n n swap01)) with (up_ren_n (S n) swap01) by auto.
+      assert (
+        forall x,
+          (up_subst (swap_subst σ n (S n))) x =
+          (swap_subst (up_subst σ) (S n) (S (S n))) x
+      ).
+      {
+        intros [|]; simpl.
+        + reflexivity.
+        + unfold swap_subst.
+          destruct (PeanoNat.Nat.eq_dec n0 n); subst.
+          - repeat rewrite PeanoNat.Nat.eqb_refl. reflexivity.
+          - assert (S n0 <> S n) by lia.
+            apply PeanoNat.Nat.eqb_neq in n1, H1.
+            rewrite n1, H1.
+            destruct (PeanoNat.Nat.eq_dec n0 (S n)); subst.
+            * repeat rewrite PeanoNat.Nat.eqb_refl. reflexivity.
+            * assert (S n0 <> S (S n)) by lia.
+              apply PeanoNat.Nat.eqb_neq in n2, H2.
+              rewrite n2, H2.
+              reflexivity.
+      }
+      erewrite (proj1 subst_extensional); eauto.
+      rewrite (proj1 up_ren_swap_subst_cancel). auto.
+Qed.
+
+Lemma well_formedness_under_subst_update_index :
+  forall E j σ,
+    well_formed_axcut_ctx (S j) E ->
+    σ (S j) = future j ->
+    (forall x, x <> S j -> ~ occurs_free_message j (σ x)) ->
+    well_formed_axcut_ctx j (subst_ctx (axcut_ctx_update_index E j) σ).
+Proof.
+  induction E; intros; simpl.
+  + econstructor.
+  + econstructor.
+  + econstructor.
+    - inversion H; subst.
+      apply nfv_under_substitution_extensional; intros.
+      destruct n; simpl.
+      * intro. inversion H3.
+      * unfold upM. intro. apply fv_up_Sn2' in H3; try lia.
+        apply (H1 n); auto. intro; subst. congruence.
+    - inversion H; subst.
+      apply IHE; auto.
+      * simpl. rewrite H0; reflexivity.
+      * intros. destruct x; simpl.
+        ** intro. inversion H3.
+        ** unfold upM. intro. apply fv_up_Sn2' in H3; try lia.
+           apply (H1 x); auto.
+  + econstructor.
+    - inversion H; subst.
+      apply nfv_under_substitution_extensional; intros.
+      destruct n; simpl.
+      * intro. inversion H3.
+      * unfold upM. intro. apply fv_up_Sn2' in H3; try lia.
+        apply (H1 n); auto. intro; subst. congruence.
+    - inversion H; subst.
+      apply IHE; auto.
+      * simpl. rewrite H0; reflexivity.
+      * intros. destruct x; simpl.
+        ** intro. inversion H3.
+        ** unfold upM. intro. apply fv_up_Sn2' in H3; try lia.
+           apply (H1 x); auto.
+Qed.
+
+Lemma reduce_axcut_in_reduce_axcut' :
+  forall n Γ' E M Γ E0 M0 P,
+    n = length_axcut_ctx E0 ->
+    well_formed_axcut_ctx 1 E ->
+    well_formed_axcut_ctx 0 E0 ->
+    ~ 1 ∈ fill_hole E0 M0 ->
+    Γ ⊢ fill_hole E0 M0 :# ->
+    Γ' ⊢ fill_hole E M :# ->
+    exists E' M',
+      reduce_axcut E0 M0 (fill_hole E M) = fill_hole E' M' /\
+      well_formed_axcut_ctx 0 E' /\
+      reduce_axcut
+        (downE (rename_axcut_ctx E0 swap01))
+        (down1_message (rename_message M0 (up_ren_n (length_axcut_ctx E0) swap01)) (length_axcut_ctx E0))
+        (reduce_axcut (rename_axcut_ctx E swap01)
+                      (rename_message M (up_ren_n (length_axcut_ctx E) swap01))
+                      (rename_process (up P) swap01))
+        = reduce_axcut E' M' P.
+Proof.
+  induction n; intros; destruct E0; simpl in H; try congruence.
+  + inversion H1; subst; simpl. unfold downE; simpl.
+    eexists; eexists. repeat split.
+    - rewrite reduce_axcut_equation_1.
+      erewrite subst_over_fill_hole2; eauto.
+      simpl. reflexivity.
+    - apply well_formedness_under_subst_update_index; auto.
+      intros. destruct x as [|[|]]; auto.
+      * simpl. intro. apply n_fv_down_Sn' in H6; try lia.
+        ** apply (proj2 (nfv_fill_hole _ _ _ H2)); auto.
+        ** apply (nfv_well_typed_fill_hole _ _ _ _ H1 H3).
+      * simpl. intro. inversion H6.
+    - rewrite reduce_axcut_equation_1.
+      replace (downM (down1_message (rename_message M0 swap01) 0) ⋅ id_subst)
+         with (up_subst_n 0 ((downM (down1_message (rename_message M0 swap01) 0) ⋅ id_subst)))
+           by auto.
+      rewrite up_subst_n_over_reduce_axcut.
+      * assert (~ (occurs_free_message 0 M0)).
+        { apply (nfv_well_typed_fill_hole _ _ _ _ H1 H3). }
+        assert (~ (occurs_free_message 1 M0)).
+        { apply (proj2 (nfv_fill_hole _ _ _ H2)). }
+        assert (rename_message M0 swap01 = M0).
+        {
+          rewrite (proj1 (proj2 renaming_idempotent_free_vars)); auto; intros.
+          destruct n as [|[|]]; auto; congruence.
+        }
+        assert (
+          forall x,
+            (up_subst (downM (down1_message M0 0) ⋅ id_subst)) x
+              = (swap_subst (downM M0 ⋅ id_subst) 0 1) x
+        ).
+        {
+          intros [|[|]]; auto; unfold swap_subst; simpl.
+          unfold upM, downM. rewrite (proj1 (proj2 up_after_down_id)); auto.
+          intro. apply n_fv_down_Sn' in H8; auto.
+        }
+        f_equal; rewrite H7; simpl.
+        {
+          erewrite subst_ctx_extensional; eauto.
+          replace swap01 with (up_ren_n 0 swap01) by auto.
+          rewrite up_ren_swap_subst_cancel_ctx; eauto.
+        }
+        {
+          rewrite <- rename_axcut_ctx_preserves_length.
+          assert (
+            forall x,
+              (up_subst_n (length_axcut_ctx E + 1) (downM (down1_message M0 0) ⋅ id_subst)) x
+                = (swap_subst (up_subst_n (length_axcut_ctx E) (downM M0 ⋅ id_subst)) (length_axcut_ctx E) (S (length_axcut_ctx E))) x
+          ).
+          {
+            intros.
+            rewrite <- up_subst_n_additive; simpl.
+            unfold swap_subst.
+            destruct (Nat.eqb x (length_axcut_ctx E)) eqn:E1.
+            + apply PeanoNat.Nat.eqb_eq in E1; rewrite E1.
+              rewrite up_subst_n_ge; try lia.
+              rewrite PeanoNat.Nat.sub_diag; simpl. unfold relocate; simpl.
+              rewrite up_subst_n_ge; try lia.
+              replace (S (length_axcut_ctx E) - length_axcut_ctx E) with 1 by lia.
+              simpl. unfold relocate; simpl. reflexivity.
+            + apply PeanoNat.Nat.eqb_neq in E1.
+              destruct (Nat.eqb x (S (length_axcut_ctx E))) eqn:E2.
+              - apply PeanoNat.Nat.eqb_eq in E2; rewrite E2.
+                repeat rewrite up_subst_n_ge; try lia.
+                rewrite PeanoNat.Nat.sub_diag.
+                replace (S (length_axcut_ctx E) - length_axcut_ctx E) with 1 by lia.
+                simpl. f_equal.
+                unfold upM, downM; rewrite (proj1 (proj2 up_after_down_id)); auto.
+                intro. apply n_fv_down_Sn' in H9; auto.
+              - apply PeanoNat.Nat.eqb_neq in E2.
+                destruct (Compare_dec.le_gt_dec (length_axcut_ctx E) x).
+                * repeat rewrite up_subst_n_ge; try lia.
+                  f_equal.
+                  assert (x - length_axcut_ctx E >= 2) by lia.
+                  destruct (x - length_axcut_ctx E) as [|[|]]; try (exfalso; lia).
+                  simpl. auto.
+                * repeat rewrite up_subst_n_lt; try lia. reflexivity.
+          }
+          erewrite (proj1 (proj2 subst_extensional)); eauto.
+          rewrite (proj1 (proj2 up_ren_swap_subst_cancel)).
+          reflexivity.
+        }
+        {
+          unfold up.
+          replace swap01 with (up_ren_n 0 swap01) by auto.
+          rewrite (proj1 up_ren_n_swap_lift_lift_Sn).
+          rewrite (proj1 subst_nfv_down) with (n := 1).
+          + rewrite (proj1 down_after_up_id). reflexivity.
+          + apply nfv_lift_n; lia.
+          + intros [|] ?; auto; exfalso; lia.
+          + intros [|] ?; auto; exfalso; lia.
+        }
+      * replace 0 with (swap01 1); replace swap01 with (up_ren_n 0 swap01); auto;
+        apply well_formedness_preserved_under_swap01; auto.
+      * rewrite <- rename_axcut_ctx_preserves_length.
+        replace (length_axcut_ctx E)
+           with (up_ren_n (length_axcut_ctx E) swap01 (S (length_axcut_ctx E)))
+             at 1 by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        rewrite <- PeanoNat.Nat.add_1_r.
+        apply (nfv_well_typed_fill_hole _ _ _ _ H0 H4).
+  + inversion H1; subst; simpl. unfold downE; simpl.
+    eexists; eexists. repeat split.
+    - rewrite reduce_axcut_equation_2.
+      erewrite subst_over_fill_hole2; eauto.
+      simpl. reflexivity.
+    - apply well_formedness_under_subst_update_index; auto.
+      intros. destruct x as [|[|]]; auto.
+      * simpl. intro. apply n_fv_down_Sn' in H6; try lia.
+        ** apply (proj2 (nfv_fill_hole _ _ _ H2)); auto.
+        ** apply (nfv_well_typed_fill_hole _ _ _ _ H1 H3).
+      * simpl. intro. inversion H6.
+    - rewrite reduce_axcut_equation_2.
+      replace (downM (down1_message (rename_message M0 swap01) 0) ⋅ id_subst)
+         with (up_subst_n 0 ((downM (down1_message (rename_message M0 swap01) 0) ⋅ id_subst)))
+           by auto.
+      rewrite up_subst_n_over_reduce_axcut.
+      * assert (~ (occurs_free_message 0 M0)).
+        { apply (nfv_well_typed_fill_hole _ _ _ _ H1 H3). }
+        assert (~ (occurs_free_message 1 M0)).
+        { apply (proj2 (nfv_fill_hole _ _ _ H2)). }
+        assert (rename_message M0 swap01 = M0).
+        {
+          rewrite (proj1 (proj2 renaming_idempotent_free_vars)); auto; intros.
+          destruct n as [|[|]]; auto; congruence.
+        }
+        assert (
+          forall x,
+            (up_subst (downM (down1_message M0 0) ⋅ id_subst)) x
+              = (swap_subst (downM M0 ⋅ id_subst) 0 1) x
+        ).
+        {
+          intros [|[|]]; auto; unfold swap_subst; simpl.
+          unfold upM, downM. rewrite (proj1 (proj2 up_after_down_id)); auto.
+          intro. apply n_fv_down_Sn' in H8; auto.
+        }
+        f_equal; rewrite H7; simpl.
+        {
+          erewrite subst_ctx_extensional; eauto.
+          replace swap01 with (up_ren_n 0 swap01) by auto.
+          rewrite up_ren_swap_subst_cancel_ctx; eauto.
+        }
+        {
+          rewrite <- rename_axcut_ctx_preserves_length.
+          assert (
+            forall x,
+              (up_subst_n (length_axcut_ctx E + 1) (downM (down1_message M0 0) ⋅ id_subst)) x
+                = (swap_subst (up_subst_n (length_axcut_ctx E) (downM M0 ⋅ id_subst)) (length_axcut_ctx E) (S (length_axcut_ctx E))) x
+          ).
+          {
+            intros.
+            rewrite <- up_subst_n_additive; simpl.
+            unfold swap_subst.
+            destruct (Nat.eqb x (length_axcut_ctx E)) eqn:E1.
+            + apply PeanoNat.Nat.eqb_eq in E1; rewrite E1.
+              rewrite up_subst_n_ge; try lia.
+              rewrite PeanoNat.Nat.sub_diag; simpl. unfold relocate; simpl.
+              rewrite up_subst_n_ge; try lia.
+              replace (S (length_axcut_ctx E) - length_axcut_ctx E) with 1 by lia.
+              simpl. unfold relocate; simpl. reflexivity.
+            + apply PeanoNat.Nat.eqb_neq in E1.
+              destruct (Nat.eqb x (S (length_axcut_ctx E))) eqn:E2.
+              - apply PeanoNat.Nat.eqb_eq in E2; rewrite E2.
+                repeat rewrite up_subst_n_ge; try lia.
+                rewrite PeanoNat.Nat.sub_diag.
+                replace (S (length_axcut_ctx E) - length_axcut_ctx E) with 1 by lia.
+                simpl. f_equal.
+                unfold upM, downM; rewrite (proj1 (proj2 up_after_down_id)); auto.
+                intro. apply n_fv_down_Sn' in H9; auto.
+              - apply PeanoNat.Nat.eqb_neq in E2.
+                destruct (Compare_dec.le_gt_dec (length_axcut_ctx E) x).
+                * repeat rewrite up_subst_n_ge; try lia.
+                  f_equal.
+                  assert (x - length_axcut_ctx E >= 2) by lia.
+                  destruct (x - length_axcut_ctx E) as [|[|]]; try (exfalso; lia).
+                  simpl. auto.
+                * repeat rewrite up_subst_n_lt; try lia. reflexivity.
+          }
+          erewrite (proj1 (proj2 subst_extensional)); eauto.
+          rewrite (proj1 (proj2 up_ren_swap_subst_cancel)).
+          reflexivity.
+        }
+        {
+          unfold up.
+          replace swap01 with (up_ren_n 0 swap01) by auto.
+          rewrite (proj1 up_ren_n_swap_lift_lift_Sn).
+          rewrite (proj1 subst_nfv_down) with (n := 1).
+          + rewrite (proj1 down_after_up_id). reflexivity.
+          + apply nfv_lift_n; lia.
+          + intros [|] ?; auto; exfalso; lia.
+          + intros [|] ?; auto; exfalso; lia.
+        }
+      * replace 0 with (swap01 1); replace swap01 with (up_ren_n 0 swap01); auto;
+        apply well_formedness_preserved_under_swap01; auto.
+      * rewrite <- rename_axcut_ctx_preserves_length.
+        replace (length_axcut_ctx E)
+           with (up_ren_n (length_axcut_ctx E) swap01 (S (length_axcut_ctx E)))
+             at 1 by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        rewrite <- PeanoNat.Nat.add_1_r.
+        apply (nfv_well_typed_fill_hole _ _ _ _ H0 H4).
+  + specialize IHn with
+        (E := lift_ctx E 2 1)
+        (M := lift_message M (length_axcut_ctx E + 2) 1)
+        (E0 := rename_axcut_ctx (rename_axcut_ctx E0 swap01) (up_ren swap01))
+        (M0 := rename_message
+                (rename_message M0 (up_ren_n (length_axcut_ctx E0) swap01))
+                (up_ren_n (length_axcut_ctx E0) (up_ren swap01)))
+        (P := rename_process (up P) swap01).
+    assert (
+      n = length_axcut_ctx (rename_axcut_ctx (rename_axcut_ctx E0 swap01) (up_ren swap01))
+    ).
+    {
+      inversion H; subst.
+      repeat rewrite <- rename_axcut_ctx_preserves_length.
+      reflexivity.
+    }
+    assert (
+      well_formed_axcut_ctx 1 (lift_ctx E 2 1)
+    ).
+    { apply upE_preserves_well_formedness2; auto. }
+    assert (
+      well_formed_axcut_ctx 0 (rename_axcut_ctx (rename_axcut_ctx E0 swap01) (up_ren swap01))
+    ).
+    {
+      replace 0 with (up_ren swap01 0) by auto.
+      replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+      apply well_formedness_preserved_under_swap01.
+      replace 0 with (swap01 1); replace swap01 with (up_ren_n 0 swap01); auto.
+      apply well_formedness_preserved_under_swap01.
+      inversion H1; auto.
+    }
+    assert (
+      ~ 1 ∈ fill_hole
+              (rename_axcut_ctx (rename_axcut_ctx E0 swap01) (up_ren swap01))
+              (rename_message
+                (rename_message M0 (up_ren_n (length_axcut_ctx E0) swap01))
+                (up_ren_n (length_axcut_ctx E0) (up_ren swap01)))
+    ).
+    {
+      replace (length_axcut_ctx E0)
+         with (length_axcut_ctx (rename_axcut_ctx E0 swap01))
+           at 2
+           by (rewrite <- rename_axcut_ctx_preserves_length; auto).
+      repeat rewrite <- rename_axcut_ctx_over_fill_hole; try apply shift_preserves_bijection; try apply swap01_is_bijective.
+      replace 1 with (up_ren swap01 2) by auto. apply nfv_under_renaming.
+      apply shift_preserves_bijection; apply swap01_is_bijective.
+      replace 2 with (swap01 2) by auto. apply nfv_under_renaming; try apply swap01_is_bijective.
+      intro. apply H2. simpl. apply fv_cut_r; auto.
+    }
+    assert (
+      exists Γ,
+        Γ ⊢ fill_hole
+              (rename_axcut_ctx (rename_axcut_ctx E0 swap01) (up_ren swap01))
+              (rename_message (rename_message M0 (up_ren_n (length_axcut_ctx E0) swap01))
+                              (up_ren_n (length_axcut_ctx E0) (up_ren swap01))) :#
+    ).
+    {
+      simpl in H3; inversion H3; subst.
+      clear - H14.
+      replace (length_axcut_ctx E0)
+         with (length_axcut_ctx (rename_axcut_ctx E0 swap01))
+           by (rewrite <- rename_axcut_ctx_preserves_length; auto).
+      rewrite <- rename_axcut_ctx_over_fill_hole; simpl.
+      rewrite <- rename_axcut_ctx_preserves_length.
+      rewrite <- rename_axcut_ctx_over_fill_hole.
+      all: try apply shift_preserves_bijection; try apply swap01_is_bijective.
+      destruct (swap01_preserves_well_typedness _ _ H14).
+      destruct (up_ren_swap01_preserves_well_typedness _ _ H).
+      eauto.
+    }
+    destruct H9 as [Γ'' ?].
+    assert (
+      exists Γ',
+        Γ' ⊢ fill_hole (lift_ctx E 2 1) (lift_message M (length_axcut_ctx E + 2) 1) :#
+    ).
+    {
+      clear - H4.
+      destruct (shift_at_1_preserves_well_typedness _ _ H4).
+      destruct (up_ren_swap01_preserves_well_typedness _ _ H).
+      clear - H0. replace (up_ren swap01) with (up_ren_n 1 swap01) in H0 by auto.
+      rewrite (proj1 up_ren_n_swap_lift_lift_Sn) in H0.
+      eexists. rewrite <- up_ctx_over_fill_hole. eassumption.
+    }
+    destruct H10 as [Γ''' ?].
+    destruct (IHn _ _ H5 H6 H7 H8 H9 H10) as [E' [M' [? [? ?]]]].
+    clear IHn.
+    exists (cons_l (down (rename_process P0 swap01))
+                   (rename_axcut_ctx E' swap01)).
+    exists (rename_message M' (up_ren_n (length_axcut_ctx E') swap01)).
+    repeat split.
+    - rewrite reduce_axcut_equation_3; simpl. f_equal.
+      rewrite <- rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+      rewrite <- H11.
+      replace swap01 with (up_ren_n 0 swap01) by auto.
+      rewrite up_ren_swap_over_reduce_axcut; simpl; auto.
+      * f_equal.
+        {
+          replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+          rewrite up_ren_swap_swap_idE; auto.
+        }
+        {
+          repeat rewrite <- rename_axcut_ctx_preserves_length.
+          rewrite PeanoNat.Nat.add_1_r.
+          replace (up_ren_n (length_axcut_ctx E0) (up_ren swap01))
+             with (up_ren_n (S (length_axcut_ctx E0)) swap01).
+          rewrite up_ren_swap_swap_idM; auto.
+          replace (up_ren swap01) with (up_ren_n 1 swap01) by auto;
+          rewrite up_ren_n_additive.
+          rewrite PeanoNat.Nat.add_1_r.
+          reflexivity.
+        }
+        {
+          unfold up; replace swap01 with (up_ren_n 0 swap01) by auto;
+          rewrite (proj1 up_ren_n_swap_lift_lift_Sn); simpl.
+          rewrite <- up_ctx_over_fill_hole.
+          replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+          rewrite <- ((proj1 up_ren_n_swap_lift_lift_Sn) _ 1).
+          rewrite up_ren_swap_swap_idP.
+          reflexivity.
+        }
+      * repeat rewrite <- rename_axcut_ctx_preserves_length.
+        replace (up_ren_n (length_axcut_ctx E0) (up_ren swap01))
+           with (up_ren_n (S (length_axcut_ctx E0)) swap01).
+        replace (length_axcut_ctx E0)
+           with (up_ren_n (S (length_axcut_ctx E0)) swap01 (length_axcut_ctx E0))
+             at 1
+             by (rewrite up_ren_n_swap_not_nSn; lia).
+        apply nfv_under_renaming.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        replace (length_axcut_ctx E0)
+           with (up_ren_n (length_axcut_ctx E0) swap01 (S (length_axcut_ctx E0)))
+             at 1
+             by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        replace (S (length_axcut_ctx E0)) with (length_axcut_ctx (cons_l P0 E0) + 0) by (simpl; lia).
+        eapply nfv_well_typed_fill_hole with (j := 0); eauto.
+        replace (up_ren swap01) with (up_ren_n 1 swap01) by auto; rewrite up_ren_n_additive; f_equal; lia.
+    - econstructor; auto.
+      * inversion H1; subst.
+        intro. apply n_fv_down_Sn' in H5; auto.
+        ** apply H2. simpl. free_var_econstructor; eauto.
+           replace 2 with (swap01 2) in H5 by auto.
+           apply (proj1 fv_under_renaming) in H5; auto. apply swap01_is_bijective.
+        ** apply nfv_01_swap; auto.
+      * replace 1 with (swap01 0); replace swap01 with (up_ren_n 0 swap01); auto.
+        apply well_formedness_preserved_under_swap01; auto.
+    - unfold downE; simpl.
+      assert (~ 2 ∈ P0).
+      { intro. apply H2. simpl. free_var_econstructor; eauto. }
+      inversion H1; subst.
+      repeat rewrite reduce_axcut_equation_3. f_equal.
+      * replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+        rewrite (proj1 up_ren_n_swap_down_down_Sn); auto.
+        unfold down.
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        repeat rewrite (proj1 up_ren_n_swap_down_down_Sn); auto.
+        rewrite ((proj1 down_k_down_Sj_lt_commute2) _ 1); auto.
+        ** intro. apply (proj1 n_fv_down_Sn') in H5; auto.
+        ** apply nfv_down_lt; auto.
+      * assert (~ occurs_free_ctx 2 E0).
+        { intro. apply H2. simpl. apply fv_cut_r. apply fv_ctx_fill_hole. assumption. }
+        rewrite swap_swap_idE.
+        rewrite <- rename_axcut_ctx_preserves_length.
+        rewrite up_ren_swap_swap_idM.
+        rewrite <- H13. f_equal.
+        {
+          replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+          rewrite up_ren_n_swap_down_down_Sn_ctx; auto.
+          unfold downE. replace swap01 with (up_ren_n 0 swap01) by auto.
+          rewrite up_ren_n_swap_down_down_Sn_ctx; simpl.
+          + replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+            rewrite up_ren_n_swap_down_down_Sn_ctx.
+            - rewrite down_at_k_rename_id_after_k_commute_ctx; auto.
+              apply swap01_is_bijective.
+              intros [|[|]] ?; auto; exfalso; lia.
+            - replace 2 with (swap01 2) by auto; apply nfv_ctx_under_renaming; auto. apply swap01_is_bijective.
+          + replace 1 with (up_ren swap01 2) by auto.
+            apply nfv_ctx_under_renaming.
+            apply shift_preserves_bijection; apply swap01_is_bijective.
+            replace 2 with (swap01 2) by auto; apply nfv_ctx_under_renaming; auto; apply swap01_is_bijective.
+        }
+        {
+          repeat rewrite <- rename_axcut_ctx_preserves_length.
+          rewrite down_ctx_preserves_length.
+          rewrite <- rename_axcut_ctx_preserves_length.
+          replace (up_ren (up_ren_n (length_axcut_ctx E0) swap01))
+             with (up_ren_n (S (length_axcut_ctx E0)) swap01) by auto.
+          rewrite (proj1 (proj2 up_ren_n_swap_down_down_Sn)).
+          + rewrite (proj1 (proj2 up_ren_n_swap_down_down_Sn)).
+            - replace (up_ren_n (length_axcut_ctx E0) (up_ren swap01))
+                 with (up_ren_n (S (length_axcut_ctx E0)) swap01).
+              rewrite (proj1 (proj2 up_ren_n_swap_down_down_Sn)).
+              rewrite (proj1 (proj2 down_at_k_rename_id_after_k_commute)); auto.
+              apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+              intros; rewrite up_ren_n_swap_not_nSn; lia.
+              * replace (S (S (length_axcut_ctx E0)))
+                   with (up_ren_n (length_axcut_ctx E0) swap01 (S (S (length_axcut_ctx E0))))
+                     by (rewrite up_ren_n_swap_not_nSn; lia).
+                apply nfv_under_renaming.
+                apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+                assert (
+                  ~ 2 ∈ fill_hole E0 M0
+                ). { intro. apply H2; simpl; free_var_econstructor; eauto. }
+                replace (S (S (length_axcut_ctx E0))) with (length_axcut_ctx E0 + 2) by lia.
+                apply (proj2 (nfv_fill_hole _ _ _ H15)).
+              * replace (up_ren swap01) with (up_ren_n 1 swap01) by auto;
+                rewrite up_ren_n_additive; f_equal; lia.
+            - replace (up_ren_n (length_axcut_ctx E0) (up_ren swap01))
+                 with (up_ren_n (S (length_axcut_ctx E0)) swap01)
+                   by (replace (up_ren swap01) with (up_ren_n 1 swap01) by auto; rewrite up_ren_n_additive; f_equal; lia).
+              replace (S (length_axcut_ctx E0))
+                 with (up_ren_n (S (length_axcut_ctx E0)) swap01 (S (S (length_axcut_ctx E0))))
+                   at 1
+                   by (rewrite up_ren_n_swap_Sn; auto).
+              apply (proj1 (proj2 nfv_under_renaming)).
+              apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+              replace (S (S (length_axcut_ctx E0)))
+                 with (up_ren_n (length_axcut_ctx E0) swap01 (S (S (length_axcut_ctx E0))))
+                   by (rewrite up_ren_n_swap_not_nSn; lia).
+              apply nfv_under_renaming.
+              apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+              assert (
+                  ~ 2 ∈ fill_hole E0 M0
+              ). { intro. apply H2; simpl; free_var_econstructor; eauto. }
+              replace (S (S (length_axcut_ctx E0))) with (length_axcut_ctx E0 + 2) by lia.
+              apply (proj2 (nfv_fill_hole _ _ _ H15)).
+          + assert (
+              ~ 2 ∈ fill_hole E0 M0
+            ). { intro. apply H2; simpl; free_var_econstructor; eauto. }
+            replace (S (S (length_axcut_ctx E0))) with (length_axcut_ctx E0 + 2) by lia.
+            apply (proj2 (nfv_fill_hole _ _ _ H15)).
+        }
+        {
+          unfold up.
+          rewrite lift_over_reduce_axcut.
+          replace swap01 with (up_ren_n 0 swap01) by auto;
+          rewrite up_ren_swap_over_reduce_axcut; simpl.
+          {
+            f_equal.
+            + replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+              rewrite up_ren_n_swap_lift_lift_Sn_ctx.
+              rewrite lift_at_k_rename_id_after_k_commute_ctx; auto.
+              apply swap01_is_bijective.
+              intros [|[|]] ?; auto; exfalso; lia.
+            + repeat rewrite lift_ctx_preserves_length.
+              rewrite <- rename_axcut_ctx_preserves_length.
+              rewrite (proj1 (proj2 up_ren_n_swap_lift_lift_Sn)); simpl.
+              replace (S (length_axcut_ctx E + 1)) with (length_axcut_ctx E + 2) by lia.
+              rewrite (proj1 (proj2 lift_at_k_rename_id_after_k_commute)); auto.
+              apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+              intros. rewrite up_ren_n_swap_not_nSn; lia.
+            + replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+              rewrite (proj1 up_ren_n_swap_lift_lift_Sn).
+              replace swap01 with (up_ren_n 0 swap01) by auto.
+              repeat rewrite (proj1 up_ren_n_swap_lift_lift_Sn).
+              rewrite (proj1 lift_k_lift_Sj_lt_commute); auto.
+          }
+          + apply upE_preserves_well_formedness2; auto.
+            replace 0 with (swap01 1) by auto. replace swap01 with (up_ren_n 0 swap01) by auto.
+            apply well_formedness_preserved_under_swap01; auto.
+          + repeat rewrite <- rename_axcut_ctx_preserves_length.
+            rewrite lift_ctx_preserves_length.
+            rewrite <- rename_axcut_ctx_preserves_length.
+            rewrite PeanoNat.Nat.add_1_r.
+            apply nfv_up_lt; try lia.
+            replace (length_axcut_ctx E)
+               with (up_ren_n (length_axcut_ctx E) swap01 (S (length_axcut_ctx E)))
+                 at 1 by (rewrite up_ren_n_swap_Sn; auto).
+            apply nfv_under_renaming.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            rewrite <- PeanoNat.Nat.add_1_r.
+            apply (nfv_well_typed_fill_hole _ _ _ _ H0 H4).
+          + replace 0 with (swap01 1); replace swap01 with (up_ren_n 0 swap01); auto.
+            apply well_formedness_preserved_under_swap01; auto.
+          + rewrite <- rename_axcut_ctx_preserves_length.
+            replace (length_axcut_ctx E)
+               with (up_ren_n (length_axcut_ctx E) swap01 (S (length_axcut_ctx E)))
+                 at 1 by (rewrite up_ren_n_swap_Sn; auto).
+            apply nfv_under_renaming.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            rewrite <- PeanoNat.Nat.add_1_r.
+            apply (nfv_well_typed_fill_hole _ _ _ _ H0 H4).
+        }
+  + specialize IHn with
+        (E := lift_ctx E 2 1)
+        (M := lift_message M (length_axcut_ctx E + 2) 1)
+        (E0 := rename_axcut_ctx (rename_axcut_ctx E0 swap01) (up_ren swap01))
+        (M0 := rename_message
+                (rename_message M0 (up_ren_n (length_axcut_ctx E0) swap01))
+                (up_ren_n (length_axcut_ctx E0) (up_ren swap01)))
+        (P := rename_process (up P) swap01).
+    assert (
+      n = length_axcut_ctx (rename_axcut_ctx (rename_axcut_ctx E0 swap01) (up_ren swap01))
+    ).
+    {
+      inversion H; subst.
+      repeat rewrite <- rename_axcut_ctx_preserves_length.
+      reflexivity.
+    }
+    assert (
+      well_formed_axcut_ctx 1 (lift_ctx E 2 1)
+    ).
+    { apply upE_preserves_well_formedness2; auto. }
+    assert (
+      well_formed_axcut_ctx 0 (rename_axcut_ctx (rename_axcut_ctx E0 swap01) (up_ren swap01))
+    ).
+    {
+      replace 0 with (up_ren swap01 0) by auto.
+      replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+      apply well_formedness_preserved_under_swap01.
+      replace 0 with (swap01 1); replace swap01 with (up_ren_n 0 swap01); auto.
+      apply well_formedness_preserved_under_swap01.
+      inversion H1; auto.
+    }
+    assert (
+      ~ 1 ∈ fill_hole
+              (rename_axcut_ctx (rename_axcut_ctx E0 swap01) (up_ren swap01))
+              (rename_message
+                (rename_message M0 (up_ren_n (length_axcut_ctx E0) swap01))
+                (up_ren_n (length_axcut_ctx E0) (up_ren swap01)))
+    ).
+    {
+      replace (length_axcut_ctx E0)
+         with (length_axcut_ctx (rename_axcut_ctx E0 swap01))
+           at 2
+           by (rewrite <- rename_axcut_ctx_preserves_length; auto).
+      repeat rewrite <- rename_axcut_ctx_over_fill_hole; try apply shift_preserves_bijection; try apply swap01_is_bijective.
+      replace 1 with (up_ren swap01 2) by auto. apply nfv_under_renaming.
+      apply shift_preserves_bijection; apply swap01_is_bijective.
+      replace 2 with (swap01 2) by auto. apply nfv_under_renaming; try apply swap01_is_bijective.
+      intro. apply H2. simpl. apply fv_cut_l; auto.
+    }
+    assert (
+      exists Γ,
+        Γ ⊢ fill_hole
+              (rename_axcut_ctx (rename_axcut_ctx E0 swap01) (up_ren swap01))
+              (rename_message (rename_message M0 (up_ren_n (length_axcut_ctx E0) swap01))
+                              (up_ren_n (length_axcut_ctx E0) (up_ren swap01))) :#
+    ).
+    {
+      simpl in H3; inversion H3; subst.
+      clear - H13.
+      replace (length_axcut_ctx E0)
+         with (length_axcut_ctx (rename_axcut_ctx E0 swap01))
+           by (rewrite <- rename_axcut_ctx_preserves_length; auto).
+      rewrite <- rename_axcut_ctx_over_fill_hole; simpl.
+      rewrite <- rename_axcut_ctx_preserves_length.
+      rewrite <- rename_axcut_ctx_over_fill_hole.
+      all: try apply shift_preserves_bijection; try apply swap01_is_bijective.
+      destruct (swap01_preserves_well_typedness _ _ H13).
+      destruct (up_ren_swap01_preserves_well_typedness _ _ H).
+      eauto.
+    }
+    destruct H9 as [Γ'' ?].
+    assert (
+      exists Γ',
+        Γ' ⊢ fill_hole (lift_ctx E 2 1) (lift_message M (length_axcut_ctx E + 2) 1) :#
+    ).
+    {
+      clear - H4.
+      destruct (shift_at_1_preserves_well_typedness _ _ H4).
+      destruct (up_ren_swap01_preserves_well_typedness _ _ H).
+      clear - H0. replace (up_ren swap01) with (up_ren_n 1 swap01) in H0 by auto.
+      rewrite (proj1 up_ren_n_swap_lift_lift_Sn) in H0.
+      eexists. rewrite <- up_ctx_over_fill_hole. eassumption.
+    }
+    destruct H10 as [Γ''' ?].
+    destruct (IHn _ _ H5 H6 H7 H8 H9 H10) as [E' [M' [? [? ?]]]].
+    clear IHn.
+    exists (cons_r (rename_axcut_ctx E' swap01)
+                   (down (rename_process P0 swap01))).
+    exists (rename_message M' (up_ren_n (length_axcut_ctx E') swap01)).
+    repeat split.
+    - rewrite reduce_axcut_equation_4; simpl. f_equal.
+      rewrite <- rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+      rewrite <- H11.
+      replace swap01 with (up_ren_n 0 swap01) by auto.
+      rewrite up_ren_swap_over_reduce_axcut; simpl; auto.
+      * f_equal.
+        {
+          replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+          rewrite up_ren_swap_swap_idE; auto.
+        }
+        {
+          repeat rewrite <- rename_axcut_ctx_preserves_length.
+          rewrite PeanoNat.Nat.add_1_r.
+          replace (up_ren_n (length_axcut_ctx E0) (up_ren swap01))
+             with (up_ren_n (S (length_axcut_ctx E0)) swap01).
+          rewrite up_ren_swap_swap_idM; auto.
+          replace (up_ren swap01) with (up_ren_n 1 swap01) by auto;
+          rewrite up_ren_n_additive.
+          rewrite PeanoNat.Nat.add_1_r.
+          reflexivity.
+        }
+        {
+          unfold up; replace swap01 with (up_ren_n 0 swap01) by auto;
+          rewrite (proj1 up_ren_n_swap_lift_lift_Sn); simpl.
+          rewrite <- up_ctx_over_fill_hole.
+          replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+          rewrite <- ((proj1 up_ren_n_swap_lift_lift_Sn) _ 1).
+          rewrite up_ren_swap_swap_idP.
+          reflexivity.
+        }
+      * repeat rewrite <- rename_axcut_ctx_preserves_length.
+        replace (up_ren_n (length_axcut_ctx E0) (up_ren swap01))
+           with (up_ren_n (S (length_axcut_ctx E0)) swap01).
+        replace (length_axcut_ctx E0)
+           with (up_ren_n (S (length_axcut_ctx E0)) swap01 (length_axcut_ctx E0))
+             at 1
+             by (rewrite up_ren_n_swap_not_nSn; lia).
+        apply nfv_under_renaming.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        replace (length_axcut_ctx E0)
+           with (up_ren_n (length_axcut_ctx E0) swap01 (S (length_axcut_ctx E0)))
+             at 1
+             by (rewrite up_ren_n_swap_Sn; auto).
+        apply nfv_under_renaming.
+        apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+        replace (S (length_axcut_ctx E0)) with (length_axcut_ctx (cons_r E0 P0) + 0) by (simpl; lia).
+        eapply nfv_well_typed_fill_hole with (j := 0); eauto.
+        replace (up_ren swap01) with (up_ren_n 1 swap01) by auto; rewrite up_ren_n_additive; f_equal; lia.
+    - econstructor; auto.
+      * inversion H1; subst.
+        intro. apply n_fv_down_Sn' in H5; auto.
+        ** apply H2. simpl. apply fv_cut_r.
+           replace 2 with (swap01 2) in H5 by auto.
+           apply (proj1 fv_under_renaming) in H5; auto. apply swap01_is_bijective.
+        ** apply nfv_01_swap; auto.
+      * replace 1 with (swap01 0); replace swap01 with (up_ren_n 0 swap01); auto.
+        apply well_formedness_preserved_under_swap01; auto.
+    - unfold downE; simpl.
+      assert (~ 2 ∈ P0).
+      { intro. apply H2. simpl. free_var_econstructor; eauto. }
+      inversion H1; subst.
+      repeat rewrite reduce_axcut_equation_4. f_equal.
+      * assert (~ occurs_free_ctx 2 E0).
+        { intro. apply H2. simpl. apply fv_cut_l. apply fv_ctx_fill_hole. assumption. }
+        rewrite swap_swap_idE.
+        rewrite <- rename_axcut_ctx_preserves_length.
+        rewrite up_ren_swap_swap_idM.
+        rewrite <- H13. f_equal.
+        {
+          replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+          rewrite up_ren_n_swap_down_down_Sn_ctx; auto.
+          unfold downE. replace swap01 with (up_ren_n 0 swap01) by auto.
+          rewrite up_ren_n_swap_down_down_Sn_ctx; simpl.
+          + replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+            rewrite up_ren_n_swap_down_down_Sn_ctx.
+            - rewrite down_at_k_rename_id_after_k_commute_ctx; auto.
+              apply swap01_is_bijective.
+              intros [|[|]] ?; auto; exfalso; lia.
+            - replace 2 with (swap01 2) by auto; apply nfv_ctx_under_renaming; auto. apply swap01_is_bijective.
+          + replace 1 with (up_ren swap01 2) by auto.
+            apply nfv_ctx_under_renaming.
+            apply shift_preserves_bijection; apply swap01_is_bijective.
+            replace 2 with (swap01 2) by auto; apply nfv_ctx_under_renaming; auto; apply swap01_is_bijective.
+        }
+        {
+          repeat rewrite <- rename_axcut_ctx_preserves_length.
+          rewrite down_ctx_preserves_length.
+          rewrite <- rename_axcut_ctx_preserves_length.
+          replace (up_ren (up_ren_n (length_axcut_ctx E0) swap01))
+             with (up_ren_n (S (length_axcut_ctx E0)) swap01) by auto.
+          rewrite (proj1 (proj2 up_ren_n_swap_down_down_Sn)).
+          + rewrite (proj1 (proj2 up_ren_n_swap_down_down_Sn)).
+            - replace (up_ren_n (length_axcut_ctx E0) (up_ren swap01))
+                 with (up_ren_n (S (length_axcut_ctx E0)) swap01).
+              rewrite (proj1 (proj2 up_ren_n_swap_down_down_Sn)).
+              rewrite (proj1 (proj2 down_at_k_rename_id_after_k_commute)); auto.
+              apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+              intros; rewrite up_ren_n_swap_not_nSn; lia.
+              * replace (S (S (length_axcut_ctx E0)))
+                   with (up_ren_n (length_axcut_ctx E0) swap01 (S (S (length_axcut_ctx E0))))
+                     by (rewrite up_ren_n_swap_not_nSn; lia).
+                apply nfv_under_renaming.
+                apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+                assert (
+                  ~ 2 ∈ fill_hole E0 M0
+                ). { intro. apply H2; simpl; free_var_econstructor; eauto. }
+                replace (S (S (length_axcut_ctx E0))) with (length_axcut_ctx E0 + 2) by lia.
+                apply (proj2 (nfv_fill_hole _ _ _ H15)).
+              * replace (up_ren swap01) with (up_ren_n 1 swap01) by auto;
+                rewrite up_ren_n_additive; f_equal; lia.
+            - replace (up_ren_n (length_axcut_ctx E0) (up_ren swap01))
+                 with (up_ren_n (S (length_axcut_ctx E0)) swap01)
+                   by (replace (up_ren swap01) with (up_ren_n 1 swap01) by auto; rewrite up_ren_n_additive; f_equal; lia).
+              replace (S (length_axcut_ctx E0))
+                 with (up_ren_n (S (length_axcut_ctx E0)) swap01 (S (S (length_axcut_ctx E0))))
+                   at 1
+                   by (rewrite up_ren_n_swap_Sn; auto).
+              apply (proj1 (proj2 nfv_under_renaming)).
+              apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+              replace (S (S (length_axcut_ctx E0)))
+                 with (up_ren_n (length_axcut_ctx E0) swap01 (S (S (length_axcut_ctx E0))))
+                   by (rewrite up_ren_n_swap_not_nSn; lia).
+              apply nfv_under_renaming.
+              apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+              assert (
+                  ~ 2 ∈ fill_hole E0 M0
+              ). { intro. apply H2; simpl; free_var_econstructor; eauto. }
+              replace (S (S (length_axcut_ctx E0))) with (length_axcut_ctx E0 + 2) by lia.
+              apply (proj2 (nfv_fill_hole _ _ _ H15)).
+          + assert (
+              ~ 2 ∈ fill_hole E0 M0
+            ). { intro. apply H2; simpl; free_var_econstructor; eauto. }
+            replace (S (S (length_axcut_ctx E0))) with (length_axcut_ctx E0 + 2) by lia.
+            apply (proj2 (nfv_fill_hole _ _ _ H15)).
+        }
+        {
+          unfold up.
+          rewrite lift_over_reduce_axcut.
+          replace swap01 with (up_ren_n 0 swap01) by auto;
+          rewrite up_ren_swap_over_reduce_axcut; simpl.
+          {
+            f_equal.
+            + replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+              rewrite up_ren_n_swap_lift_lift_Sn_ctx.
+              rewrite lift_at_k_rename_id_after_k_commute_ctx; auto.
+              apply swap01_is_bijective.
+              intros [|[|]] ?; auto; exfalso; lia.
+            + repeat rewrite lift_ctx_preserves_length.
+              rewrite <- rename_axcut_ctx_preserves_length.
+              rewrite (proj1 (proj2 up_ren_n_swap_lift_lift_Sn)); simpl.
+              replace (S (length_axcut_ctx E + 1)) with (length_axcut_ctx E + 2) by lia.
+              rewrite (proj1 (proj2 lift_at_k_rename_id_after_k_commute)); auto.
+              apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+              intros. rewrite up_ren_n_swap_not_nSn; lia.
+            + replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+              rewrite (proj1 up_ren_n_swap_lift_lift_Sn).
+              replace swap01 with (up_ren_n 0 swap01) by auto.
+              repeat rewrite (proj1 up_ren_n_swap_lift_lift_Sn).
+              rewrite (proj1 lift_k_lift_Sj_lt_commute); auto.
+          }
+          + apply upE_preserves_well_formedness2; auto.
+            replace 0 with (swap01 1) by auto. replace swap01 with (up_ren_n 0 swap01) by auto.
+            apply well_formedness_preserved_under_swap01; auto.
+          + repeat rewrite <- rename_axcut_ctx_preserves_length.
+            rewrite lift_ctx_preserves_length.
+            rewrite <- rename_axcut_ctx_preserves_length.
+            rewrite PeanoNat.Nat.add_1_r.
+            apply nfv_up_lt; try lia.
+            replace (length_axcut_ctx E)
+               with (up_ren_n (length_axcut_ctx E) swap01 (S (length_axcut_ctx E)))
+                 at 1 by (rewrite up_ren_n_swap_Sn; auto).
+            apply nfv_under_renaming.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            rewrite <- PeanoNat.Nat.add_1_r.
+            apply (nfv_well_typed_fill_hole _ _ _ _ H0 H4).
+          + replace 0 with (swap01 1); replace swap01 with (up_ren_n 0 swap01); auto.
+            apply well_formedness_preserved_under_swap01; auto.
+          + rewrite <- rename_axcut_ctx_preserves_length.
+            replace (length_axcut_ctx E)
+               with (up_ren_n (length_axcut_ctx E) swap01 (S (length_axcut_ctx E)))
+                 at 1 by (rewrite up_ren_n_swap_Sn; auto).
+            apply nfv_under_renaming.
+            apply up_ren_n_preserves_bijection; apply swap01_is_bijective.
+            rewrite <- PeanoNat.Nat.add_1_r.
+            apply (nfv_well_typed_fill_hole _ _ _ _ H0 H4).
+        }
+      * replace (up_ren swap01) with (up_ren_n 1 swap01) by auto.
+        rewrite (proj1 up_ren_n_swap_down_down_Sn); auto.
+        unfold down.
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        repeat rewrite (proj1 up_ren_n_swap_down_down_Sn); auto.
+        rewrite ((proj1 down_k_down_Sj_lt_commute2) _ 1); auto.
+        ** intro. apply (proj1 n_fv_down_Sn') in H5; auto.
+        ** apply nfv_down_lt; auto.
+Qed.
+
+Lemma reduce_axcut_in_reduce_axcut :
+  forall Γ' E M Γ E0 M0 P,
+    well_formed_axcut_ctx 1 E ->
+    well_formed_axcut_ctx 0 E0 ->
+    ~ 1 ∈ fill_hole E0 M0 ->
+    Γ ⊢ fill_hole E0 M0 :# ->
+    Γ' ⊢ fill_hole E M :# ->
+    exists E' M',
+      reduce_axcut E0 M0 (fill_hole E M) = fill_hole E' M' /\
+      well_formed_axcut_ctx 0 E' /\
+      reduce_axcut
+        (downE (rename_axcut_ctx E0 swap01))
+        (down1_message (rename_message M0 (up_ren_n (length_axcut_ctx E0) swap01)) (length_axcut_ctx E0))
+        (reduce_axcut (rename_axcut_ctx E swap01)
+                      (rename_message M (up_ren_n (length_axcut_ctx E) swap01))
+                      (rename_process (up P) swap01))
+        = reduce_axcut E' M' P.
+Proof.
+  intros. eapply reduce_axcut_in_reduce_axcut'; eauto.
+Qed.
+
+Lemma reduce_axcut_invariant_under_reduced_context' :
+  forall n Q Q' Γ Γ' E M P,
+    n = length_axcut_ctx E ->
+    Q = fill_hole E M ->
+    well_formed_axcut_ctx 0 E ->
+    Γ ⊢ Q :# ->
+    Γ' ⊢ P :# ->
+    Q ⊵ Q' ->
+    exists E' M',
+      Q' = fill_hole E' M' /\
+      well_formed_axcut_ctx 0 E' /\
+      (reduce_axcut E M P) ⊵ (reduce_axcut E' M' P).
+Proof.
+  induction n; intros; destruct E; simpl in H; try congruence.
+  + simpl in H0. subst. inversion H4; subst.
+    exists (nil_l n). exists M.
+    repeat split; auto. apply rp_refl.
+  + simpl in H0. subst. inversion H4; subst.
+    exists (nil_r n). exists M.
+    repeat split; auto. apply rp_refl.
+  + simpl in H0; subst.
+    inversion H1; subst.
+    inversion H4; subst.
+    - exists (cons_l P0 E).
+      exists M.
+      repeat split; auto.
+      apply rp_refl.
+    - rewrite reduce_axcut_equation_3.
+      assert (
+        cut (down (rename_process (fill_hole E0 M0) swap01))
+            (reduce_axcut (rename_axcut_ctx E swap01)
+                          (rename_message M (up_ren_n (length_axcut_ctx E) swap01))
+                          (rename_process (up P) swap01))
+          ⊵
+        reduce_axcut
+          (downE (rename_axcut_ctx E0 swap01))
+          (down1_message (rename_message M0 (up_ren_n (length_axcut_ctx E0) swap01)) (length_axcut_ctx E0))
+          ((reduce_axcut (rename_axcut_ctx E swap01)
+                          (rename_message M (up_ren_n (length_axcut_ctx E) swap01))
+                          (rename_process (up P) swap01)))
+      ).
+      {
+        rewrite rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+        unfold down. rewrite down_ctx_over_fill_hole.
+        rewrite <- plus_n_O.
+        rewrite <- rename_axcut_ctx_preserves_length.
+        unfold downE.
+        eapply rp_ax_cut_l; eauto.
+        apply downE_preserves_well_formedness_nfv; try lia.
+        + apply nfv_ctx_01_swap.
+          apply (proj1 (nfv_fill_hole _ _ _ H7)).
+        + replace 1 with (swap01 0); replace swap01 with (up_ren_n 0 swap01); auto.
+          apply well_formedness_preserved_under_swap01. assumption.
+      }
+      inversion H2; subst.
+      pose proof (reduce_axcut_in_reduce_axcut _ E M _ E0 M0 P H8 H9 H7 H12 H13) as [E' [M' [? [? ?]]]].
+      exists E'. exists M'.
+      repeat split; auto.
+      rewrite H11 in H0. assumption.
+    - admit.
+    - exists (cons_l P' E).
+      exists M.
+      repeat split; auto.
+      * econstructor; eauto. inversion H2.
+        eapply (nfv_under_equiv_red _ P0); eauto.
+      * repeat rewrite reduce_axcut_equation_3.
+        apply rp_cong_cut_l.
+        inversion H2; subst.
+        destruct (swap01_preserves_well_typedness _ _ H11).
+        eapply equiv_red_invariant_under_down; eauto.
+        ** replace swap01 with (up_ren_n 0 swap01) by auto.
+           eapply equiv_red_invariant_under_swap; eauto.
+        ** apply nfv_01_swap; auto.
+    - rewrite reduce_axcut_equation_3.
+      assert (
+        rename_process (fill_hole E M) swap01 =
+          fill_hole (rename_axcut_ctx E swap01)
+                    (rename_message M (up_ren_n (length_axcut_ctx E) swap01))
+      ). { rewrite rename_axcut_ctx_over_fill_hole; auto. apply swap01_is_bijective. }
+      assert (
+        n = length_axcut_ctx (rename_axcut_ctx E swap01)
+      ). { rewrite <- rename_axcut_ctx_preserves_length; auto. }
+      assert (
+        well_formed_axcut_ctx 0 (rename_axcut_ctx E swap01)
+      ).
+      {
+        inversion H1; subst.
+        replace 0 with (swap01 1) by auto.
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01; auto.
+      }
+      assert (
+        exists Δ, Δ ⊢ rename_process (fill_hole E M) swap01 :#
+      ).
+      {
+        inversion H2; subst.
+        destruct (swap01_preserves_well_typedness _ _ H15); eauto.
+      }
+      destruct H10 as [Δ ?].
+      assert (
+        exists Δ', Δ' ⊢ up P :#
+      ).
+      {
+        clear - H3. unfold up.
+        replace Γ' with (nil ++ Γ') in H3 by auto.
+        apply (proj1 up_shift_sound) in H3; eauto.
+      }
+      destruct H11.
+      assert (
+        exists Δ', Δ' ⊢ rename_process (up P) swap01 :#
+      ).
+      { destruct (swap01_preserves_well_typedness _ _ H11); eauto. }
+      destruct H12 as [Δ' ?].
+      assert (
+        (rename_process (fill_hole E M) swap01) ⊵ (rename_process Q'0 swap01)
+      ).
+      {
+        inversion H2; subst.
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        eapply equiv_red_invariant_under_swap; eauto.
+      }
+      destruct (IHn _ _ _ _ _ _ _
+                  H5
+                  H0
+                  H6
+                  H10
+                  H12
+                  H13) as [E' [M' [? [? ?]]]].
+      exists (cons_l P0 (rename_axcut_ctx E' swap01)).
+      exists (rename_message M' (up_ren_n (length_axcut_ctx E') swap01)).
+      repeat split.
+      * simpl. rewrite <- rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+        rewrite <- H14. rewrite swap_swap_id. reflexivity.
+      * econstructor; eauto.
+        replace 1 with (swap01 0); replace swap01 with (up_ren_n 0 swap01); auto.
+        apply well_formedness_preserved_under_swap01; auto.
+      * repeat rewrite reduce_axcut_equation_3.
+        apply rp_cong_cut_r.
+        rewrite swap_swap_idE.
+        rewrite <- rename_axcut_ctx_preserves_length.
+        rewrite up_ren_swap_swap_idM.
+        assumption.
+  + simpl in H0; subst.
+    inversion H1; subst.
+    inversion H4; subst.
+    - exists (cons_r E P0).
+      exists M.
+      repeat split; auto.
+      apply rp_refl.
+    - rewrite reduce_axcut_equation_4.
+      admit.
+    - rewrite reduce_axcut_equation_4.
+      assert (
+        cut (reduce_axcut (rename_axcut_ctx E swap01)
+                          (rename_message M (up_ren_n (length_axcut_ctx E) swap01))
+                          (rename_process (up P) swap01))
+            (down (rename_process (fill_hole E0 M0) swap01))
+          ⊵
+        reduce_axcut
+          (downE (rename_axcut_ctx E0 swap01))
+          (down1_message (rename_message M0 (up_ren_n (length_axcut_ctx E0) swap01)) (length_axcut_ctx E0))
+          ((reduce_axcut (rename_axcut_ctx E swap01)
+                          (rename_message M (up_ren_n (length_axcut_ctx E) swap01))
+                          (rename_process (up P) swap01)))
+      ).
+      {
+        rewrite rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+        unfold down. rewrite down_ctx_over_fill_hole.
+        rewrite <- plus_n_O.
+        rewrite <- rename_axcut_ctx_preserves_length.
+        unfold downE.
+        eapply rp_ax_cut_r; eauto.
+        apply downE_preserves_well_formedness_nfv; try lia.
+        + apply nfv_ctx_01_swap.
+          apply (proj1 (nfv_fill_hole _ _ _ H7)).
+        + replace 1 with (swap01 0); replace swap01 with (up_ren_n 0 swap01); auto.
+          apply well_formedness_preserved_under_swap01. assumption.
+      }
+      inversion H2; subst.
+      pose proof (reduce_axcut_in_reduce_axcut _ E M _ E0 M0 P H8 H9 H7 H13 H12) as [E' [M' [? [? ?]]]].
+      exists E'. exists M'.
+      repeat split; auto.
+      rewrite H11 in H0. assumption.
+    - rewrite reduce_axcut_equation_4.
+      assert (
+        rename_process (fill_hole E M) swap01 =
+          fill_hole (rename_axcut_ctx E swap01)
+                    (rename_message M (up_ren_n (length_axcut_ctx E) swap01))
+      ). { rewrite rename_axcut_ctx_over_fill_hole; auto. apply swap01_is_bijective. }
+      assert (
+        n = length_axcut_ctx (rename_axcut_ctx E swap01)
+      ). { rewrite <- rename_axcut_ctx_preserves_length; auto. }
+      assert (
+        well_formed_axcut_ctx 0 (rename_axcut_ctx E swap01)
+      ).
+      {
+        inversion H1; subst.
+        replace 0 with (swap01 1) by auto.
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        apply well_formedness_preserved_under_swap01; auto.
+      }
+      assert (
+        exists Δ, Δ ⊢ rename_process (fill_hole E M) swap01 :#
+      ).
+      {
+        inversion H2; subst.
+        destruct (swap01_preserves_well_typedness _ _ H14); eauto.
+      }
+      destruct H10 as [Δ ?].
+      assert (
+        exists Δ', Δ' ⊢ up P :#
+      ).
+      {
+        clear - H3. unfold up.
+        replace Γ' with (nil ++ Γ') in H3 by auto.
+        apply (proj1 up_shift_sound) in H3; eauto.
+      }
+      destruct H11.
+      assert (
+        exists Δ', Δ' ⊢ rename_process (up P) swap01 :#
+      ).
+      { destruct (swap01_preserves_well_typedness _ _ H11); eauto. }
+      destruct H12 as [Δ' ?].
+      assert (
+        (rename_process (fill_hole E M) swap01) ⊵ (rename_process P' swap01)
+      ).
+      {
+        inversion H2; subst.
+        replace swap01 with (up_ren_n 0 swap01) by auto.
+        eapply equiv_red_invariant_under_swap; eauto.
+      }
+      destruct (IHn _ _ _ _ _ _ _
+                  H5
+                  H0
+                  H6
+                  H10
+                  H12
+                  H13) as [E' [M' [? [? ?]]]].
+      exists (cons_r (rename_axcut_ctx E' swap01) P0).
+      exists (rename_message M' (up_ren_n (length_axcut_ctx E') swap01)).
+      repeat split.
+      * simpl. rewrite <- rename_axcut_ctx_over_fill_hole; try apply swap01_is_bijective.
+        rewrite <- H14. rewrite swap_swap_id. reflexivity.
+      * econstructor; eauto.
+        replace 1 with (swap01 0); replace swap01 with (up_ren_n 0 swap01); auto.
+        apply well_formedness_preserved_under_swap01; auto.
+      * repeat rewrite reduce_axcut_equation_4.
+        apply rp_cong_cut_l.
+        rewrite swap_swap_idE.
+        rewrite <- rename_axcut_ctx_preserves_length.
+        rewrite up_ren_swap_swap_idM.
+        assumption.
+    - exists (cons_r E Q'0).
+      exists M.
+      repeat split; auto.
+      * econstructor; eauto. inversion H2.
+        eapply (nfv_under_equiv_red _ P0); eauto.
+      * repeat rewrite reduce_axcut_equation_4.
+        apply rp_cong_cut_r.
+        inversion H2; subst.
+        destruct (swap01_preserves_well_typedness _ _ H12).
+        eapply equiv_red_invariant_under_down; eauto.
+        ** replace swap01 with (up_ren_n 0 swap01) by auto.
+           eapply equiv_red_invariant_under_swap; eauto.
+        ** apply nfv_01_swap; auto.
+Admitted.
+
+Lemma reduce_axcut_invariant_under_reduced_context :
+  forall Q Q' Γ Γ' E M P,
+    Q = fill_hole E M ->
+    well_formed_axcut_ctx 0 E ->
+    Γ ⊢ Q :# ->
+    Γ' ⊢ P :# ->
+    Q ⊵ Q' ->
+    exists E' M',
+      Q' = fill_hole E' M' /\
+      well_formed_axcut_ctx 0 E' /\
+      (reduce_axcut E M P) ⊵ (reduce_axcut E' M' P).
+Proof.
+  intros. eapply reduce_axcut_invariant_under_reduced_context'; eauto.
 Qed.
