@@ -3041,9 +3041,6 @@ Proof.
   intros. eapply reduce_axcut_in_reduce_axcut'; eauto.
 Qed.
 
-(******************************************************************************)
-(* new approach *)
-(******************************************************************************)
 Lemma reduce_axcut_over_reduce_axcut' :
   forall n E M P E0 M0 P0,
     n = length_axcut_ctx E0 ->

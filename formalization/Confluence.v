@@ -1067,5 +1067,3 @@ Proof.
   apply clos_trans_par_red_in_multi_step_red in H2, H3.
   eexists; eauto.
 Qed.
-
-Print Assumptions church_rosser.
