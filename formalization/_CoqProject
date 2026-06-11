@@ -17,5 +17,5 @@ DirectedCong.v
 AxCutCtx.v
 ParallelReduction.v
 EquivRedProperties.v
-# Confluence.v
+Confluence.v
 # Results.v
