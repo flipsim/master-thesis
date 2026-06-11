@@ -834,10 +834,13 @@ Proof.
                   H0
                   H6
                   H8
-                  H7) as [E' [M' [? [? ?]]]].
-      eexists. split.
-      * econstructor. eassumption.
-      * econstructor. rewrite H. eapply rp_ax_cut_l; auto.
+                  H7) as [[E' [M' [? [? ?]]]] | ?].
+      * eexists; split.
+        ** econstructor; eassumption.
+        ** econstructor. rewrite H. eapply rp_ax_cut_l; auto.
+      * eexists; split; apply or_intror.
+        ** apply H.
+        ** apply c_refl.
     - inversion H2; subst.
       eexists; split; econstructor.
       * eapply reduce_axcut_invariant_under_reduced_substituent; eauto.
@@ -867,10 +870,13 @@ Proof.
                   H0
                   H8
                   H6
-                  H7) as [E' [M' [? [? ?]]]].
-      eexists. split.
-      * econstructor. eassumption.
-      * econstructor. rewrite H. eapply rp_ax_cut_r; auto.
+                  H7) as [[E' [M' [? [? ?]]]] | ?].
+      * eexists; split.
+        ** econstructor; eassumption.
+        ** econstructor. rewrite H. eapply rp_ax_cut_r; auto.
+      * eexists; split; apply or_intror.
+        ** apply H.
+        ** apply c_cut_comm.
   (* seq *)
   + inversion H1; subst.
     - eexists; split; econstructor.
@@ -890,10 +896,13 @@ Proof.
                   H5
                   H7
                   H8
-                  H0) as [E' [M' [? [? ?]]]].
-      eexists. split.
-      * econstructor. rewrite H2. eapply rp_ax_cut_l; auto.
-      * econstructor. eassumption.
+                  H0) as [[E' [M' [? [? ?]]]] | ?].
+      * eexists; split.
+        ** econstructor. rewrite H2. eapply rp_ax_cut_l; auto.
+        ** econstructor; eassumption.
+      * eexists; split; apply or_intror.
+        ** apply c_comm. apply H2.
+        ** apply c_refl.
     - inversion H; subst.
       eexists; split; econstructor.
       * eapply rp_ax_cut_r; eauto.
@@ -923,10 +932,13 @@ Proof.
                   H5
                   H8
                   H7
-                  H0) as [E' [M' [? [? ?]]]].
-      eexists. split.
-      * econstructor. rewrite H2. eapply rp_ax_cut_r; auto.
-      * econstructor. eassumption.
+                  H0) as [[E' [M' [? [? ?]]]] | ?].
+      * eexists; split.
+        ** econstructor. rewrite H2. eapply rp_ax_cut_r; auto.
+        ** econstructor; eassumption.
+      * eexists; split; apply or_intror.
+        ** eapply c_trans. apply c_cut_comm. apply c_comm. apply H2.
+        ** apply c_refl.
     - eexists; split; econstructor.
       * apply rp_cong_cut_l; eauto.
       * apply rp_cong_cut_r; eauto.
