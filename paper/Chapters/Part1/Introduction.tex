@@ -1,0 +1,436 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Introduction}\label{ch:introduction}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Functional programming, with its foundation being the $\lambda$-calculus,
+enjoys a plethora of strong, theoretical properties. Particularly with
+the use of structured data in the form of (co)data types, many functional programming
+languages allow for complex reasoning about the flow of data.
+
+However, with the surge of mobile applications, web services and data centers,
+the nature of programming is becoming increasingly parallel. Thus, our programs
+need not only structure its data, but also its communication. Milner's
+$\pi$-calculus \cite{Milner1992:PiCalculus} is one of the process calculi that emerged in the search of
+a model for concurrent computation.
+
+The need for structured concurrency gave rise to \emph{session types}
+which have been introduced by Honda \cite{Honda1993:TypesForDyadicInteraction}.
+Just as data types encode the structure
+of our data, session types specify concurrent interaction as type-theoretic
+communication protocols. Approaching session types as a static type system for $\pi$-calculi,
+we would like for these protocols to be enforced at compile time with
+two safety guarantees being of particular interest: session fidelity and
+deadlock freedom. One way for a type system to satisfy these safety guarantees
+is to approach its design through the relation to formal logic.
+
+\section{Curry-Howard: Proofs as Programs}
+One of the advantages of functional programming languages is their tight correspondence
+to mathematical logic. The \emph{Curry-Howard correspondence} \cite{Curry1959-CombinatoryLogic, Howard1980-FormulasAsTypes}
+provides the theoretical foundation relating \emph{proofs} and \emph{programs},
+\emph{propositions} and \emph{types}.
+
+Most famously, this connection is explained
+through Church's $\lambda$-calculus \cite{Church1932:LambdaCalc} and
+Gentzen's natural deduction ND \cite{Gentzen1935:Untersuchungen1}:
+Proofs in intuitionistic logic correspond to programs written in the $\lambda$-calculus,
+and, vice versa, terms of the $\lambda$-calculus give an algorithmic specification
+of an intuitionistic proof. But the correspondence goes beyond a mere bijection
+between proofs and programs; it also connects the rules for evaluating programs
+the ones for simplifying proofs.
+
+Natural deduction is not the only logic that witnesses this connection. The
+Curry-Howard view has proved to be more general and has been applied to various
+other logics, such as Gentzen's sequent calculus LK \cite{Gentzen1935:Untersuchungen2} - introduced within the
+same paper as his natural deduction. Curien and Herbelin's $\lambda\mu\tilde{\mu}$-calculus \cite{Curien2000:DualityOfComputation}
+is one of the languages that, through the lens of the Curry-Howard-correspondence,
+reveals the computational content of classical LK proofs.
+
+The sequent calculus' deep symmetries lend themselves to study a variety of
+features through duality - such as (co)data-types \cite{Binder2025:Thesis} or
+(co)induction \cite{Downen2015:StructuralRecursion} - while at the same time being a suitable intermediate
+representation for compilers \cite{Schuster2025:AxCut}.
+As such, the study of sequent calculi can guide us in our
+exploration of the design of programming languages. Naturally, we may want to apply this
+perspective to extensions of traditional logics.
+
+The extensions of logic this thesis is concerned with are derivates of
+Girard's \emph{Linear Logic} LL \cite{Girard19871:LinearLogic}. Term assignments for LL have also been studied,
+both in the intuitionistic \cite{Caires2010:ILLasSessions} and classical setting \cite{Wadler2012:PropositionsAsSessions}.
+The languages thus obtained are a form $\pi$-calculus, with propositions being interpreted as session types
+instead of data types. Following the approach explained above, our aim is to
+explore the design of concurrent programs by considering a different choice
+of sequent calculus as our basis for concurrent computation.
+For this purpose, we will first consider the options from which we can choose
+when designing the rules of a sequent calculus.
+
+\section{Designing Sequent Calculi}
+The meaning of the logical connectives can be understood in terms of the logical rules
+which define their justifications or refutations. In a sequent calculus, these rules
+can be classified using two criteria: rules either \emph{introduce} their connective
+in the conclusion or \emph{eliminate} it from their premises, and they either do so
+on the \emph{left} or the \emph{right} side of the turnstile. Thus, for some generic
+$n$-ary connective $\odot$, we have four possible combinations as demonstrated
+by the following table.
+
+\begin{center}
+  \begin{minipage}{0.49\textwidth}
+    \centering
+    \begin{prooftree}
+      \hypo{P_1 \hdots P_n}
+      \infer1[]{\Gamma, \odot(T_1, \hdots, T_n) \vdash \Delta}
+    \end{prooftree}
+    \\ \bigskip
+    \begin{prooftree}
+      \hypo{\Gamma, \odot(T_1, \hdots, T_n) \vdash \Delta}
+      \hypo{P_1 \hdots P_n}
+      \infer2[]{C}
+    \end{prooftree}
+  \end{minipage}\hfill
+  \begin{minipage}{0.49\textwidth}
+    \centering
+    \begin{prooftree}
+      \hypo{P_1 \hdots P_n}
+      \infer1[]{\Gamma \vdash \odot(T_1, \hdots, T_n), \Delta}
+    \end{prooftree}
+    \\ \bigskip
+    \begin{prooftree}
+      \hypo{\Gamma \vdash \odot(T_1, \hdots, T_n), \Delta}
+      \hypo{P_1 \hdots P_n}
+      \infer2[]{C}
+    \end{prooftree}
+  \end{minipage}
+\end{center}
+
+Here, $P_1, \hdots, P_n$ are premises and $C$ is a conclusion of the form $\Gamma \vdash \Delta$.
+The formula $\odot(T_1, \hdots, T_n)$ mentioned in all rules is called the \emph{active formula}.
+If it appears in one of the premises, this premise is called the \emph{main premise},
+all other premises are called \emph{secondary} or \emph{side premises}.
+
+Concretely, for the conjunction, we may consider the following four rules
+which are all valid inferences on formulas of the form $A \land B$.
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{\Gamma, A, B \vdash \Delta}
+    \infer1[L-$\land$-I]{\Gamma, A \land B \vdash \Delta}
+  \end{prooftree}
+  \qquad
+  \begin{prooftree}
+    \hypo{\Gamma_1 \vdash A, \Delta_1}
+    \hypo{\Gamma_2 \vdash B, \Delta_2}
+    \infer2[R-$\land$-I]{\Gamma_1, \Gamma_2 \vdash A \land B, \Delta_1, \Delta_2}
+  \end{prooftree}
+  \\ \bigskip
+  \begin{prooftree}
+    \hypo{\Gamma_1, A \land B \vdash \Delta_1}
+    \hypo{\Gamma_2 \vdash A, \Delta_2}
+    \hypo{\Gamma_3 \vdash B, \Delta_3}
+    \infer3[L-$\land$-E]{\Gamma_1, \Gamma_2, \Gamma_3 \vdash \Delta_1, \Delta_2, \Delta_3}
+  \end{prooftree}
+  \\ \bigskip
+  \begin{prooftree}
+    \hypo{\Gamma_1 \vdash A \land B, \Delta_1}
+    \hypo{\Gamma_2, A, B \vdash \Delta_2}
+    \infer2[R-$\land$-E]{\Gamma_1, \Gamma_2 \vdash \Delta_1, \Delta_2}
+  \end{prooftree}
+\end{center}
+
+However, defining a connective using all four rules is redundant, since some of
+these rules can be expressed through each other.
+In particular, left-introduction and right-elimination (as well as left-elimination and right-introduction) rules
+can be obtained through each other.
+
+This phenomenon is captured by the notion of \emph{bi-expressibility} introduced
+by \cite{Ostermann2022:IntroElim}, who demonstrate that the choice of inference rules
+gives rise to four functionally complete sub-calculi which correspond to one
+of the rows or columns of the table above.
+
+\section{The Computational Content of Proofs}
+The choice of sub-calculus does not merely amount to a change in syntax,
+it changes our notion of computation.
+To demonstrate, we will consider the formula $(A \land B) \to (B \land A)$.
+
+\subsection{Natural Deduction: ND}
+Natural deduction only consists of right rules.
+The following derivation $\mathcal{D}$ is a proof of the sequent
+$\vdash (A \land B) \to (B \land A)$.
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{A \land B \vdash A \land B}
+    \infer1[R-$\land$-E$_1$]{A \land B \vdash B}
+
+    \hypo{A \land B \vdash A \land B}
+    \infer1[R-$\land$-E$_2$]{A \land B \vdash A}
+
+    \infer2[R-$\land$-I]{A \land B \vdash B \land A}
+
+    \infer1[R-$\to$-I]{\vdash (A \land B) \to (B \land A)}
+  \end{prooftree}
+\end{center}
+
+Suppose we had derivations $\mathcal{D}_A$ and $\mathcal{D}_B$ for the sequents
+$\vdash A$ and $\vdash B$, respectively, then we could spark a computation as follows:
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{\mathcal{D}}
+    \ellipsis{}{\vdash (A \land B) \to (B \land A)}
+
+    \hypo{\mathcal{D}_A}
+    \ellipsis{}{\vdash A}
+    \hypo{\mathcal{D}_B}
+    \ellipsis{}{\vdash B}
+    \infer2[R-$\land$-I]{\vdash A \land B}
+
+    \infer2[R-$\to$-E]{\vdash B \land A}
+  \end{prooftree}
+\end{center}
+
+This proof is not in normalform, in particular, it violates the \emph{subformula property}:
+The formula $(A \land B) \to (B \land A)$ occurs in one of its subderivations,
+but no longer in the conclusion. The reason for this is an introduction rule
+which is immediately followed by an elimination rule. However, we can eliminate
+this detour by substituting the proof of $\vdash A \land B$ into $\mathcal{D}$.
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{\mathcal{D}_A}
+    \ellipsis{}{\vdash A}
+    \hypo{\mathcal{D}_B}
+    \ellipsis{}{\vdash B}
+    \infer2[R-$\land$-I]{\vdash A \land B}
+    \infer1[R-$\land$-E$_1$]{\vdash B}
+
+    \hypo{\mathcal{D}_A}
+    \ellipsis{}{\vdash A}
+    \hypo{\mathcal{D}_B}
+    \ellipsis{}{\vdash B}
+    \infer2[R-$\land$-I]{\vdash A \land B}
+    \infer1[R-$\land$-E$_2$]{\vdash A}
+
+    \infer2[R-$\land$-I]{\vdash B \land A}
+  \end{prooftree}
+\end{center}
+
+This created two new detours: R-$\land$-Intro followed by R-$\land$-Elim$_1$
+(R-$\land$-Elim$_2$). Eliminating them finally creates a proof in normalform.
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{\mathcal{D}_B}
+    \ellipsis{}{\vdash B}
+    \hypo{\mathcal{D}_A}
+    \ellipsis{}{\vdash A}
+    \infer2[R-$\land$-Intro]{\vdash B \land A}
+  \end{prooftree}
+\end{center}
+
+The proof above corresponds to the (open) $\lambda$-calculus term
+\[
+  (\lambda x . (proj_2 x, proj_1 x)) (a, b)
+\]
+and the proof simplifications that were carried out mirror the term's reduction steps
+\[
+  (\lambda x . (proj_2 x, proj_1 x)) (a, b) \rhd (proj_2 (a, b), proj_1 (a, b)) \rhd (b, a)
+\]
+At its core, the notion of computation within natural deduction is function creation
+and application.
+
+\subsection{Sequent Calculus: LK}
+In LK, we no longer have elimination rules on the right, but instead introduction
+rules on the left (and right). A derivation $\mathcal{D}$ of the same sequent
+now has the form
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{B \vdash B}
+    \hypo{A \vdash A}
+    \infer2[R-$\land$-I]{A, B \vdash B \land A}
+    \infer1[L-$\land$-I]{A \land B \vdash B \land A}
+    \infer1[R-$\to$-I]{\vdash (A \land B) \to (B \land A)}
+  \end{prooftree}
+\end{center}
+
+To spark a computation, we require the rule of cut (again assuming the existence
+of derivations $\mathcal{D}_A$ and $\mathcal{D}_B$).
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{\mathcal{D}}
+    \ellipsis{}{\vdash (A \land B) \to (B \land A)}
+
+    \hypo{\mathcal{D}_A}
+    \ellipsis{}{\vdash A}
+    \hypo{\mathcal{D}_B}
+    \ellipsis{}{\vdash B}
+    \infer2[R-$\land$-I]{\vdash A \land B}
+    \hypo{B \land A \vdash B \land A}
+    \infer2[L-$\to$-I]{(A \land B) \to (B \land A) \vdash B \land A}
+
+    \infer2[Cut]{\vdash B \land A}
+  \end{prooftree}
+\end{center}
+
+A detour in LK occurs whenever a left and right introduction rule meet in a cut.
+We can simplify the cut above by introducing two new ones, both of which have a
+principal formula of lower rank.
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{\mathcal{D}_A}
+    \ellipsis{}{\vdash A}
+    \hypo{\mathcal{D}_B}
+    \ellipsis{}{\vdash B}
+    \infer2[R-$\land$-I]{\vdash A \land B}
+
+    \hypo{B \vdash B}
+    \hypo{A \vdash A}
+    \infer2[R-$\land$-I]{A, B \vdash B \land A}
+    \infer1[L-$\land$-I]{A \land B \vdash B \land A}
+
+    \hypo{B \land A \vdash B \land A}
+    \infer2[Cut]{A \land B \vdash B \land A}
+
+    \infer2[Cut]{\vdash B \land A}
+  \end{prooftree}
+\end{center}
+
+The lower cut is eliminated can be eliminated via proof composition.
+The remaining cut could be eliminated, but a cut with an axiom at the root
+will not violate the subformula property.
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{\mathcal{D}_B}
+    \ellipsis{}{\vdash B}
+    \hypo{\mathcal{D}_A}
+    \ellipsis{}{\vdash A}
+    \infer2[R-$\land$-I]{\vdash B \land A}
+
+    \hypo{B \land A \vdash B \land A}
+    \infer2[Cut]{\vdash B \land A}
+  \end{prooftree}
+\end{center}
+
+Similarly, we can find a $\lambda\mu\tilde{\mu}$-command, which corresponds
+to this proof and its simplifications.
+\begin{align*}
+  & \; \langle \lambda (x \cdot \alpha). \langle x \,\vert\vert\, Match \{ (x, y) \mapsto \langle (y, x) \,\vert\vert\, \alpha \rangle \} \rangle \,\vert\vert\, (a, b) \cdot \alpha \rangle \\
+  \rhd &\; \langle (a, b) \,\vert\vert\, Match \{ (x, y) \mapsto \langle (y, x) \,\vert\vert\, \alpha \rangle \} \rangle \\
+  \rhd &\; \langle (b, a) \,\vert\vert\, \alpha \rangle
+\end{align*}
+
+Now, opposed to ND, the driver of computation is the interplay between
+producers, e.g. an abstraction, and consumers, e.g. a call stack $(a, b) \cdot \alpha$ -
+the latter not being a first-class entity in ND. Thus, we see that the underlying
+logical framework influences not only the structure of our programs, but also
+its features and model of computation.
+
+\section{Logical Elimination and Free Deduction}
+Neither ND nor LK makes use of elimination rules on the left, which is in contrast
+to Parigot's \emph{Free Deduction} FD \cite{Parigot1992:FreeDeduction} where every inference eliminates a formula.
+Now, a proof $\mathcal{D}$ of the formula $\tau := (A \land B) \to (B \land A)$ looks as follows.
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{\tau \vdash \tau}
+
+    \hypo{A \land B \vdash A \land B}
+    \hypo{B \land A \vdash B \land A}
+    \hypo{B \vdash B}
+    \hypo{A \vdash A}
+    \infer3[L-$\land$-E]{A, B \vdash B \land A}
+    \infer2[R-$\land$-E]{A \land B \vdash B \land A}
+
+    \infer2[L-$\to$-E]{\vdash \tau}
+  \end{prooftree}
+\end{center}
+
+The derivation already highlights the characteristic of FD's normalforms: Every
+main premise is an axiom which is causing the derivations to grow as right-deep trees.
+Thus, as will be explained later, for a computation to occur, an axiom must be subject to both its left and right
+eliminations rule.
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{\mathcal{D}}
+    \ellipsis{}{\vdash \tau}
+
+    \hypo{A \land B \vdash A \land B}
+    \hypo{\mathcal{D}_A}
+    \ellipsis{}{\vdash A}
+    \hypo{\mathcal{D}_B}
+    \ellipsis{}{\vdash B}
+    \infer3[L-$\land$-E]{\vdash A \land B}
+
+    \hypo{B \land A \vdash B \land A}
+
+    \infer3[R-$\to$-E]{\vdash B \land A}
+  \end{prooftree}
+\end{center}
+
+Substituting the axiom $A \land B \vdash A \land B$ for the proof of $A \land B$
+yields the first simplification step.
+
+\begin{center}
+  \begin{prooftree}[separation=1.0em]
+    \hypo{A \land B \vdash A \land B}
+    \hypo{\mathcal{D}_A}
+    \ellipsis{}{\vdash A}
+    \hypo{\mathcal{D}_B}
+    \ellipsis{}{\vdash B}
+    \infer3[L-$\land$-E]{\vdash A \land B}
+
+    \hypo{B \land A \vdash B \land A}
+    \hypo{B \vdash B}
+    \infer[no rule]1{A \vdash A}
+    \infer2[L-$\land$-E]{A, B \vdash B \land A}
+    \infer2[R-$\land$-E]{A \land B \vdash B \land A}
+  \end{prooftree}
+\end{center}
+
+This reveals a second detour involving L-$\land$-E and R-$\land$-E which
+can also be discharged via proof composition to yield the following normalform.
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{B \land A \vdash B \land A}
+    \hypo{\mathcal{D}_B}
+    \ellipsis{}{\vdash B}
+    \hypo{\mathcal{D}_A}
+    \ellipsis{}{\vdash A}
+    \infer3[L-$\land$-E]{\vdash B \land A}
+  \end{prooftree}
+\end{center}
+
+This looks similar to the normalform we reached in LK, but the axiom
+$B \land A \vdash B \land A$ cannot be eliminated - and it does not have to be in order to
+satisfy the subformula property. Previously, we could interpret
+the resulting normalforms as an order pair $(b, a)$. This analogy fails in FD
+due to the presence of an additional axiom. Therefore, we suggest for FD to be
+interpreted in the context of communicating processes: The axiom $B \land A \vdash B \land A$
+creates a binary session channel, and every elimination rule specifies the \enquote{payload}
+to send along this channel. Whenever a channel has witnessed communication on both
+sides, i.e. a left and right elimination rule meet, we can perform a step of communication.
+A normalform having only axioms as main premises thus corresponds to channels
+waiting for external communication, i.e. the program only specified the behavior
+for one side of the channel. This thesis will provide a suitable term assignment
+to make this interpretation of FD precise.
+
+\section{Contribution and Structure}
+We present a term assignment for a version of Parigot's Free Deduction,
+called System LFD, and demonstrate how the choice of elimination rules naturally
+describes asynchronous processes. Thus, showing that LFD serves an alternative
+logical foundation for the asynchronous $\pi$-calculus. The main contribution
+of this thesis consists in mechanized proofs for type safety and the
+Church-Rosser property for LFD's term assignment system, $\pi$FD.
+
+The rest of this thesis is structured in three parts.
+\begin{itemize}
+  \item The remainder of the first part gives an introduction into the logical system
+        of Free Deduction and how LFD is derived from it.
+  \item The second part introduces the term assignment system $\pi$FD and its relation
+        to existing Curry-Howard interpretations of linear logics.
+  \item The last part delves into the metatheory of $\pi$FD.
+\end{itemize}

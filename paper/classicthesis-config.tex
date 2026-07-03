@@ -76,7 +76,7 @@
 %\PassOptionsToPackage{ngerman,american}{babel}   % change this to your language(s)
 % Spanish languages need extra options in order to work with this template
 %\PassOptionsToPackage{spanish,es-lcroman}{babel}
-	\usepackage{babel}                  
+\usepackage{babel}
 
 \usepackage{csquotes}
 \PassOptionsToPackage{%
@@ -100,7 +100,7 @@
 % General useful packages
 % ******************************************************************** 
 \PassOptionsToPackage{T1}{fontenc} % T2A for cyrillics
-    \usepackage{fontenc}     
+    \usepackage{fontenc}
 \usepackage{textcomp} % fix warning with missing font shapes
 \usepackage{scrhack} % fix warnings when using KOMA with listings package          
 \usepackage{xspace} % to get the spacing after macros right  
@@ -112,6 +112,40 @@
     %\renewcommand{\bflabel}[1]{{#1}\hfill} % fix the list of acronyms --> no longer working
     %\renewcommand*{\acsfont}[1]{\textsc{#1}} 
     \renewcommand*{\aclabelfont}[1]{\acsfont{#1}}
+
+% ********************************************************************
+% Theorems, Typing Derivations, Logic Symbols, etc.
+% ********************************************************************
+\usepackage{amsthm, amssymb}
+\usepackage{cmll}
+\usepackage{ebproof}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{convention}{Convention}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{prop}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{conjecture}{Conjecture}
+
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+\newtheorem{example}{Example}
+
+% ********************************************************************
+% TODO Notes
+% ********************************************************************
+\usepackage{xargs}
+\usepackage[pdftex,dvipsnames]{xcolor} 
+\usepackage[prependcaption]{todonotes} %,textsize=tiny
+\newcommandx{\unsure}[2][1=]{\todo[linecolor=red,backgroundcolor=red!25,bordercolor=red,#1]{#2}}
+\newcommandx{\change}[2][1=]{\todo[linecolor=blue,backgroundcolor=blue!25,bordercolor=blue,#1]{#2}}
+\newcommandx{\info}[2][1=]{\todo[linecolor=OliveGreen,backgroundcolor=OliveGreen!25,bordercolor=OliveGreen,#1]{#2}}
+\newcommandx{\improvement}[2][1=]{\todo[linecolor=Plum,backgroundcolor=Plum!25,bordercolor=Plum,#1]{#2}}
+
 % ****************************************************************************************************
 
 
@@ -171,7 +205,7 @@
 \pdfadjustspacing=1 
 \PassOptionsToPackage{pdftex}{graphicx}
     \usepackage{graphicx} 
- 
+
 
 % ********************************************************************
 % Hyperreferences
@@ -230,9 +264,6 @@
             \providecommand{\subfigureautorefname}{\figureautorefname}%             
     }{\relax}
 \makeatother
-
-\usepackage{ebproof}
-
 
 % ****************************************************************************************************
 % 7. Last calls before the bar closes
