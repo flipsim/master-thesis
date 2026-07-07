@@ -1,3 +1,254 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Free Deduction}\label{ch:free-deduction}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+In this section we introduce the logical Framework of \enquote{Free Deduction} (FD)
+and discuss the normalization procedure for proofs of FD, as described by Parigot.
+Using FD as a starting point, we derive the framework LFD in Section \ref{ch:linear-fd}.
+
+\section{The Logical Framework FD}
+For now, we will restrict ourselves to the connectives $\otimes$, $\oplus$, and $\to$.
+Opposed to Parigot, we put an emphasize on the polarity (citation!) connectives.
+
+\begin{definition}[Propositions of FD]
+  The logical propositions of FD are defined inductively by the following grammar:
+  \[
+    A, B \Coloneqq X
+              \mid A \oplus A
+              \mid A \otimes A
+              \mid A \to A
+  \]
+\end{definition}
+
+Even though Parigot's representation of \enquote{Free Deduction} is not linear
+and uses implicit structural rules, we still differentiate between multiplicative
+and additive connectives as in linear logic. Through the course of this thesis,
+we will restrict ourselves to the linear fragment of Free Deduction, leaving
+the treatment of structural rules and exponentials to future work. As a consequence,
+the logical rules of FD correspond to the linear core of Negri's UCL (citation!).
+
+\begin{definition}[FD]
+  \phantom{Foo} \\
+  \begin{center}
+    \begin{prooftree}
+      \hypo{}
+      \infer1[Ax]{A \vdash A}
+    \end{prooftree}
+    \\ \bigskip
+    \begin{prooftree}
+      \hypo{\Gamma_1, A \oplus B \vdash \Delta_1}
+      \hypo{\Gamma_2 \vdash A, \Delta_2}
+      \infer2[L$\oplus_1$]{\Gamma_1, \Gamma_2 \vdash \Delta_1, \Delta_2}
+    \end{prooftree}
+    \hfill
+    \begin{prooftree}
+      \hypo{\Gamma_1, A \oplus B \vdash \Delta_1}
+      \hypo{\Gamma_2 \vdash B, \Delta_2}
+      \infer2[L$\oplus_2$]{\Gamma_1, \Gamma_2 \vdash \Delta_1, \Delta_2}
+    \end{prooftree}
+    \\ \bigskip
+    \begin{prooftree}
+      \hypo{\Gamma_1 \vdash A \oplus B, \Delta_1}
+      \hypo{\Gamma_2, A \vdash \Delta_2}
+      \hypo{\Gamma_2, B \vdash \Delta_2}
+      \infer3[R$\oplus$]{\Gamma_1, \Gamma_2 \vdash \Delta_1, \Delta_2}
+    \end{prooftree}
+    \\ \bigskip
+    \begin{prooftree}[center=false]
+      \hypo{\Gamma_1, A \otimes B \vdash \Delta_1}
+      \hypo{\Gamma_2 \vdash A, \Delta_2}
+      \infer[no rule]1{\Gamma_3 \vdash B, \Delta_3}
+      \infer2[L$\otimes$]{\Gamma_1, \Gamma_2, \Gamma_3 \vdash \Delta_1, \Delta_2, \Delta_3}
+    \end{prooftree}
+    \hfill
+    \begin{prooftree}[center=false]
+      \hypo{\Gamma_1 \vdash A \otimes B, \Delta_1}
+      \hypo{\Gamma_2, A, B \vdash \Delta_2}
+      \infer2[R$\otimes$]{\Gamma_1, \Gamma_2 \vdash \Delta_1, \Delta_2}
+    \end{prooftree}
+    \\ \bigskip
+    \begin{prooftree}[center=false, separation=1.0em]
+      \hypo{\Gamma_1, A \to B \vdash \Delta_1}
+      \hypo{\Gamma_2, A \vdash B, \Delta_2}
+      \infer2[L$\to$]{\Gamma_1, \Gamma_2 \vdash \Delta_1, \Delta_2}
+    \end{prooftree}
+    \hfill
+    \begin{prooftree}[center=false, separation=1.0em]
+      \hypo{\Gamma_1 \vdash A \to B, \Delta_1}
+      \hypo{\Gamma_2 \vdash A, \Delta_2}
+      \infer[no rule]1{\Gamma_3, B \vdash \Delta_3}
+      \infer2[R$\to$]{\Gamma_1, \Gamma_2, \Gamma_3 \vdash \Delta_1, \Delta_2, \Delta_3}
+    \end{prooftree}
+  \end{center}
+\end{definition}
+
+All sequents have the form $\Gamma \vdash \Delta$, where $\Gamma$ and $\Delta$
+are unordered lists of formulas.
+
+There are two observations that can be made about the structure of proofs
+and provability in FD. First, opposed to classical sequent calculi like LK,
+no logical rule of FD has an active formula in its conclusion. Every instance
+of the logical rules removes the principal formula from the sequent entirely.
+This causes proofs of FD to possess the \emph{formula property}.
+
+\begin{definition}[Formula property]
+  Every formula $A$ which occurs in the conclusion $\Gamma \vdash \Delta$ of a proof
+  in FD comes from an axiom $A \vdash A$.
+\end{definition}
+
+\begin{remark}
+  In a system with implicit structural rules, the property must be relaxed
+  to every non-weakened formula $A$ and axiom of the shape $\Pi, A \vdash A, \Theta$.
+  However, if one considers elimination rules for exponentials (see Negri'S UCL (citation!)),
+  the formula property still holds in the presence of explicit structural rules.
+\end{remark}
+
+Consequently, a proof may only violate the subformula property if both formulas
+of an axiom are eventually principal formula of an elimination rule, i.e.
+if the proof contains both a left and right elimination with formulas of the same axiom
+as subjects. This will later be used to define a notion of \emph{logical redex}.
+
+Secondly, FD has no Cut rule. Surprisingly, the rule of Cut
+\begin{center}
+  \begin{prooftree}
+    \hypo{\Gamma \vdash A, \Delta}
+    \hypo{\Pi, A \vdash \Theta}
+    \infer2[Cut]{\Gamma, \Pi \vdash \Delta, \Theta}
+  \end{prooftree}
+\end{center}
+is derivable as can be witnessed by the following derivation:
+\begin{center}
+  \begin{prooftree}
+    \hypo{A \to A \vdash A \to A}
+    \hypo{A \vdash A}
+    \infer2[L$\to$]{\vdash A \to A}
+    \hypo{\Gamma, A \vdash \Delta}
+    \hypo{\Pi \vdash A, \Theta}
+    \infer3[R$\to$]{\Gamma, \Pi \vdash \Delta, \Theta}
+  \end{prooftree}
+\end{center}
+
+The same construction can be carried out using the connective $\oplus$ or $\otimes$
+if we also consider their units $0$ and $1$, and their corresponding elimination rules:
+
+\begin{definition}[Units for FD]
+  The meaning of the units $0$ and $1$ is defined by the following rules.
+  \begin{center}
+    \begin{tabular}{cc}
+      \begin{prooftree}
+        \hypo{\Gamma, 1 \vdash \Delta}
+        \infer1[L$1$]{\Gamma \vdash \Delta}
+      \end{prooftree}
+      &
+      \begin{prooftree}
+        \hypo{\Gamma_1 \vdash 1, \Delta_1}
+        \hypo{\Gamma_2 \vdash \Delta_2}
+        \infer2[R$1$]{\Gamma_1, \Gamma_2 \vdash \Delta_1, \Delta_2}
+      \end{prooftree}
+      \\ \noalign{\bigskip}
+      \text{no left elimination rule for $0$}
+      &
+      \begin{prooftree}
+        \hypo{\Gamma \vdash 0, \Delta}
+        \infer1[R$0$]{\Gamma \vdash \Delta}
+      \end{prooftree}
+    \end{tabular}
+  \end{center}
+\end{definition}
+
+Cut can now also be derived using $\oplus$ and $0$ (and similarly, using $\otimes$ and $1$):
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{0 \oplus A \vdash 0 \oplus A}
+    \hypo{\Gamma \vdash A, \Delta}
+    \infer2[L$\oplus$]{\Gamma \vdash 0 \oplus A, \Delta}
+
+    \hypo{0 \vdash 0}
+    \infer1[R$0$]{0 \vdash}
+    \hypo{\Pi, A \vdash \Theta}
+    \infer3[R$\oplus$]{\Gamma, \Pi \vdash \Delta, \Theta}
+  \end{prooftree}
+\end{center}
+
+The phenomenon that logical redexes derive cuts arises,
+because cuts are \emph{internalized} in FD (as in natural deduction). However,
+we can make them explicit by translating the derivations so that they only
+use introduction rules and cuts, as described by \cite{Ostermann2022:IntroElim}:
+\begin{center}
+  \begin{prooftree}
+    \hypo{0 \oplus A \vdash 0 \oplus A}
+    \hypo{\Gamma \vdash A, \Delta}
+    \infer1[R-$\oplus$-I$_2$]{\Gamma \vdash 0 \oplus A, \Delta}
+    \infer2[Cut]{\Gamma \vdash 0 \oplus A, \Delta}
+    \hypo{}
+    \infer1[L-$0$-I]{0 \vdash}
+    \hypo{\Pi, A \vdash \Theta}
+    \infer2[L-$\oplus$-I]{\Pi, 0 \oplus A \vdash \Theta}
+    \infer2[Cut]{\Gamma, \Pi \vdash \Delta, \Theta}
+  \end{prooftree}
+\end{center}
+Removing the administrative redexes on the left and the resulting $\beta_\oplus$-redex
+will leave us exactly with the rule of cut.
+
+The translation demonstrates, that every elimination rule in FD can be derived
+by its dual introduction rule and a cut in the
+classical sequent calculus. Vice versa, every introduction rule
+of the classical sequent calculus can be derived in FD by instantiating the main
+premise with an axiom. This is possible because these rules are designed to mirror
+each other: The side premises of FD's left (right) elimination rules are exactly
+the premises of the dual right (left) introduction rules.
+
+The duality between elimination  and introduction rules is a direct consequence
+of the justifications for FD's logical rules. The introduction rules are justified
+through the BHK-interpretation, which give the \emph{sufficient grounds} for
+deriving a formula. Given the sufficient grounds, the elimination rules
+can be justified through an \emph{inversion} and \emph{dual inversion principle} (cite Negri).
+The former states
+\begin{equation*}
+  \parbox{0.85\textwidth}{\centering \itshape 
+    ``Whatever follows from the grounds for deriving a formula must follow from that formula.''}
+\end{equation*}
+\vspace{-2ex}
+\begin{flushright}
+  --- \textsc{Negri}, \textit{Varieties in Linear Logic} (2001)
+\end{flushright}
+
+and determines the shape of the inference figure for which the principal formula
+occurs in the succedent, i.e. the right-elimination form. For example,
+the sufficient grounds for deriving the formula $A \otimes B$ is a proof
+of $A$ and a proof $B$. From the inversion principle we obtain
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{\Gamma_1 \vdash A \otimes B, \Delta_1}
+    \hypo{\Gamma_2, A, B \vdash \Delta_2}
+    \infer2[]{\Gamma_1, \Gamma_2 \vdash \Delta_1, \Delta_2}
+  \end{prooftree}
+\end{center}
+
+The dual inversion principle, conversely, determines the shape of the left-elimination form:
+\begin{equation*}
+  \parbox{0.85\textwidth}{\centering \itshape
+    ``Whatever follows from a formula must follow from the sufficient grounds for deriving the formula.''}
+\end{equation*}
+\vspace{-2ex}
+\begin{flushright}
+  --- \textsc{Negri}, \textit{Varieties in Linear Logic} (2001)
+\end{flushright}
+This suggests the following inference figure.
+\begin{center}
+  \begin{prooftree}
+    \hypo{\Gamma_1, A \otimes B \vdash \Delta_1}
+    \hypo{\Gamma_2 \vdash A, \Delta_2}
+    \hypo{\Gamma_3 \vdash B, \Delta_3}
+    \infer3[]{\Gamma_1, \Gamma_2, \Gamma_3 \vdash \Delta_1, \Delta_2, \Delta_3}
+  \end{prooftree}
+\end{center}
+
+It is these justifications that make Cut obsolete in FD. As such,
+when considering a normalization procedure for FD, the notion
+of \emph{cut-free} proofs has to be defined separately.
+
+\section{Cut Elimination}
+
