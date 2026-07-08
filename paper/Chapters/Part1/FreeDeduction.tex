@@ -89,12 +89,13 @@ There are two observations that can be made about the structure of proofs
 and provability in FD. First, opposed to classical sequent calculi like LK,
 no logical rule of FD has an active formula in its conclusion. Every instance
 of the logical rules removes the principal formula from the sequent entirely.
-This causes proofs of FD to possess the \emph{formula property}.
+This causes proofs of FD to possess the \emph{formula property}, which can
+be verified by inspection of the rules of the calculus.
 
-\begin{definition}[Formula property]
+\begin{lemma}[Formula property]
   Every formula $A$ which occurs in the conclusion $\Gamma \vdash \Delta$ of a proof
   in FD comes from an axiom $A \vdash A$.
-\end{definition}
+\end{lemma}
 
 \begin{remark}
   In a system with implicit structural rules, the property must be relaxed
@@ -251,4 +252,172 @@ when considering a normalization procedure for FD, the notion
 of \emph{cut-free} proofs has to be defined separately.
 
 \section{Cut Elimination}
+As explained above, a detour in a proof of Free Deduction involves that
+it involves both a left and its corresponding right elimination.
+In the simplest case, both rules are adjacent. However, this need not be the
+case in general. Parigot thus differentiates between \emph{logical} and
+\emph{structural cuts}.
 
+\subsection{Logical Cuts}
+A logical cut is of the form
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{}
+    \infer1[Ax]{A \vdash A}
+
+    \hypo{\mathcal{D}_i}
+    \ellipsis{}{\Pi_i \vdash \Theta_i}
+    \delims{ \left( }{ \right)_{i} }
+    \hypo{\hspace{-1.5em}} % by default, spacing between hypos is 1.5em
+
+    \infer3[L$\odot$]{\Gamma_1 \vdash A, \Delta_1}
+
+    \hypo{\mathcal{D}_k'}
+    \ellipsis{}{\Pi'_k \vdash \Theta'_k}
+    \delims{ \left( }{ \right)_{k} }
+    \hypo{\hspace{-1.5em}}
+
+    \infer3[R$\odot$]{\Gamma_1, \Gamma_2 \vdash \Delta_1, \Delta_2}
+  \end{prooftree}
+\end{center}
+or
+\begin{center}
+  \begin{prooftree}
+    \hypo{}
+    \infer1[Ax]{A \vdash A}
+
+    \hypo{\mathcal{D}_i}
+    \ellipsis{}{\Pi_i \vdash \Theta_i}
+    \delims{ \left( }{ \right)_{i} }
+    \hypo{\hspace{-1.5em}} % by default, spacing between hypos is 1.5em
+
+    \infer3[R$\odot$]{\Gamma_1, A \vdash \Delta_1}
+
+    \hypo{\mathcal{D}_k'}
+    \ellipsis{}{\Pi'_k \vdash \Theta'_k}
+    \delims{ \left( }{ \right)_{k} }
+    \hypo{\hspace{-1.5em}}
+
+    \infer3[L$\odot$]{\Gamma_1, \Gamma_2 \vdash \Delta_1, \Delta_2}
+  \end{prooftree}
+\end{center}
+
+Both derivations refer to the same \emph{logical redex}, i.e. we will treat
+them up to the order of their left and right elimination rule.
+Their reduct is defined through a substitution
+of minor premises of R$\odot$ (L$\odot$) for axioms in minor premises of
+L$\odot$ (R$\odot$). The choice of which rule supplies the premises that are
+being substituted for reflects the non-determinism of classical logic: Either
+choice eventually normalizes the proof, but allowing both reductions comes
+at the cost of losing confluence. For example, the logical redex for $\oplus$
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{}
+    \infer1[Ax]{A \oplus B \vdash A \oplus B}
+    \hypo{\mathcal{D}_1}
+    \ellipsis{}{\Gamma, A \vdash \Delta}
+    \hypo{\mathcal{D}_2}
+    \ellipsis{}{\Gamma, B \vdash \Delta}
+    \infer3[R$\oplus$]{\Gamma, A \oplus B \vdash \Delta}
+    \hypo{\mathcal{D}_3}
+    \ellipsis{}{\Pi \vdash A, \Theta}
+    \infer2[L$\oplus_1$]{\Gamma, \Pi \vdash \Delta, \Theta}
+  \end{prooftree}
+\end{center}
+may reduce to
+\begin{center}
+  \begin{prooftree}
+    \hypo{\mathcal{D}_1[\mathcal{D}_3 / A]}
+    \ellipsis{}{\Gamma, \Pi \vdash \Delta, \Theta}
+  \end{prooftree}
+  \qquad or \qquad
+  \begin{prooftree}
+    \hypo{\mathcal{D}_3[\mathcal{D}_1 / A]}
+    \ellipsis{}{\Gamma, \Pi \vdash \Delta, \Theta}
+  \end{prooftree}
+\end{center}
+
+Parigot resolves this issue by statically removing any form of non-determinism.
+For this purpose, he annotates every axiom with a sign which determines
+the choice of substitution. This representation of Free Deduction avoids the
+additional bureaucracy and reestablishes confluence by choosing
+the substitution based on the polarity of the connective.
+
+\begin{remark}
+  Section \ref{ch:linear-fd} suggests yet another approach: Instead of
+  relying on proof composition for normalization, we may reintroduce Cut
+  and interpret FD proofs as proof nets.
+\end{remark}
+
+What remains is to discuss what we should do not, if a left and right
+elimination do not immediately succeed their axiom. Parigot refers to these
+situations as \emph{structural redexes}.
+
+\subsection{Structural Cuts}
+Whenever, a logical rule does not follow its axiom, we can make use of
+the \emph{permutation property}, which states that every logical rule may freely
+be permuted upwards towards its axiom. Generally speaking, if we want to permute
+a logical rule above the conclusion of another logical rule, then we are looking
+at a derivation of the following form:
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{P_1, \hdots, P_{i - 1}}
+    \hypo{\mathcal{D}}
+    \ellipsis{}{\Gamma_i, A \odot B \vdash \Delta_i}
+    \hypo{P_{i + 1}, \hdots, P_n}
+    \infer3[$\mathcal{R}$]{\Gamma, A \odot B \vdash \Delta}
+    \hypo{P_1', \hdots, P_m'}
+    \infer2[L$\odot$]{\Gamma' \vdash \Delta'}
+  \end{prooftree}
+\end{center}
+
+$\mathcal{R}$ is either a left or right elimination rule, such that $A \odot B$
+is not an active formula. Permuting $L\odot$ above $\mathcal{R}$ results in
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{P_1, \hdots, P_{i - 1}}
+
+    \hypo{\mathcal{D}}
+    \ellipsis{}{\Gamma_i, A \odot B \vdash \Delta_i}
+    \hypo{P_1', \hdots, P_m'}
+    \infer2[L$\odot$]{\Gamma'' \vdash \Delta''}
+
+    \hypo{P_{i + 1}, \hdots, P_n}
+    \infer3[$\mathcal{R}$]{\Gamma' \vdash \Delta'}
+  \end{prooftree}
+\end{center}
+
+\begin{remark}
+  In a system with explicit structural rules, we would also have to consider
+  the cases of permuting a logical rule above a weakening or contraction.
+\end{remark}
+
+Instead of permuting on rule at a time, we will permute a rule directly to its
+axiom. This operation can be expressed through a substitution that replaces
+the axiom $A \odot B \vdash A \odot B$ in $\mathcal{D}$ with the derivation
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{}
+    \infer1[Ax]{A \odot B \vdash A \odot B}
+    \hypo{P_1', \hdots, P_m'}
+    \infer2[L$\odot$]{\Pi \vdash \Theta}
+  \end{prooftree}
+\end{center}
+
+By continually permuting rules up to their axioms, we can identify logical redexes
+and eliminate them. This procedure eventually terminates yielding a
+cut-free proof which satisfies the subformula property. If a derivation contains
+neither logical nor structural redexes, then it is in normalform.
+
+\begin{definition}[Normalform]
+  A derivation in FD is in normalform if every main premise is an axiom.
+\end{definition}
+
+The next step in our development involves some changes to FD, that make
+it more suited as the basis of process calculus. The resulting
+framework will retain the notions of logical and structural cuts.

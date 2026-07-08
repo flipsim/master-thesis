@@ -187,7 +187,14 @@ $\vdash A$ and $\vdash B$, respectively, then we could spark a computation as fo
   \end{prooftree}
 \end{center}
 
-This proof is not in normalform, in particular, it violates the \emph{subformula property}:
+This proof is not in normalform, in particular, it violates the \emph{subformula property}.
+
+\begin{definition}[Subformula property]
+  A derivation $\mathcal{D}$ of a sequent $\Gamma \vdash \Delta$ satisfies
+  the subformula property if every formula occurring in $\mathcal{D}$ is
+  a subformula of one of the formulas contained in $\Gamma$ or $\Delta$.
+\end{definition}
+
 The formula $(A \land B) \to (B \land A)$ occurs in one of its subderivations,
 but no longer in the conclusion. The reason for this is an introduction rule
 which is immediately followed by an elimination rule. However, we can eliminate
