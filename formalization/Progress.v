@@ -10,9 +10,13 @@ From FD Require Import FinalProcess.
 From Stdlib Require Import Lia.
 
 Theorem progress :
-  forall Γ P, Γ ⊢ P :# -> (exists P', P ⊳ P') \/ final P.
+  forall Γ P, Γ ⊢ P :# -> (exists P', P ⊳ P') \/ is_final P.
 Proof.
   intros.
+  enough ((exists P' : process, P ⊳ P') \/ final P).
+  {
+    destruct H0; auto. right. eapply well_typed_final_process_is_final_wt; eauto.
+  }
   induction H.
   + apply or_comm.
     apply (link_final_or_reduces _ _ _ (t_ax _ _ _ _ _ _ H H0 H1)).
@@ -59,7 +63,8 @@ Proof.
       {
         apply (link_list_free_vars _ (n :: xs)); auto.
         + intros. destruct x; try lia. congruence.
-        + left; auto.
+        + apply link_list_wt_implies_link_list; auto.
+        + simpl. left; auto.
       }
       assert (~ (Nat.pred n) ∈ P').
       {

@@ -48,7 +48,7 @@ Print Assumptions preservation.
    P reduces to P' (P ⊳ P').
 *)
 Theorem progress :
-  forall Γ P, Γ ⊢ P :# -> (exists P', P ⊳ P') \/ final P.
+  forall Γ P, Γ ⊢ P :# -> (exists P', P ⊳ P') \/ is_final P.
 Proof. exact progress. Qed.
 
 Print Assumptions progress.
@@ -67,7 +67,7 @@ Print Assumptions progress_for_closed_processes.
    then P is final iff P is irreducible.
 *)
 Theorem final_iff_irreducible :
-  forall Γ P, Γ ⊢ P :# -> final P <-> irreducible P.
+  forall Γ P, Γ ⊢ P :# -> is_final P <-> irreducible P.
 Proof. exact final_iff_irreducible. Qed.
 
 Print Assumptions final_iff_irreducible.

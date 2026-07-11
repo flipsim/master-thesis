@@ -29,7 +29,7 @@ Inductive cut_list : process -> Prop :=
                       cut_list (cut L P).
 
 (******************************************************************************)
-(* Final Processes                                                            *)
+(* Final Processes (for the untyped case)                                     *)
 (******************************************************************************)
 Definition no_future (M : message) :=
   forall i, M <> future i.
@@ -69,6 +69,108 @@ Inductive final : process -> Prop :=
                   link_list xs P' ->
                   P ≡ P' ->
                   final P.
+
+(******************************************************************************)
+(* Final Processes (for typed processes)                                      *)
+(******************************************************************************)
+Inductive link_list_wt : list nat -> process -> Prop :=
+  | link_list_nil : forall i1 i2 M1 M2 P1 P2,
+                    no_future M1 -> no_future M2 ->
+                    P1 ≡ (link (future i1) M1) ->
+                    P2 ≡ (link (future i2) M2) ->
+                    link_list_wt [i1; i2] (cut P1 P2)
+  | link_list_cons : forall i M xs P L,
+                      link_list_wt (List.map S xs) P ->
+                      no_future M ->
+                      L ≡ (link (future i) M) ->
+                      link_list_wt (i :: xs) (cut L P).
+
+Inductive is_final : process -> Prop :=
+  | final_stop_wt : is_final stop
+  | final_future_l_wt : forall i M, is_final (link (future i) M)
+  | final_future_r_wt : forall i M, is_final (link M (future i))
+  | final_list_wt : forall xs P P',
+                      ~ (List.In 0 xs) ->
+                      link_list_wt xs P' ->
+                      P ≡ P' ->
+                      is_final P.
+
+Lemma well_typed_link_list_no_0_is_link_list_wt :
+  forall Γ P xs, Γ ⊢ P :# -> link_list xs P -> ~ (List.In 0 xs) -> link_list_wt xs P.
+Proof.
+  intros. generalize dependent Γ.
+  induction H0; intros.
+  + eapply (link_list_nil i1 i2 M1 M2); eauto.
+  + simpl in H1. assert (i1 <> 0) by lia. assert (i2 <> 0) by lia.
+    inversion H2.
+    assert (0 ∈ (link (future i1) (future i2))).
+    {
+      assert (lookup 0 (A .: Γ1) = Some A) by auto.
+      eapply (proj1 formula_property) in H11; eauto.
+    }
+    inversion H11; subst; inversion H14; congruence.
+  + simpl in H1. assert (i2 <> 0) by lia. assert (i3 <> 0) by lia.
+    inversion H2.
+    assert (0 ∈ (link (future i2) (future i3))).
+    {
+      assert (lookup 0 (dual A .: Γ2) = Some (dual A)) by auto.
+      eapply (proj1 formula_property) in H11; eauto.
+    }
+    inversion H11; subst; inversion H14; congruence.
+  + simpl in H1. assert (i1 <> 0) by lia. assert (i2 <> 0) by lia.
+    inversion H.
+    assert (0 ∈ (link (future i1) (future i2))).
+    {
+      assert (lookup 0 (A .: Γ1) = Some A) by auto.
+      eapply (proj1 formula_property) in H9; eauto.
+    }
+    inversion H9; subst; inversion H12; congruence.
+  + assert (~ List.In 0 xs).
+    {
+      destruct (PeanoNat.Nat.eq_dec i 0).
+      + subst. simpl in H1. intro. apply H1. left. auto.
+      + simpl in H1. intro. apply H1; auto.
+    }
+    assert (~ List.In 0 (ListDef.map S xs)).
+    {
+      intro. clear - H5. induction xs; auto. apply IHxs.
+      simpl in H5. destruct H5; try congruence.
+    }
+    inversion H3.
+    eapply (link_list_cons i); eauto.
+  + simpl in H1. assert (i1 <> 0) by lia. assert (i2 <> 0) by lia.
+    inversion H.
+    assert (0 ∈ (link (future i1) (future i2))).
+    {
+      assert (lookup 0 (A .: Γ1) = Some A) by auto.
+      eapply (proj1 formula_property) in H10; eauto.
+    }
+    inversion H10; subst; inversion H13; congruence.
+Qed.
+
+Lemma well_typed_final_process_is_final_wt :
+  forall Γ P, Γ ⊢ P :# -> final P -> is_final P.
+Proof.
+  intros.
+  induction H0; try (econstructor; eauto).
+  apply ((proj1 struct_cong_preserves_typing) _ _ H2) in H. clear H2.
+  eapply well_typed_link_list_no_0_is_link_list_wt; eauto.
+Qed.
+
+Lemma link_list_wt_implies_link_list :
+  forall P xs, link_list_wt xs P -> link_list xs P.
+Proof.
+  intros. induction H.
+  + eapply (link_cut_nn i1 i2 M1 M2); eauto.
+  + econstructor; eauto.
+Qed.
+
+Lemma final_wt_implies_final :
+  forall P, is_final P -> final P.
+Proof.
+  intros. induction H; try econstructor; eauto.
+  apply link_list_wt_implies_link_list; auto.
+Qed.
 
 (******************************************************************************)
 (* Canonical Cut Form                                                         *)

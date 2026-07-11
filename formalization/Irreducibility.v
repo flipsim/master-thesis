@@ -25,7 +25,7 @@ Definition irreducible P := forall Q, ~ (P ⊳ Q).
 (* We want to show, that for every well-typed P, final P iff irreducible P *)
 (* The direction <- follows immediately by progress  *)
 Lemma irreducible_implies_final :
-  forall Γ P, Γ ⊢ P :# -> irreducible P -> final P.
+  forall Γ P, Γ ⊢ P :# -> irreducible P -> is_final P.
 Proof.
   intros. apply progress in H. destruct H as [[P' ?] |]; auto.
   exfalso. apply (H0 P'); auto.
@@ -1925,9 +1925,9 @@ Proof.
 Qed.
 
 Corollary final_iff_irreducible :
-  forall Γ P, Γ ⊢ P :# -> final P <-> irreducible P.
+  forall Γ P, Γ ⊢ P :# -> is_final P <-> irreducible P.
 Proof.
   intros; split.
-  + eapply final_implies_irreducible; eauto.
+  + intros. apply final_wt_implies_final in H0. eapply final_implies_irreducible; eauto.
   + eapply irreducible_implies_final; eauto.
 Qed.
