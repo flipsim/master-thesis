@@ -31,7 +31,7 @@ provides the theoretical foundation relating \emph{proofs} and \emph{programs},
 
 Most famously, this connection is explained
 through Church's $\lambda$-calculus \cite{Church1932:LambdaCalc} and
-Gentzen's natural deduction ND \cite{Gentzen1935:Untersuchungen1}:
+Gentzen's natural deduction $\ND$ \cite{Gentzen1935:Untersuchungen1}:
 Proofs in intuitionistic logic correspond to programs written in the $\lambda$-calculus,
 and, vice versa, terms of the $\lambda$-calculus give an algorithmic specification
 of an intuitionistic proof. But the correspondence goes beyond a mere bijection
@@ -40,10 +40,10 @@ the ones for simplifying proofs.
 
 Natural deduction is not the only logic that witnesses this connection. The
 Curry-Howard view has proved to be more general and has been applied to various
-other logics, such as Gentzen's sequent calculus LK \cite{Gentzen1935:Untersuchungen2} - introduced within the
+other logics, such as Gentzen's sequent calculus $\LK$ \cite{Gentzen1935:Untersuchungen2} - introduced within the
 same paper as his natural deduction. Curien and Herbelin's $\lambda\mu\tilde{\mu}$-calculus \cite{Curien2000:DualityOfComputation}
 is one of the languages that, through the lens of the Curry-Howard-correspondence,
-reveals the computational content of classical LK proofs.
+reveals the computational content of classical $\LK$ proofs.
 
 The sequent calculus' deep symmetries lend themselves to study a variety of
 features through duality - such as (co)data-types \cite{Binder2025:Thesis} or
@@ -54,7 +54,7 @@ exploration of the design of programming languages. Naturally, we may want to ap
 perspective to extensions of traditional logics.
 
 The extensions of logic this thesis is concerned with are derivates of
-Girard's \emph{Linear Logic} LL \cite{Girard19871:LinearLogic}. Term assignments for LL have also been studied,
+Girard's \emph{Linear Logic} $\LL$ \cite{Girard19871:LinearLogic}. Term assignments for $\LL$ have also been studied,
 both in the intuitionistic \cite{Caires2010:ILLasSessions} and classical setting \cite{Wadler2012:PropositionsAsSessions}.
 The languages thus obtained are a form $\pi$-calculus, with propositions being interpreted as session types
 instead of data types. Following the approach explained above, our aim is to
@@ -112,26 +112,26 @@ which are all valid inferences on formulas of the form $A \land B$.
 \begin{center}
   \begin{prooftree}
     \hypo{\Gamma, A, B \vdash \Delta}
-    \infer1[L-$\land$-I]{\Gamma, A \land B \vdash \Delta}
+    \infer1[\textsc{l-$\land$-i}]{\Gamma, A \land B \vdash \Delta}
   \end{prooftree}
   \qquad
   \begin{prooftree}
     \hypo{\Gamma_1 \vdash A, \Delta_1}
     \hypo{\Gamma_2 \vdash B, \Delta_2}
-    \infer2[R-$\land$-I]{\Gamma_1, \Gamma_2 \vdash A \land B, \Delta_1, \Delta_2}
+    \infer2[\textsc{r-$\land$-i}]{\Gamma_1, \Gamma_2 \vdash A \land B, \Delta_1, \Delta_2}
   \end{prooftree}
   \\ \bigskip
   \begin{prooftree}
     \hypo{\Gamma_1, A \land B \vdash \Delta_1}
     \hypo{\Gamma_2 \vdash A, \Delta_2}
     \hypo{\Gamma_3 \vdash B, \Delta_3}
-    \infer3[L-$\land$-E]{\Gamma_1, \Gamma_2, \Gamma_3 \vdash \Delta_1, \Delta_2, \Delta_3}
+    \infer3[\textsc{l-$\land$-e}]{\Gamma_1, \Gamma_2, \Gamma_3 \vdash \Delta_1, \Delta_2, \Delta_3}
   \end{prooftree}
   \\ \bigskip
   \begin{prooftree}
     \hypo{\Gamma_1 \vdash A \land B, \Delta_1}
     \hypo{\Gamma_2, A, B \vdash \Delta_2}
-    \infer2[R-$\land$-E]{\Gamma_1, \Gamma_2 \vdash \Delta_1, \Delta_2}
+    \infer2[\textsc{r-$\land$-e}]{\Gamma_1, \Gamma_2 \vdash \Delta_1, \Delta_2}
   \end{prooftree}
 \end{center}
 
@@ -158,14 +158,14 @@ $\vdash (A \land B) \to (B \land A)$.
 \begin{center}
   \begin{prooftree}
     \hypo{A \land B \vdash A \land B}
-    \infer1[R-$\land$-E$_1$]{A \land B \vdash B}
+    \infer1[\textsc{r-$\land$-e$_1$}]{A \land B \vdash B}
 
     \hypo{A \land B \vdash A \land B}
-    \infer1[R-$\land$-E$_2$]{A \land B \vdash A}
+    \infer1[\textsc{r-$\land$-e$_2$}]{A \land B \vdash A}
 
-    \infer2[R-$\land$-I]{A \land B \vdash B \land A}
+    \infer2[\textsc{r-$\land$-i}]{A \land B \vdash B \land A}
 
-    \infer1[R-$\to$-I]{\vdash (A \land B) \to (B \land A)}
+    \infer1[\textsc{r-$\to$-i}]{\vdash (A \land B) \to (B \land A)}
   \end{prooftree}
 \end{center}
 
@@ -181,9 +181,9 @@ $\vdash A$ and $\vdash B$, respectively, then we could spark a computation as fo
     \ellipsis{}{\vdash A}
     \hypo{\mathcal{D}_B}
     \ellipsis{}{\vdash B}
-    \infer2[R-$\land$-I]{\vdash A \land B}
+    \infer2[\textsc{r-$\land$-i}]{\vdash A \land B}
 
-    \infer2[R-$\to$-E]{\vdash B \land A}
+    \infer2[\textsc{r-$\to$-e}]{\vdash B \land A}
   \end{prooftree}
 \end{center}
 
@@ -206,17 +206,17 @@ this detour by substituting the proof of $\vdash A \land B$ into $\mathcal{D}$.
     \ellipsis{}{\vdash A}
     \hypo{\mathcal{D}_B}
     \ellipsis{}{\vdash B}
-    \infer2[R-$\land$-I]{\vdash A \land B}
-    \infer1[R-$\land$-E$_1$]{\vdash B}
+    \infer2[\textsc{r-$\land$-i}]{\vdash A \land B}
+    \infer1[\textsc{r-$\land$-e$_1$}]{\vdash B}
 
     \hypo{\mathcal{D}_A}
     \ellipsis{}{\vdash A}
     \hypo{\mathcal{D}_B}
     \ellipsis{}{\vdash B}
-    \infer2[R-$\land$-I]{\vdash A \land B}
-    \infer1[R-$\land$-E$_2$]{\vdash A}
+    \infer2[\textsc{r-$\land$-i}]{\vdash A \land B}
+    \infer1[\textsc{r-$\land$-e$_2$}]{\vdash A}
 
-    \infer2[R-$\land$-I]{\vdash B \land A}
+    \infer2[\textsc{r-$\land$-i}]{\vdash B \land A}
   \end{prooftree}
 \end{center}
 
@@ -229,7 +229,7 @@ This created two new detours: R-$\land$-Intro followed by R-$\land$-Elim$_1$
     \ellipsis{}{\vdash B}
     \hypo{\mathcal{D}_A}
     \ellipsis{}{\vdash A}
-    \infer2[R-$\land$-Intro]{\vdash B \land A}
+    \infer2[\textsc{r-$\land$-i}]{\vdash B \land A}
   \end{prooftree}
 \end{center}
 
@@ -245,7 +245,7 @@ At its core, the notion of computation within natural deduction is function crea
 and application.
 
 \subsection{Sequent Calculus: LK}
-In LK, we no longer have elimination rules on the right, but instead introduction
+In $\LK$, we no longer have elimination rules on the right, but instead introduction
 rules on the left (and right). A derivation $\mathcal{D}$ of the same sequent
 now has the form
 
@@ -253,9 +253,9 @@ now has the form
   \begin{prooftree}
     \hypo{B \vdash B}
     \hypo{A \vdash A}
-    \infer2[R-$\land$-I]{A, B \vdash B \land A}
-    \infer1[L-$\land$-I]{A \land B \vdash B \land A}
-    \infer1[R-$\to$-I]{\vdash (A \land B) \to (B \land A)}
+    \infer2[\textsc{r-$\land$-i}]{A, B \vdash B \land A}
+    \infer1[\textsc{l-$\land$-i}]{A \land B \vdash B \land A}
+    \infer1[\textsc{r-$\to$-i}]{\vdash (A \land B) \to (B \land A)}
   \end{prooftree}
 \end{center}
 
@@ -271,15 +271,15 @@ of derivations $\mathcal{D}_A$ and $\mathcal{D}_B$).
     \ellipsis{}{\vdash A}
     \hypo{\mathcal{D}_B}
     \ellipsis{}{\vdash B}
-    \infer2[R-$\land$-I]{\vdash A \land B}
+    \infer2[\textsc{r-$\land$-i}]{\vdash A \land B}
     \hypo{B \land A \vdash B \land A}
-    \infer2[L-$\to$-I]{(A \land B) \to (B \land A) \vdash B \land A}
+    \infer2[\textsc{l-$\to$-i}]{(A \land B) \to (B \land A) \vdash B \land A}
 
-    \infer2[Cut]{\vdash B \land A}
+    \infer2[\textsc{cut}]{\vdash B \land A}
   \end{prooftree}
 \end{center}
 
-A detour in LK occurs whenever a left and right introduction rule meet in a cut.
+A detour in $\LK$ occurs whenever a left and right introduction rule meet in a cut.
 We can simplify the cut above by introducing two new ones, both of which have a
 principal formula of lower rank.
 
@@ -289,23 +289,23 @@ principal formula of lower rank.
     \ellipsis{}{\vdash A}
     \hypo{\mathcal{D}_B}
     \ellipsis{}{\vdash B}
-    \infer2[R-$\land$-I]{\vdash A \land B}
+    \infer2[\textsc{r-$\land$-i}]{\vdash A \land B}
 
     \hypo{B \vdash B}
     \hypo{A \vdash A}
-    \infer2[R-$\land$-I]{A, B \vdash B \land A}
-    \infer1[L-$\land$-I]{A \land B \vdash B \land A}
+    \infer2[\textsc{r-$\land$-i}]{A, B \vdash B \land A}
+    \infer1[\textsc{l-$\land$-i}]{A \land B \vdash B \land A}
 
     \hypo{B \land A \vdash B \land A}
-    \infer2[Cut]{A \land B \vdash B \land A}
+    \infer2[\textsc{cut}]{A \land B \vdash B \land A}
 
-    \infer2[Cut]{\vdash B \land A}
+    \infer2[\textsc{cut}]{\vdash B \land A}
   \end{prooftree}
 \end{center}
 
-The lower cut is eliminated can be eliminated via proof composition.
+The lower cut can be eliminated via proof composition.
 The remaining cut could be eliminated, but a cut with an axiom at the root
-will not violate the subformula property.
+does not violate the subformula property.
 
 \begin{center}
   \begin{prooftree}
@@ -313,10 +313,10 @@ will not violate the subformula property.
     \ellipsis{}{\vdash B}
     \hypo{\mathcal{D}_A}
     \ellipsis{}{\vdash A}
-    \infer2[R-$\land$-I]{\vdash B \land A}
+    \infer2[\textsc{r-$\land$-i}]{\vdash B \land A}
 
     \hypo{B \land A \vdash B \land A}
-    \infer2[Cut]{\vdash B \land A}
+    \infer2[\textsc{cut}]{\vdash B \land A}
   \end{prooftree}
 \end{center}
 
@@ -328,15 +328,15 @@ to this proof and its simplifications.
   \rhd &\; \langle (b, a) \,\vert\vert\, \alpha \rangle
 \end{align*}
 
-Now, opposed to ND, the driver of computation is the interplay between
+Now, opposed to $\ND$, the driver of computation is the interplay between
 producers, e.g. an abstraction, and consumers, e.g. a call stack $(a, b) \cdot \alpha$ -
-the latter not being a first-class entity in ND. Thus, we see that the underlying
+the latter not being a first-class entity in $\ND$. Thus, we see that the underlying
 logical framework influences not only the structure of our programs, but also
 its features and model of computation.
 
 \section{Logical Elimination and Free Deduction}
-Neither ND nor LK makes use of elimination rules on the left, which is in contrast
-to Parigot's \emph{Free Deduction} FD \cite{Parigot1992:FreeDeduction} where every inference eliminates a formula.
+Neither $\ND$ nor $\LK$ makes use of elimination rules on the left, which is in contrast
+to Parigot's \emph{Free Deduction} $\FD$ \cite{Parigot1992:FreeDeduction} where every inference eliminates a formula.
 Now, a proof $\mathcal{D}$ of the formula $\tau := (A \land B) \to (B \land A)$ looks as follows.
 
 \begin{center}
@@ -347,14 +347,14 @@ Now, a proof $\mathcal{D}$ of the formula $\tau := (A \land B) \to (B \land A)$ 
     \hypo{B \land A \vdash B \land A}
     \hypo{B \vdash B}
     \hypo{A \vdash A}
-    \infer3[L-$\land$-E]{A, B \vdash B \land A}
-    \infer2[R-$\land$-E]{A \land B \vdash B \land A}
+    \infer3[\textsc{l-$\land$-e}]{A, B \vdash B \land A}
+    \infer2[\textsc{r-$\land$-e}]{A \land B \vdash B \land A}
 
-    \infer2[L-$\to$-E]{\vdash \tau}
+    \infer2[\textsc{l-$\to$-e}]{\vdash \tau}
   \end{prooftree}
 \end{center}
 
-The derivation already highlights the characteristic of FD's normalforms: Every
+The derivation already highlights the characteristic of $\FD$'s normalforms: Every
 main premise is an axiom which is causing the derivations to grow as right-deep trees.
 Thus, as will be explained later, for a computation to occur, an axiom must be subject to both its left and right
 eliminations rule.
@@ -369,11 +369,11 @@ eliminations rule.
     \ellipsis{}{\vdash A}
     \hypo{\mathcal{D}_B}
     \ellipsis{}{\vdash B}
-    \infer3[L-$\land$-E]{\vdash A \land B}
+    \infer3[\textsc{l-$\land$-e}]{\vdash A \land B}
 
     \hypo{B \land A \vdash B \land A}
 
-    \infer3[R-$\to$-E]{\vdash B \land A}
+    \infer3[\textsc{r-$\to$-e}]{\vdash B \land A}
   \end{prooftree}
 \end{center}
 
@@ -387,13 +387,13 @@ yields the first simplification step.
     \ellipsis{}{\vdash A}
     \hypo{\mathcal{D}_B}
     \ellipsis{}{\vdash B}
-    \infer3[L-$\land$-E]{\vdash A \land B}
+    \infer3[\textsc{l-$\land$-e}]{\vdash A \land B}
 
     \hypo{B \land A \vdash B \land A}
     \hypo{B \vdash B}
     \infer[no rule]1{A \vdash A}
-    \infer2[L-$\land$-E]{A, B \vdash B \land A}
-    \infer2[R-$\land$-E]{A \land B \vdash B \land A}
+    \infer2[\textsc{l-$\land$-e}]{A, B \vdash B \land A}
+    \infer2[\textsc{r-$\land$-e}]{A \land B \vdash B \land A}
   \end{prooftree}
 \end{center}
 
@@ -407,15 +407,15 @@ can also be discharged via proof composition to yield the following normalform.
     \ellipsis{}{\vdash B}
     \hypo{\mathcal{D}_A}
     \ellipsis{}{\vdash A}
-    \infer3[L-$\land$-E]{\vdash B \land A}
+    \infer3[\textsc{l-$\land$-e}]{\vdash B \land A}
   \end{prooftree}
 \end{center}
 
-This looks similar to the normalform we reached in LK, but the axiom
+This looks similar to the normalform we reached in $\LK$, but the axiom
 $B \land A \vdash B \land A$ cannot be eliminated - and it does not have to be in order to
 satisfy the subformula property. Previously, we could interpret
-the resulting normalforms as an order pair $(b, a)$. This analogy fails in FD
-due to the presence of an additional axiom. Therefore, we suggest for FD to be
+the resulting normalforms as an order pair $(b, a)$. This analogy fails in $\FD$
+due to the presence of an additional axiom. Therefore, we suggest for $\FD$ to be
 interpreted in the context of communicating processes: The axiom $B \land A \vdash B \land A$
 creates a binary session channel, and every elimination rule specifies the \enquote{payload}
 to send along this channel. Whenever a channel has witnessed communication on both
@@ -423,21 +423,21 @@ sides, i.e. a left and right elimination rule meet, we can perform a step of com
 A normalform having only axioms as main premises thus corresponds to channels
 waiting for external communication, i.e. the program only specified the behavior
 for one side of the channel. This thesis will provide a suitable term assignment
-to make this interpretation of FD precise.
+to make this interpretation of $\FD$ precise.
 
 \section{Contribution and Structure}
 We present a term assignment for a version of Parigot's Free Deduction,
-called System LFD, and demonstrate how the choice of elimination rules naturally
-describes asynchronous processes. Thus, showing that LFD serves an alternative
+called System \LFD, and demonstrate how the choice of elimination rules naturally
+describes asynchronous processes. Thus, showing that \LFD serves an alternative
 logical foundation for the asynchronous $\pi$-calculus. The main contribution
 of this thesis consists in mechanized proofs for type safety and the
-Church-Rosser property for LFD's term assignment system, $\pi$FD.
+Church-Rosser property for \LFD's term assignment system, $\piFD$.
 
 The rest of this thesis is structured in three parts.
 \begin{itemize}
   \item The remainder of the first part gives an introduction into the logical system
-        of Free Deduction and how LFD is derived from it.
-  \item The second part introduces the term assignment system $\pi$FD and its relation
+        of Free Deduction and how \LFD is derived from it.
+  \item The second part introduces the term assignment system $\piFD$ and its relation
         to existing Curry-Howard interpretations of linear logics.
-  \item The last part delves into the metatheory of $\pi$FD.
+  \item The last part delves into the metatheory of $\piFD$.
 \end{itemize}

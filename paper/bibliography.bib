@@ -236,3 +236,84 @@ month = sep,
 pages = {1–40},
 numpages = {40}
 }
+
+@article{Andreoli1992:FocusingProofs,
+    author = {Andreoli, Jean-Marc},
+    title = {Logic Programming with Focusing Proofs in Linear Logic},
+    journal = {Journal of Logic and Computation},
+    volume = {2},
+    number = {3},
+    pages = {297-347},
+    year = {1992},
+    month = {06},
+    abstract = {The deep symmetry of linear logic [18] makes it suitable for providing abstract models of computation, free from implementation details which are, by nature, oriented and non-symmetrical. I propose here one such model, in the area of logic programming, where the basic computational priciple isComputation = Proof searchProofs cinsidered here are those of the Gentzen style sequent calculus for linear logic. However, proofs in this system may be redundant, in that two proofs canbe syntactically different although identical up to some irrelevant reordering or simplification of the applications of the inferences rules. This leads to an untractable proof search where the search procedure is forced to make costly choices whch turn out to be irrelevant. To overcome this problem, a subclass of proofs, called the ‘focusing’ proofs, which is both complete (any derivable formla in linear logic has a focusing proof) and tractable (many irrelevant choices in the search are eliminated when aimed at focusing proofs) is identified. The main constraint underlying the specificatuon of focusing proofs has been to preserve the symmetry of linear logic, which is its most salient feature. In particular, dual connectives have dual properties with respect to focusing proofsThen, a progrmming language, called LinLog, consisting of a fragment of linear logic, in which focussing proofs have a more compact form, is presented. Linlog deals with formulae which have a syntax similar to the of the definite clauses and goals of Horn logic, but the crucial difference here is that it allows clauses with multiple atoms in the head, connected by the ‘par’ (multiplicative disjuction). It is then shown that the syntyactic restriction induced by LinLog is not performed at the cost of any expressive power: a mapping from full linear logic to LinLog, preserving focusing proofs, and analogous to the normalization to clausal form for classical logic, is presented.},
+    issn = {0955-792X},
+    doi = {10.1093/logcom/2.3.297},
+    url = {https://doi.org/10.1093/logcom/2.3.297},
+    eprint = {https://academic.oup.com/logcom/article-pdf/2/3/297/6137548/2-3-297.pdf},
+}
+
+@article{Zeilberger2008:UnityOfDuality,
+title = {On the unity of duality},
+journal = {Annals of Pure and Applied Logic},
+volume = {153},
+number = {1},
+pages = {66-96},
+year = {2008},
+issn = {0168-0072},
+doi = {https://doi.org/10.1016/j.apal.2008.01.001},
+url = {https://www.sciencedirect.com/science/article/pii/S0168007208000080},
+author = {Noam Zeilberger},
+keywords = {Polarity, Focusing, Evaluation order, Michael Dummett, Curry–Howard isomorphism},
+abstract = {Most type systems are agnostic regarding the evaluation strategy for the underlying languages, with the value restriction for ML which is absent in Haskell as a notable exception. As type systems become more precise, however, detailed properties of the operational semantics may become visible because properties captured by the types may be sound under one strategy but not the other. For example, intersection types distinguish between call-by-name and call-by-value functions, because the subtyping law (A→B)∩(A→C)≤A→(B∩C) is unsound for the latter in the presence of effects. In this paper we develop a proof-theoretic framework for analyzing the interaction of types with evaluation order, based on the notion of polarity. Polarity was discovered through linear logic, but we propose a fresh origin in Dummett’s program of justifying the logical laws through alternative verificationist or pragmatist “meaning-theories”, which include a bias towards either introduction or elimination rules. We revisit Dummett’s analysis using the tools of Martin-Löf’s judgmental method, and then show how to extend it to a unified polarized logic, with Girard’s “shift” connectives acting as intermediaries. This logic safely combines intuitionistic and dual intuitionistic reasoning principles, while simultaneously admitting a focusing interpretation for the classical sequent calculus. Then, by applying the Curry–Howard isomorphism to polarized logic, we obtain a single programming language in which evaluation order is reflected at the level of types. Different logical notions correspond directly to natural programming constructs, such as pattern-matching, explicit substitutions, values and call-by-value continuations. We give examples demonstrating the expressiveness of the language and type system, and prove a basic but modular type safety result. We conclude with a brief discussion of extensions to the language with additional effects and types, and sketch the sort of explanation this can provide for operationally sensitive typing phenomena.}
+}
+
+@InProceedings{Perez2012:LinearLogicRelationsConcur,
+author="P{\'e}rez, Jorge A.
+and Caires, Lu{\'i}s
+and Pfenning, Frank
+and Toninho, Bernardo",
+editor="Seidl, Helmut",
+title="Linear Logical Relations for Session-Based Concurrency",
+booktitle="Programming Languages and Systems",
+year="2012",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="539--558",
+abstract="In prior work we proposed an interpretation of intuitionistic linear logic propositions as session types for concurrent processes. The type system obtained from the interpretation ensures fundamental properties of session-based typed disciplines---most notably, type preservation, session fidelity, and global progress. In this paper, we complement and strengthen these results by developing a theory of logical relations. Our development is based on, and is remarkably similar to, that for functional languages, extended to an (intuitionistic) linear type structure. A main result is that well-typed processes always terminate (strong normalization). We also introduce a notion of observational equivalence for session-typed processes. As applications, we prove that all proof conversions induced by the logic interpretation actually express observational equivalences, and explain how type isomorphisms resulting from linear logic equivalences are realized by coercions between interface types of session-based concurrent systems.",
+isbn="978-3-642-28869-2"
+}
+
+@article{Bellin1994:PiCalcAndLinearLogic,
+title = {On the pi-calculus and linear logic},
+journal = {Theoretical Computer Science},
+volume = {135},
+number = {1},
+pages = {11-65},
+year = {1994},
+issn = {0304-3975},
+doi = {https://doi.org/10.1016/0304-3975(94)00104-9},
+url = {https://www.sciencedirect.com/science/article/pii/0304397594001049},
+author = {G. Bellin and P.J. Scott},
+}
+
+@article{Honda2010:PolarizedProofNets,
+title = {An exact correspondence between a typed pi-calculus and polarised proof-nets},
+journal = {Theoretical Computer Science},
+volume = {411},
+number = {22},
+pages = {2223-2238},
+year = {2010},
+issn = {0304-3975},
+doi = {https://doi.org/10.1016/j.tcs.2010.01.028},
+url = {https://www.sciencedirect.com/science/article/pii/S0304397510000538},
+author = {Kohei Honda and Olivier Laurent},
+keywords = {Pi-calculus, Proof-nets, Processes, Logics, Proofs, Types, Interaction, Concurrency, Linear Logic, Polarity, Embedding, Determinism, Non-determinism}
+}
+
+@InProceedings{Honda2004:PiCalculusWithControl,
+  author = 	 {Kohei Honda and Nobuko Yoshida and Martin Berger},
+  title = 	 {{Control in the Pi-Calculus}},
+  booktitle =	 {Proc.~Fourth ACM-SIGPLAN Continuation Workshop (CW'04)},
+  year =	 2004
+}
