@@ -5,4 +5,39 @@
 \newcommand{\LFD}{\textsf{LFD}}
 \newcommand{\LL}{\textsf{LL}}
 \newcommand{\UCL}{\textsf{UCL}}
+\newcommand{\CP}{\textsf{CP}}
 \newcommand{\piFD}{\pi\textsf{FD}}
+
+% Syntax of piFD
+% statements for processes in piFD
+\newcommand{\seq}{;\,}
+\newcommand{\link}[2]{#1 \leftrightarrow #2}
+\newcommand{\parcomp}[4]{(\nu #1 #2)(#3 \mid #4)}
+\newcommand{\lselect}[2]{#1 \lhd inl(#2)}
+\newcommand{\rselect}[2]{#1 \lhd inr(#2)}
+\newcommand{\choice}[3]{#1 \rhd \{ #2,\; #3 \}}
+\newcommand{\send}[3]{#1 ! [#2 \mid #3]}
+\newcommand{\receive}[4]{#1 ? (#2, #3).#4}
+\newcommand{\close}[1]{#1 ! [\,]}
+\newcommand{\wait}[2]{#1 ? ().#2}
+
+\newcommand{\slselect}[1]{\lhd inl(#1)}
+\newcommand{\srselect}[1]{\lhd inr(#1)}
+\newcommand{\schoice}[2]{\rhd \{ #1,\; #2 \}}
+\newcommand{\ssend}[2]{! [#1 \mid #2]}
+\newcommand{\sreceive}[3]{? (#1, #2).#3}
+\newcommand{\sclose}{! [\,]}
+\newcommand{\swait}[1]{? ().#1}
+
+\newcommand{\future}[1]{#1}
+
+% Operational semantics
+\newcommand{\contr}{\rhd_1}
+\newcommand{\red}{\rhd}
+
+% Rocq Icon
+\newcommand{\rocqicon}{%
+  \raisebox{-0.15\baselineskip}{%
+    \includegraphics[height=0.85em]{gfx/rocq-logo.pdf}%
+  }%
+}

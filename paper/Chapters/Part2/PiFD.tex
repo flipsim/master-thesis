@@ -2,16 +2,702 @@
 \chapter{A Term Assignment for LFD}\label{ch:pi-fd}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+In this section, we introduce a term assignment system for $\LFD$: $\piFD$.
+We present its syntax, typing, and operational semantics, as well as the
+interpretation of the logical connectives in the process calculus setting.
+A demonstration on how to program using $\piFD$ is given in
+Section \ref{ch:programming-with-sessions}. A detailed presentation of
+$\piFD$'s metatheory is postponed to the third part of this thesis.
+
 \section{Syntax and Typing}
+The language of types if given by Definition \ref{def:pi-fd:types}.
+Since we do not consider polymorphism, we will drop propositional variables,
+opposed to the propositions of $\LFD$.
+
+\begin{definition}[Types of $\piFD$] \label{def:pi-fd:types}
+  \begin{alignat*}{4}
+    & A, B \; &&&\Coloneqq &\; A \oplus B  &\qquad \tag*{\textit{selection}} & \\
+    &         &&&\mid      &\; A \with B   &\qquad \tag*{\textit{choice}   } & \\
+    &         &&&\mid      &\; A \otimes B &\qquad \tag*{\textit{output}   } & \\
+    &         &&&\mid      &\; A \parr B   &\qquad \tag*{\textit{input}    } & \\
+    &         &&&\mid      &\; 1           &\qquad \tag*{\textit{close}    } & \\
+    &         &&&\mid      &\; \bot        &\qquad \tag*{\textit{wait}     } &
+  \end{alignat*}
+\end{definition}
+
+\begin{definition}[Syntax of $\piFD$]
+  \phantom{foo}
+  \vspace{-1.5em}
+
+  \begin{minipage}[t]{0.40\textwidth}
+    \begin{flalign*}
+      P, Q \; &\Coloneq &\!\!\!\!\!&                      & \textbf{Process} \\
+              &         &\!\!\!\!\!& \link{M}{M}          & \textit{link} \\
+              &\;\;\mid &\!\!\!\!\!& \parcomp{x}{y}{P}{Q} & \textit{cut} \\
+              &\;\;\mid &\!\!\!\!\!& P \seq xS            & \textit{sequencing} \\
+              &\;\;\mid &\!\!\!\!\!& \Lambda              & \textit{nil process} \\
+      M \;    &\Coloneq &\!\!\!\!\!&                      & \textbf{Message} \\
+              &         &\!\!\!\!\!& \future{x}           & \textit{future} \\
+              &\;\;\mid &\!\!\!\!\!& S                    & \textit{statement}
+    \end{flalign*}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{0.40\textwidth}
+    \begin{flalign*}
+      S \; &\Coloneq &\!\!\!\!\!&                    & \textbf{Statement} \\
+           &         &\!\!\!\!\!& \slselect{x.P}     & \textit{selection} \\
+           &\;\;\mid &\!\!\!\!\!& \srselect{x.P}     & \textit{selection} \\
+           &\;\;\mid &\!\!\!\!\!& \schoice{x.P}{x.P} & \textit{choice} \\
+           &\;\;\mid &\!\!\!\!\!& \ssend{x.P}{x.P}   & \textit{output} \\
+           &\;\;\mid &\!\!\!\!\!& \sreceive{x}{x}{P} & \textit{input} \\
+           &\;\;\mid &\!\!\!\!\!& \sclose            & \textit{close} \\
+           &\;\;\mid &\!\!\!\!\!& \swait{P}          & \textit{wait}
+    \end{flalign*}
+  \end{minipage}
+\end{definition}
+
+The syntax of $\piFD$ differentiates between \emph{processes}, \emph{statements}
+and \emph{messages}. The last two syntactic categories are not necessary,
+however they allow the operational semantics to be written more concisely.
+Similarly, we add the nil process $\Lambda$ to allow for closed processes,
+at the cost of losing consistency.
+
+\begin{definition}[Contexts]
+  The contexts of $\piFD$ are inductively defined by the grammar
+  \[
+    \Gamma \Coloneqq \varnothing \mid \Gamma, x : A
+  \]
+  and are treated as unordered lists. The subjects of the declarations in
+  a context are pairwise distinct. We refer to the set of all subjects of
+  a context $\Gamma$ as the \emph{domain} $dom(\Gamma)$.
+\end{definition}
+
+Since we are dealing with a linear typing discipline, we define the relation
+$\Gamma = \Delta_1 \circ \Delta_2$, which describes how a context may be split
+into two disjoint contexts\footnote{In a named representation with unordered
+contexts this merely amounts to a linear union. However, in our formalization,
+contexts are lists ordered based on their de Bruijn index. Many proofs thus
+make use of an induction on the derivation of a context split, which is why
+we did not want to omit their definition.}.
+
+\begin{definition}[Context Split]
+  The relation $\Gamma = \Delta_1 \circ \Delta_2$ is inductively defined by the
+  following rules, where we presuppose that $dom(\Delta_1) \cap dom(\Delta_2) = \varnothing$.
+  \begin{center}
+    \begin{prooftree}
+      \hypo{}
+      \infer1[\textsc{split-e}]{\varnothing = \varnothing \circ \varnothing}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{\Gamma = \Delta_1 \circ \Delta_2}
+      \infer1[\textsc{split-l}]{\Gamma, x : A = (\Delta_1, x : A) \circ \Delta_2}
+    \end{prooftree}
+    \hfill
+    \begin{prooftree}
+      \hypo{\Gamma = \Delta_1 \circ \Delta_2}
+      \infer1[\textsc{split-r}]{\Gamma, x : A = \Delta_1 \circ (\Delta_2, x : A)}
+    \end{prooftree}
+  \end{center}
+\end{definition}
+
+\begin{definition}[Typing rules of $\piFD$]
+  \phantom{Foo}
+  \begin{center}
+    \begin{flushright}
+      Processes \framebox{$\Gamma \vdash P$}
+    \end{flushright}
+
+    \begin{prooftree}
+      \hypo{\Gamma \vdash M_1 : A}
+      \hypo{\Delta \vdash M_2 : A^\bot}
+      \infer2[\textsc{t-ax}]{\Gamma \circ \Delta \vdash \link{M_1}{M_2}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{\Gamma, x : A \vdash P}
+      \hypo{\Delta, y : A^\bot \vdash Q}
+      \infer2[\textsc{t-cut}]{\Gamma \circ \Delta \vdash \parcomp{x}{y}{P}{Q}}
+    \end{prooftree}
+    \hfill
+    \begin{prooftree}
+      \hypo{\Gamma, x : A \vdash P}
+      \hypo{\Delta \vdash S : A}
+      \infer2[\textsc{t-seq}]{\Gamma \circ \Delta \vdash P \seq xS}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{}
+      \infer1[\textsc{t-nil}]{\vdash \Lambda}
+    \end{prooftree}
+
+    \begin{flushright}
+      Messages \framebox{$\Gamma \vdash M : A$} and
+      statements \framebox{$\Gamma \vdash S : A$}
+    \end{flushright}
+
+    \begin{prooftree}[center=false]
+      \hypo{}
+      \infer1[\textsc{t-id}]{x : A \vdash x : A}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{\Gamma, z : A^\bot \vdash Q}
+      \infer1[\textsc{t-$\oplus_1$}]{\Gamma \vdash \slselect{z.Q} : A \oplus B}
+    \end{prooftree}
+    \qquad
+    \begin{prooftree}
+      \hypo{\Gamma, z : B^\bot \vdash Q}
+      \infer1[\textsc{t-$\oplus_2$}]{\Gamma \vdash \srselect{z.Q} : A \oplus B}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{\Gamma, z_1 : A^\bot \vdash Q_1}
+      \hypo{\Gamma, z_2 : B^\bot \vdash Q_2}
+      \infer2[\textsc{t-$\with$}]{\Gamma \vdash \schoice{z_1.Q_1}{z_2.Q_2} : A \with B}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{\Gamma, v : A^\bot \vdash Q}
+      \hypo{\Delta, z : B^\bot \vdash R}
+      \infer2[\textsc{t-$\otimes$}]{\Gamma \circ \Delta \vdash \ssend{v.Q}{z.R} : A \otimes B}
+    \end{prooftree}
+    \qquad
+    \begin{prooftree}
+      \hypo{\Gamma, v : A^\bot, z : B^\bot \vdash Q}
+      \infer1[\textsc{t-$\parr$}]{\Gamma \vdash \sreceive{v}{z}{Q} : A \parr B}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}[center=false]
+      \hypo{}
+      \infer1[\textsc{t-$1$}]{\vdash \sclose{} : 1}
+    \end{prooftree}
+    \qquad
+    \begin{prooftree}[center=false]
+      \hypo{\Gamma \vdash Q}
+      \infer1[\textsc{t-$\bot$}]{\Gamma \vdash \swait{Q} : \bot}
+    \end{prooftree}
+  \end{center}
+\end{definition}
+
+The processes of $\piFD$ are the term assignments for $\LFD$ derivations.
+A link consisting of two futures corresponds to an axiom of $\LFD$.
+Every elimination rule is represented by a sequencing, i.e. applying
+multiple elimination rules in succession corresponds to a sequence of communication
+statements. For the elimination rule of $\otimes$, we obtain the following
+term decoration:
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{\Gamma_1, x : A \otimes B \vdash P}
+    \hypo{\Gamma_2, v : A^\bot \vdash Q}
+    \hypo{\Gamma_3, z : B^\bot \vdash R}
+    \infer2[\textsc{t-$\otimes$}]{\Gamma_2 \circ \Gamma_3 \vdash \ssend{v.Q}{z.R} : A \otimes B}
+    \infer2[\textsc{t-seq}]{\Gamma_1 \circ \Gamma_2 \circ \Gamma_3 \vdash P \seq x\ssend{v.Q}{z.R}}
+  \end{prooftree}
+\end{center}
+
+The statements of $\piFD$ exactly correspond to the secondary premises
+of every elimination rule in $\LFD$. Having them live in their own syntactic
+category allows the permutation of logical rules to be expressed by a substitution
+of messages for futures: a process $P \seq xS$ \emph{fulfills} the future
+$x$ with the message $S$ by substituting $S$ for $x$.
+
+However, adding these new syntactic categories comes at the cost of slightly loosening
+the correspondence between processes and derivations: The logical redex
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{1, \bot \vdash}
+    \infer1[$1$]{\bot \vdash}
+    \hypo{\Gamma \vdash}
+    \infer2[$\bot$]{\Gamma \vdash}
+  \end{prooftree}
+\end{center}
+possesses four different term assignments
+\begin{gather*}
+  \link{x}{y} \seq x\sclose \seq y\swait{P} \\
+  \link{\sclose}{y} \seq y\swait{P} \\
+  \link{x}{\swait{P}} \seq x\sclose \\
+  \link{\sclose}{\swait{P}}
+\end{gather*}
+given $\Gamma \vdash P$ for some $\Gamma$. They correspond to no, one or both
+futures representing a channel being fulfilled. Once both sides are fulfilled,
+we obtain a logical redex.
+
+\begin{definition}[Logical redexes in $\piFD$]
+  A link is a logical redex, if it is of one of the following forms.
+  \begin{enumerate}[label=(\roman*)]
+    \item $\link{\ssend{v.P}{z.Q}}{\sreceive{a}{b}{R}}$
+    \item $\link{\slselect{z.P}}{\schoice{v.Q}{w.R}}$
+    \item $\link{\srselect{z.P}}{\schoice{v.Q}{w.R}}$
+    \item $\link{\sclose}{\swait{P}}$
+  \end{enumerate}
+\end{definition}
+
+As in $\LFD$, we use a congruence relation to factor out syntactic differences
+of processes that are not significant for their behavior, such as the orientation
+of a link.
+
+\section{Structural Congruence}
+The structural proof conversions of $\LFD$ yield the rules of the \emph{structural congruence}
+$\equiv$ of $\piFD$.
+
+\begin{definition}[Structural congruence]
+  Structural congruence $\equiv$ is defined as the least congruence relation
+  that is closed under rules
+  \begin{align*}
+    \link{x}{y} &\equiv \link{y}{x} \tag{\textsc{c-link}} \\
+    \parcomp{x}{y}{P}{Q} &\equiv \parcomp{y}{x}{Q}{P} \tag{\textsc{c-comm}} \\
+    \parcomp{v}{z}{\parcomp{x}{y}{P}{Q}}{R}
+      &\equiv \parcomp{x}{y}{P}{\parcomp{v}{z}{Q}{R}} \tag{\textsc{c-assoc}}
+  \end{align*}
+  where for \textsc{c-assoc} we presuppose that $v \notin fv(P)$ and $y \notin fv(R)$.
+\end{definition}
+
+\textsc{c-comm} and \textsc{c-assoc} correspond
+to the conversions \textsc{CComm} and \textsc{CAssoc}, respectively.
+Together, they allow us to view an abstract syntax tree built form nested \textsc{cut}s
+as a flat multiset of processes.
+
+The structural proof conversion \textsc{LComm} is captured by the axiom
+\textsc{c-link}, enabling channel bidirectionality.
+
+\section{Free Variables and Substitution}
+In order to present the interesting conversions of process reductions, we
+must first deal with the notions of free variables and substitution. We first
+define the set of free variables of processes, statements and terms.
+
+\begin{definition}[Free variables]
+  The set of free variables, written $fv(P)$ ($fv(M)$) is recursively defined
+  as follows:
+  {\allowdisplaybreaks
+  \begin{align*}
+    fv(\link{M_1}{M_2}) &\coloneq fv(M_1) \cup fv(M_2) \\
+    fv(\parcomp{x}{y}{P}{Q}) &\coloneq (fv(P) \cup fv(Q)) \setminus \{x, y\} \\
+    fv(P \seq xS) &\coloneq (fv(P) \setminus x) \cup fv(S) \\
+    fv(\Lambda) &\coloneq \varnothing \\
+    fv(x) &\coloneq \{x\} \\
+    fv(\slselect{x.P}) &\coloneq fv(P) \setminus x \\
+    fv(\srselect{x.P}) &\coloneq fv(P) \setminus x \\
+    fv(\schoice{x.P}{y.Q}) &\coloneq (fv(P) \setminus x) \cup (fv(Q) \setminus y) \\
+    fv(\ssend{x.P}{y.Q}) &\coloneq (fv(P) \setminus x) \cup (fv(Q) \setminus y) \\
+    fv(\sreceive{x}{y}{P}) &\coloneq fv(P) \setminus \{x, y\} \\
+    fv(\sclose) &\coloneq \varnothing \\
+    fv(\swait{P}) &\coloneq fv(P)
+  \end{align*}
+  }
+  We say that a process is \emph{closed}, if its set of free variables is empty.
+\end{definition}
+
+A consequence of linear typing is, that the typing contexts and
+the set of free variables for well-typed processes coincide.
+
+\begin{lemma}[\rocqicon~Domains are strict] \label{lemma:strict-domains}
+  If $\Gamma \vdash P$ ($\Gamma \vdash M$), then $dom(\Gamma) = fv(P)$ ($fv(M)$).
+\end{lemma}
+
+Lemma \ref{lemma:strict-domains} tells us, that the channels a process
+may communicate along are exactly the axioms that are yet to be the subject
+of a communication statement.
+
+The second notion, substitution, is the primary operation enabling
+interaction between concurrent processes. We define it via
+\emph{simultaneous substitutions} \cite{Stoughton1988:SimultaneousSubst} \footnote{This choice
+reflects the structure of our Rocq formalization more faithfully.}.
+
+\begin{definition}[Substitution]
+  \begin{enumerate}
+  \item A simultaneous substitution of messages $M_1, \hdots, M_n$ for
+  the variables $x_1, \hdots, x_n$ ($x_i$ distinct) is defined by the
+  following grammar.
+  \[
+    \sigma \Coloneqq [M_1, \hdots, M_n/x_1, \hdots, x_n]
+  \]
+  \item The domain $dom(\sigma)$ and range $rng(\sigma)$ of a substitution
+  is defined as follows:
+  \begin{align*}
+    dom([M_1, \hdots, M_n/x_1, \hdots, x_n]) &= \{x_1, \hdots, x_n\} \\
+    rng([M_1, \hdots, M_n/x_1, \hdots, x_n]) &= fv(M_1) \cup \hdots \cup fv(M_n)
+  \end{align*}
+  \item The action of a substitution $\sigma$ on processes and messages is defined
+  recursively:
+  {\allowdisplaybreaks
+  \begin{align*}
+    (\link{M_1}{M_2})\sigma &\coloneq \link{M_1\sigma}{M_2\sigma} \\
+    (\parcomp{x}{y}{P}{Q})\sigma &\coloneq \parcomp{x'}{y'}{(P\sigma')\sigma}{(Q\sigma')\sigma} \\
+    (P \seq xS)\sigma &\coloneq (P \sigma')\sigma \seq x'(S\sigma) \\
+    \Lambda\sigma &\coloneq \Lambda \\
+    x[M_1, \hdots, M_n/x_1, \hdots, x_n] &\coloneq M_i \quad \text{if } x = x_i \\
+    x\sigma &\coloneq x \quad \text{if } x \notin dom(\sigma) \\
+    (\slselect{x.P})\sigma &\coloneq \slselect{x'.(P\sigma')\sigma} \\
+    (\srselect{x.P})\sigma &\coloneq \srselect{x'.(P\sigma')\sigma} \\
+    (\schoice{x.P}{y.Q})\sigma &\coloneq \schoice{x'.(P\sigma')\sigma}{y'.(Q\sigma')\sigma} \\
+    (\ssend{x.P}{y.Q})\sigma &\coloneq \ssend{x'.(P\sigma')\sigma}{y'.(Q\sigma')\sigma} \\
+    (\sreceive{x}{y}{P})\sigma &\coloneq \sreceive{x'}{y'}{(P\sigma')\sigma} \\
+    (\sclose)\sigma &\coloneq \sclose \\
+    (\swait{P})\sigma &\coloneq \swait{P\sigma}
+  \end{align*}
+  where $\sigma'$ is used to perform a renaming of bound variables with names
+  that are fresh to both the domain and range of $\sigma$.
+  }
+  \end{enumerate}
+\end{definition}
+
+\begin{definition}[Cons for substitutions]
+  Extending a substitution $\sigma = [M_1, \hdots, M_n/x_1, \hdots, x_n]$
+  to additionally substitute $M$ for $x$, given $x \notin dom(\sigma)$, is
+  defined as
+  \[
+    (x \coloneq M) \cdot \sigma \coloneq [M, M_1, \hdots, M_n/x, x_1, \hdots, x_n]
+  \]
+\end{definition}
+
+\begin{definition}[Identity substitution]
+  Given a set of variables $\Gamma = \{x_1, \hdots, x_n\}$, we define
+  the identity substitution as
+  \[
+    id_\Gamma \coloneq [x_1, \hdots, x_n/x_1, \hdots, x_n]
+  \]
+\end{definition}
+
+The operational semantics itself only makes use of single substitution, which
+we define in terms of the identity substitution.
+
+\begin{definition}[Single substitution]
+  We define a single substitution, written $P[M/x]$ ($M'[M/x]$),
+  as the simultaneous identity substitution on free variables extended with a mapping for $x$:
+  \[
+    P[M/x] \coloneq (x \coloneq M) \cdot id_{fv(P) \setminus x}
+  \]
+\end{definition}
+
+Later in our development, we will also require a notion of \emph{well-formedness}
+for substitutions.
+
+\begin{definition}[Well-formedness of substitutions] \label{def:wf-substitution}
+  Let $\sigma$ be a substitution with domain $\Gamma$ and range $\Delta$.
+  The well-formedness of $\sigma$, written $\Gamma \vdash \sigma: \Delta$, is
+  inductively defined by the following rules.
+  \begin{center}
+    \begin{prooftree}
+      \hypo{}
+      \infer1[\textsc{wf-subst-empty}]{\varnothing \vdash [] : \varnothing}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{\Delta' \vdash M : A}
+      \hypo{\Gamma \vdash \sigma : \Delta''}
+      \hypo{\Delta = \Delta' \circ \Delta''}
+      \infer3[\textsc{wf-subst-cons}]{x : A, \Gamma \vdash (x \coloneq M) \cdot \sigma : \Delta}
+    \end{prooftree}
+  \end{center}
+\end{definition}
+
+We later prove that well-formed substitutions preserve linear typing using the fact that
+Definition \ref{def:wf-substitution} ensures that substituted messages are typed
+in pairwise disjoint contexts.
 
 \section{Operational Semantics}
+We can now define the operation of single-step \emph{contraction} $\contr$, which
+allows to eliminate a single redex in a process.
+
+\begin{definition}[Contraction $\contr$]
+  \begin{align}
+    % tensor/par
+    \link{\ssend{v.P}{z.Q}}{\sreceive{a}{b}{R}}
+    &\contr \parcomp{b}{z}{\parcomp{a}{v}{R}{P}}{Q}
+    \tag{\textsc{r-$\otimes\parr$}}
+    \\
+    % plus/with
+    \link{\slselect{z.P}}{\schoice{v.Q}{w.R}}
+    &\contr \parcomp{z}{v}{P}{Q}
+    \tag{\textsc{r-$\oplus\with_1$}}
+    \\
+    \link{\srselect{z.P}}{\schoice{v.Q}{w.R}}
+    &\contr \parcomp{z}{w}{P}{R}
+    \tag{\textsc{r-$\oplus\with_2$}}
+    \\
+    % 1/bot
+    \link{\sclose}{\swait{P}}
+    &\contr P
+    \tag{\textsc{r-$1\bot$}}
+    \\
+    % AxCut
+    \parcomp{x}{y}{\link{x}{M}}{P}
+    &\contr P[M/y]
+    \tag{\textsc{r-axcut}}
+    \\
+    % Seq
+    P \seq xS
+    &\contr P[S/x]
+    \tag{\textsc{r-seq}}
+  \end{align}
+  \vspace{-2.0em}
+  \begin{center}
+    % congruence: cut
+    \hfill
+    \begin{prooftree}
+      \hypo{P \contr P'}
+      \infer1[]{\parcomp{x}{y}{P}{Q} \contr \parcomp{x}{y}{P'}{Q}}
+    \end{prooftree}
+    \hfill (\textsc{r-cong-cut})
+
+    \bigskip
+
+    % congruence: seq
+    \hfill
+    \begin{prooftree}
+      \hypo{P \contr P'}
+      \infer1[]{P \seq s \contr P' \seq s}
+    \end{prooftree}
+    \hfill
+    (\textsc{r-cong-seq})
+
+    \bigskip
+
+    % struct
+    \hfill
+    \begin{prooftree}
+      \hypo{P \equiv P'}
+      \hypo{P' \contr Q'}
+      \hypo{Q' \equiv Q}
+      \infer3[]{P \contr Q}
+    \end{prooftree}
+    \hfill
+    (\textsc{r-struct})
+  \end{center}
+\end{definition}
+
+Rules \textsc{r-$\otimes\parr$}, \textsc{r-$\oplus\with_1$}, \textsc{r-$\oplus\with_2$},
+and \textsc{r-$1\bot$} correspond to the logical cut reductions in Figure \ref{sec:linear-fd:logical-cuts}.
+The rule \textsc{r-seq} eliminates a structural cut by permuting a rule
+directly to its axiom. \textsc{r-axcut} incorporates the structural cut reductions \textsc{AxCut} and \textsc{LCut}
+of $\LFD$ (Figure \ref{sec:linear-fd:structural-cut-reductions}), but opposed to $\LFD$,
+the resulting structural redex in \textsc{LCut} is immediately eliminated via substitution.
+
+\textsc{r-cong-cut} and \textsc{r-cong-seq} allow contractions beneath cuts and
+sequences. The former enables concurrent processes to be reduced in parallel;
+the latter allows futures to be fulfilled in any order. However, $\contr$ is
+not a congruence: Reduction within messages and statements is not possible.
+Consequently, statements serve a synchronization points in processes.
+
+Finally, the rule \textsc{r-struct} allows to contract a redex in a different
+process which lays in the same equivalence class w.r.t. $\equiv$. Sometimes,
+$\equiv$ may reveal a redex that was not yet syntactically present in a process, e.g.
+the process
+\[
+    \parcomp{z}{w}{\parcomp{x}{y}{P}{\link{z}{M}}}{Q}
+\]
+cannot apply \textsc{r-seq} using $\link{z}{M}$. However, assuming
+$z \notin fv(P)$ and $y \notin fv(Q)$, the congruent process
+\[
+    \parcomp{x}{y}{P}{\parcomp{z}{w}{\link{z}{M}}{Q}}
+\]
+may contract to $\parcomp{x}{y}{P}{Q[M/w]}$.
+
+Reduction $\red$ is now defined as a sequence of contractions up to congruence.
+
+\begin{definition}[Reduction] \label{def:reduction}
+  Reduction $\red$ is defined as the transitive closure of the union
+  of contraction and structural congruence.
+  \begin{equation*}
+    \red \coloneq (\contr \cup \equiv)^*
+  \end{equation*}
+\end{definition}
+
+\begin{remark}
+  Instead of defining $\red$ in terms of a union, we could have defined
+  $P \red Q$, if there exists $P_1, \hdots, P_n$, such that
+  \[
+    P = P_1 \contr P_2 \contr \hdots \contr P_{n-1} \equiv P_n = Q
+  \]
+  The resulting relations are the same, but many proofs benefit from Definition \ref{def:reduction}.
+\end{remark}
 
 \subsection{Axiom as Channel Creation}
+The link process $\link{x}{y}$ has been introduced by Wadler \cite{Wadler2012:PropositionsAsSessions}.
+It serves as a bidirectional link, forwarding anything received on $x$ to $y$
+and vice versa. The same interpretation also holds in $\piFD$.
 
-\subsection{Multiplicatives as Input and Output}
+However, there is another way to interpret the forwarding process $\link{x}{y}$.
+Since, $\LFD$'s formula property extends to $\piFD$ as well,
+any channel must first be created using $\textsc{t-ax}$. Thus, in its most primitive form,
+$\textsc{t-ax}$ can be thought of as the command creating a new channel with endpoints named $x$ and $y$ adhering
+to protocol $A$ and $A^\bot$, respectively,
+\begin{center}
+  \begin{prooftree}
+    \hypo{}
+    \infer1[\textsc{t-id}]{x : A \vdash x : A}
+    \hypo{}
+    \infer1[\textsc{t-id}]{y : A^\bot \vdash y : A^\bot}
+    \infer2[\textsc{t-ax}]{x : A, y : A^\bot \vdash \link{x}{y}}
+  \end{prooftree}
+\end{center}
+where $x$ and $y$ serve as memory cells remembering which side of a channel
+has already been fulfilled.
 
-\subsection{Additives as Selection and Choice}
-
-\subsection{Units as Close and Wait}
+This treatment of \textsc{t-ax} is different to other representations in the literature:
+Bellin and Scott \cite{Bellin1994:PiCalcAndLinearLogic}, for example,
+restrict the axiom to atomic types. This is dual to $\piFD$, where axioms
+start at complex, composite types which are gradually eliminated.
+Caires and Pfennig \cite{Caires2010:ILLasSessions}, on the other hand, have no axiom at all; the only
+axiomatic rule is the proof of unit. Wadler's \cite{Wadler2012:PropositionsAsSessions}
+axiom may be typed at arbitrary types, but $\CP$ also has an axiom for a proof of $1$.
+As a consequence, in the calculi above, not every channel must go through an explicit creation via $\link{x}{y}$
+as in $\piFD$.
 
 \subsection{Cut as Parallel Composition}
+Cut combines the constructs of parallel composition and scope restriction from
+the $\pi$-calculus:
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{\Gamma, x : A \vdash P}
+    \hypo{\Delta, y : A^\bot \vdash Q}
+    \infer2[\textsc{t-cut}]{\Gamma \circ \Delta \vdash \parcomp{x}{y}{P}{Q}}
+  \end{prooftree}
+\end{center}
+
+$P$ and $Q$ may execute in parallel and communicate via the channel endpoints
+$x$ and $y$. Requiring every parallel composition to be enclosed by a scope
+restriction is one of the insight of linear logic leading to deadlock freedom:
+The typing ensures that $x$ and $y$ belong to different processes, whereas scope
+restrictions in the untyped $\pi$-calculus may link endpoints belonging to the same thread.
+
+The scope restriction allows $P$ to forward a message along $x$ which is received
+by $Q$ along $y$. If either $P$ or $Q$ eventually reduces to a link which forwards
+along $x$ or $y$, respectively, \textsc{r-axcut} implements a message passing between
+the two concurrent processes.
+
+Opposed to process interpretations based on classical linear logic, \textsc{cut} in
+$\piFD$ only serves as a way to run communicating processes in parallel. Communication
+that happens between endpoints of a channel is handled by links instead.
+
+\subsection{Multiplicatives as Input and Output}
+The multiplicatives $\otimes$ and $\parr$ model input and output: A channel
+adhering to the session type $A \otimes B$ sends a message of type $A$ and then
+behaves as $B$. Dually, a channel typed $A^\bot \parr B^\bot$ expects to receive
+a message of type $A^\bot$ and continues as $B^\bot$.
+
+If a process $P$ offers a channel $x : A \otimes B$, then $x$ can receive
+a message of type $A \otimes B$:
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{\Gamma_1, x : A \otimes B \vdash P}
+    \hypo{\Gamma_2, v : A^\bot \vdash Q}
+    \hypo{\Gamma_3, z : B^\bot \vdash R}
+    \infer2[\textsc{t-$\otimes$}]{\Gamma_2 \circ \Gamma_3 \vdash \ssend{v.Q}{z.R} : A \otimes B}
+    \infer2[\textsc{t-seq}]{\Gamma_1 \circ \Gamma_2 \circ \Gamma_3 \vdash P \seq x\ssend{v.Q}{z.R}}
+  \end{prooftree}
+\end{center}
+
+The message $\ssend{v.Q}{z.R}$ consists of two parts: A process $Q$, which computes
+a message of type $A$ that will be forwarded along $v$ and a continuation process
+$R$. The latter specifies a continuation channel $z$ which handles the
+rest of the session protocol $B$.
+
+As for \textsc{cut}, the typing guarantees, that the output channel $v$ and the continuation channel
+$z$ belong to two different processes. Therefore, the output cannot depend on its
+own continuation, as may be the case in the untyped $\pi$-calculus, thus avoiding
+deadlocks.
+
+It is worth noting, that $\piFD$ uses a new channel $z$ for $x$'s continuation.
+This is different to synchronous $\pi$-calculi, which reuse the channel $x$
+as the continuation. This choice allows $\piFD$ to execute the continuation
+of a communication statement asynchronously. The relation of $\piFD$ to the
+asynchronous $\pi$-calculus is further elaborated in Section \ref{sec:examples:async-communication}.
+
+$x$'s dual endpoint, say $y$, is typed $A^\bot \parr B^\bot$:
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{\Gamma_1, y : A^\bot \parr B^\bot \vdash P}
+    \hypo{\Gamma_2, a : A, b : B \vdash Z}
+    \infer1[\textsc{t-$\parr$}]{\Gamma_2 \vdash \sreceive{a}{b}{Z} : A^\bot \parr B^\bot}
+    \infer2[\textsc{t-seq}]{\Gamma_1 \circ \Gamma_2 \vdash P \seq y\sreceive{a}{b}{Z}}
+  \end{prooftree}
+\end{center}
+
+The message $\sreceive{a}{b}{Z}$ specifies a process $Z$, which handles
+an output of type $A$ along channel $a$ and the continuation along $b$.
+If both $x$ and $y$ have received their messages, \textsc{r-$\otimes\parr$}
+forks the receiving process $Z$, the output process $Q$ and the continuation process $R$
+and links them accordingly:
+\[
+    \parcomp{b}{z}{\parcomp{a}{v}{Z}{Q}}{R}
+\]
+
+\subsection{Additives as Selection and Choice}
+The additives $\oplus$ and $\with$ implement selection and binary choice.
+A channel typed $A \oplus B$ may choose to continue the communication as either
+$A$ or $B$, providing a corresponding continuation channel $z$ in a separate continuation process $Q$:
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{\Gamma_1, x : A \oplus B \vdash P}
+    \hypo{\Gamma_2, z : A^\bot \vdash Q}
+    \infer1[\textsc{t-$\oplus_1$}]{\Gamma_2 \vdash \slselect{z.Q} : A \oplus B}
+    \infer2[\textsc{t-seq}]{\Gamma_1 \circ \Gamma_2 \vdash P \seq x\slselect{z.Q}}
+  \end{prooftree}
+\end{center}
+
+The dual channel $y : A^\bot \with B^\bot$ offers a choice: A process
+$R$ expecting to be forwarded a message of type $A$ along $a$ or, vice versa,
+a process $Z$ waiting to communicate along $b$ according to the protocol $B$:
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{\Gamma_1, y : A^\bot \with B^\bot \vdash P}
+    \hypo{\Gamma_2, a : A \vdash R}
+    \hypo{\Gamma_2, b : B \vdash Z}
+    \infer2[\textsc{t-$\with$}]{\Gamma_2 \vdash \schoice{a.R}{b.Z} : A^\bot \with B^\bot}
+    \infer2[\textsc{t-seq}]{\Gamma_1 \circ \Gamma_2 \vdash P \seq x\schoice{a.R}{b.Z}}
+  \end{prooftree}
+\end{center}
+
+\subsection{Units as Close and Wait}
+A channel is closed using the multiplicative units $1$ and $\bot$.
+The message sent along a channel $x : 1$ is an empty output:
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{\Gamma_1, x : 1 \vdash P}
+    \hypo{}
+    \infer1[\textsc{t-$1$}]{\vdash \sclose : 1}
+    \infer2[\textsc{t-seq}]{\Gamma_1 \vdash P \seq x\sclose}
+  \end{prooftree}
+\end{center}
+
+We interpret $\sclose$ as the message signaling channel termination.
+A channel $y : \bot$, on the other hand, expects an empty input:
+
+\begin{center}
+  \begin{prooftree}
+    \hypo{\Gamma_1, y : \bot \vdash P}
+    \hypo{\Gamma_2 \vdash Q}
+    \infer1[\textsc{t-$\bot$}]{\Gamma_2 \vdash \swait{Q} : \bot}
+    \infer2[\textsc{t-seq}]{\Gamma_1 \circ \Gamma_2 \vdash P \seq y\swait{Q}}
+  \end{prooftree}
+\end{center}
+
+Here, $\swait{Q}$ serves as a guard, which blocks the execution of $Q$.
+Once $x$ signals a termination towards $y$, \textsc{r-$1\bot$} removes the guard
+on $Q$ allowing it to be reduced.
