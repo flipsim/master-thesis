@@ -620,9 +620,11 @@ own continuation, as may be the case in the untyped $\pi$-calculus, thus avoidin
 deadlocks.
 
 It is worth noting, that $\piFD$ uses a new channel $z$ for $x$'s continuation.
-This is different to synchronous $\pi$-calculi, which reuse the channel $x$
-as the continuation. This choice allows $\piFD$ to execute the continuation
-of a communication statement asynchronously. The relation of $\piFD$ to the
+Since every message in $\piFD$ also specifies a continuation
+process, we can use an $\eta$-expanded link of the new continuation channel as a message's continuation
+process to express asynchronous communication - the $\eta$-expansion now serving as a \emph{forwarder}.
+This idea follows Boudol's \cite{Boudol1992:Asynchrony} translation from a synchronous $\pi$-calculus to an
+asynchronous one. The relation of $\piFD$ to the
 asynchronous $\pi$-calculus is further elaborated in Section \ref{sec:examples:async-communication}.
 
 $x$'s dual endpoint, say $y$, is typed $A^\bot \parr B^\bot$:
