@@ -17,26 +17,26 @@ Proof.
   {
     destruct H0; auto. right. eapply well_typed_final_process_is_final_wt; eauto.
   }
-  induction H.
+  inversion H; subst.
   + apply or_comm.
-    apply (link_final_or_reduces _ _ _ (t_ax _ _ _ _ _ _ H H0 H1)).
+    apply (link_final_or_reduces _ _ _ (t_ax _ _ _ _ _ _ H0 H1 H2)).
   + (* restructure cut into canonical form *)
-    assert (Γ ⊢ (cut P Q) :# ) by (econstructor; eauto).
-    destruct (canonical_cut_form _ _ _ H2) as [P' [? ?]].
+    assert (Γ ⊢ (cut P0 Q) :# ) by (econstructor; eauto).
+    destruct (canonical_cut_form _ _ _ H3) as [P' [? ?]].
 
     (* decide whether canonical form is final or reduces *)
-    assert (Γ ⊢ P' :#). { apply ((proj1 struct_cong_preserves_typing) _ _ H3) in H2; auto. }
-    destruct (cut_list_final_or_reduces _ _ H5 H4).
-    - inversion H6; subst.
-      * inversion H4.
-      * inversion H4.
-      * inversion H4.
+    assert (Γ ⊢ P' :#). { apply ((proj1 struct_cong_preserves_typing) _ _ H4) in H3; auto. }
+    destruct (cut_list_final_or_reduces _ _ H6 H5).
+    - inversion H7; subst.
+      * inversion H5.
+      * inversion H5.
+      * inversion H5.
       * right. eapply final_list; eauto.
         eapply c_trans; eauto.
-    - destruct H6 as [P'' ?].
+    - destruct H7 as [P'' ?].
       left. exists P''. eapply r_struct; eauto. apply c_refl.
   + left.
-    exists (subst_process P ((prefix s) ⋅ id_subst)).
+    exists (subst_process P0 ((prefix s) ⋅ id_subst)).
     econstructor.
   + right. econstructor.
 Qed.
