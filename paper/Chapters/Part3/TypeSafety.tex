@@ -1,0 +1,341 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Type Safety}\label{ch:type-safety}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\change[inline]{Add fluff text between lemmata.}
+
+\section{Preservation}
+
+\begin{lemma}[\rocqicon~Preservation for $\equiv$] \label{lemma:preservation-for-struct-cong}
+  If $P \equiv Q$, then $\Gamma \vdash P$ if and only if $\Gamma \vdash Q$.
+\end{lemma}
+\begin{proof}
+  By induction on the derivation of $P \equiv Q$.
+\end{proof}
+
+\begin{lemma}[\rocqicon~Partitions for well-formed substitutions] \label{lemma:subst-partition}
+  If $\Gamma = \Gamma_1 \circ \Gamma_2$ and $\Gamma \vdash \sigma : \Delta$, then
+  there exist $\Delta_1$ and $\Delta_2$ such that
+  \begin{enumerate}[label=(\roman*)]
+    \item $\Delta = \Delta_1 \circ \Delta_2$ and
+    \item $\Gamma_1 \vdash \sigma : \Delta_1$ and
+    \item $\Gamma_2 \vdash \sigma : \Delta_2$.
+  \end{enumerate}
+\end{lemma}
+\begin{proof}
+  By induction on the length of the tail of $\Gamma$.
+\end{proof}
+
+\begin{lemma}[\rocqicon~Substitution]\label{lemma:substitution}\mbox{}
+  \begin{enumerate}[label=(\roman*)]
+    \item If $\Gamma \vdash P$, then, for all substitutions $\sigma$ such that $\Gamma \vdash \sigma : \Delta$,
+          it follows $\Delta \vdash P\sigma$.
+    \item If $\Gamma \vdash M : A$, then, for all substitutions $\sigma$ such that $\Gamma \vdash \sigma : \Delta$,
+          it follows $\Delta \vdash M\sigma : A$.
+    \item If $\Gamma \vdash S : A$, then, for all substitutions $\sigma$ such that $\Gamma \vdash \sigma : \Delta$,
+          it follows $\Delta \vdash S\sigma : A$.
+  \end{enumerate}
+\end{lemma}
+\begin{proof}
+  By induction on the typing derivation. We will only highlight the case
+  for \textsc{t-cut}, the remaining cases follow immediately or analogously.
+
+  We may assume that the names of free and bound variables are unique, i.e.
+  $\parcomp{x}{y}{P}{Q}\sigma = \parcomp{x}{y}{P\sigma}{Q\sigma}$.
+  Given
+  \begin{center}
+    \begin{prooftree}
+      \hypo{\Gamma_1, x : A \vdash P}
+      \hypo{\Gamma_2, y : A^\bot \vdash Q}
+      \infer2[\textsc{t-cut}]{\Gamma \vdash \parcomp{x}{y}{P}{Q}}
+    \end{prooftree}
+  \end{center}
+  with $\Gamma = \Gamma_1 \circ \Gamma_2$. By induction hypothesis,
+  we have for all $\Delta$ and $\sigma$, if $\Gamma_1, x : A \vdash \sigma : \Delta$,
+  then $\Delta \vdash P\sigma$, and similarly for $Q$.
+  Using Lemma \ref{lemma:subst-partition}, there exist $\Delta_1$ and $\Delta_2$ such that
+  \[
+    \Gamma_1 \vdash \sigma : \Delta_1 \quad \text{and} \quad
+    \Gamma_2 \vdash \sigma : \Delta_2 \quad \text{and} \quad
+    \Delta = \Delta_1 \circ \Delta_2.
+  \]
+  Linear typing further yields
+  \[
+    \Gamma_1, x : A \vdash (x \coloneq x) \cdot \sigma : \Delta_1, x : A
+  \]
+  and
+  \[
+    \Gamma_2, y : A^\bot \vdash (y \coloneq y) \cdot \sigma : \Delta_2, y : A^\bot
+  \]
+  Thus, using the induction hypothesis,
+  \begin{center}
+    \begin{prooftree}
+      \hypo{\Delta_1, x : A \vdash P\sigma}
+      \hypo{\Delta_2, y : A^\bot \vdash Q\sigma}
+      \infer2[\textsc{t-cut}]{\Delta \vdash \parcomp{x}{y}{P\sigma}{Q\sigma}}
+    \end{prooftree}
+  \end{center}
+  where we use the fact that $P\sigma = P((x \coloneq x) \cdot \sigma)$.
+\end{proof}
+
+\begin{theorem}[\rocqicon~Preservation]
+  If $\Gamma \vdash P$ and $P \contr Q$, then $\Gamma \vdash Q$.
+\end{theorem}
+\begin{proof}
+  By induction on the derivation of the premise $P \contr Q$.
+  Most cases follow immediately by inversion on the typing relation.
+  The interesting cases are \textsc{r-axcut}, \textsc{r-seq} and \textsc{r-struct}.
+
+  \begin{enumerate}[itemsep=1em, label=Case:, leftmargin=*]
+    \item (\textsc{r-axcut}) \\
+      We have
+      \[
+        P = \parcomp{x}{y}{\link{x}{M}}{R} \contr R[M/y] = Q.
+      \]
+      By inversion on the typing derivation
+      \[
+        \Gamma \vdash \parcomp{x}{y}{\link{x}{M}}{R}
+      \]
+      we obtain
+      \[
+        x : A \vdash x : A \quad \text{and} \quad
+        \Delta_1 \vdash M : A^\bot \quad \text{and} \quad
+        \Delta_2, y : A^\bot \vdash R
+      \]
+      with $\Gamma = \Delta_1 \circ \Delta_2$. Defining
+      \[
+        \sigma \coloneq (y \coloneq M) \cdot id_{\Delta_2},
+      \]
+      we conclude $R[M/y] = R\sigma$ using Lemma \ref{lemma:strict-domains}.
+      Further, we can derive
+      \[
+        \Delta_2, y : A^\bot \vdash \sigma : \Gamma.
+      \]
+      by the disjointness of $\Delta_1$ and $\Delta_2$.
+      Thus, using Lemma \ref{lemma:substitution}, we obtain $\Gamma \vdash R \sigma$.
+    \item (\textsc{r-seq}) \\
+      Analogous to the previous case.
+    \item (\textsc{r-struct}) \\
+      The derivation ends with the following shape:
+      \begin{center}
+        \begin{prooftree}
+          \hypo{P \equiv P'}
+          \hypo{P' \contr Q'}
+          \hypo{Q' \equiv Q}
+          \infer3[]{P \contr Q}
+        \end{prooftree}
+      \end{center}
+      By induction hypothesis, we have, for any $\Gamma$,
+      if $\Gamma \vdash P'$, then $\Gamma \vdash Q'$. Using Lemma
+      \ref{lemma:preservation-for-struct-cong}, we obtain
+      $\Gamma \vdash P'$. Thus, by IH, $\Gamma \vdash Q'$. Finally,
+      using Lemma \ref{lemma:preservation-for-struct-cong} again, we
+      derive the desired conclusion $\Gamma \vdash Q$.
+  \end{enumerate}
+\end{proof}
+
+\section{Terminated Processes}
+\subsection{Canonical Cut Forms and Link Lists}
+\begin{definition}[Canonical cut form]
+  The set of cuts that is in \emph{canonical cut form} is inductively defined by the following clauses.
+  \begin{enumerate}[label=(\roman*)]
+    \item If $L$ and $R$ are not cuts, then
+          $\parcomp{x}{y}{L}{R}$ is in canonical cut form.
+    \item If $L$ is not a cut and $P$ is in canonical cut form,
+          then $\parcomp{x}{y}{L}{P}$ is also in canonical cut form.
+  \end{enumerate}
+\end{definition}
+
+\begin{remark}
+  A cut that is in canonical cut form is a degenerate tree of $\textsc{cut}$s
+  with link processes or sequences as leaves. That is why we sometimes refer
+  to a cut in canonical cut form as a cut list.
+\end{remark}
+
+\begin{lemma}[\rocqicon~Appending cut lists] \label{lemma:cut-list-append}
+  If $\Gamma \vdash \parcomp{x}{y}{P}{Q}$ and both $P$ and $Q$ are in canonical
+  cut form, then there exists an $R$ in canonical cut form such that $\parcomp{x}{y}{P}{Q} \equiv R$.
+\end{lemma}
+\begin{proof}
+  By induction on the depth of $P$ and appropriate application of structural congruences for cuts.
+\end{proof}
+
+\begin{lemma}[\rocqicon~Existence of canonical cut forms] \label{lemma:canonical-cut-forms}
+  If $\Gamma \vdash \parcomp{x}{y}{L}{R}$, then there exists
+  a process $P$ such that $\parcomp{x}{y}{L}{R} \equiv P$ and $P$
+  is in canonical cut form.
+\end{lemma}
+\begin{proof}
+  By induction on the derivation of $\Gamma \vdash \parcomp{x}{y}{L}{R}$, followed
+  by a case analysis on the structure of $L$ and $R$. Excluding the vacuous
+  cases which are impossible due to typing, we end up with five valid cases:
+  four where one premise is a link or sequencing and the other is a cut,
+  and a fifth, where both $L$ and $R$ are cuts.
+
+  \begin{enumerate}[itemsep=1em, label=Case:, leftmargin=*]
+  \item ($L = \link{M_1}{M_2}$ and $R = \parcomp{a}{b}{Q_1}{Q_2}$) \\
+    By induction hypothesis, there exists an $R'$ such that $R \equiv R'$ and
+    $R'$ is in canonical cut form. Thus,
+    \[
+      \parcomp{x}{y}{L}{R} \equiv \parcomp{x}{y}{\link{M_1}{M_2}}{R'} \eqcolon P
+    \]
+    where $P$ is in canonical cut form by definition.
+    The other three cases in which exactly one of $L$ or $R$
+    is a cut follow analogously.
+
+  \item ($L = \parcomp{a}{b}{L_1}{L_2}$ and $R = \parcomp{c}{d}{R_1}{R_2}$) \\
+    By induction hypothesis, there exists $L'$ and $R'$ such that
+    \[
+      L \equiv L' \quad \text{and} \quad R \equiv R',
+    \]
+    and both $L'$ and $R'$ are in canonical cut form.
+    Thus, $\parcomp{x}{y}{L}{R} \equiv \parcomp{x}{y}{L'}{R'}$. The result then
+    follows by applying Lemma \ref{lemma:cut-list-append}.
+  \end{enumerate}
+\end{proof}
+
+A special case of a cut list is a \emph{link list}, which,
+informally, is a degenerate tree of cuts whose leaves are link processes
+of the form $\link{x_i}{M_i}$ (or symmetrically $\link{M_i}{x_i}$).
+
+\begin{definition}[Link list]
+  The set of \emph{link lists} and their associated \emph{spines} (sequences of names) are
+  inductively defined by the following clauses.
+  \begin{enumerate}[label=(\roman*)]
+    \item If $P_1 \equiv \link{x_1}{M_1}$ and $P_2 \equiv \link{x_2}{M_2}$ such that
+          $M_1$ and $M_2$ are not futures, then $\parcomp{x}{y}{P_1}{P_2}$
+          is a link list with spine $spine(P) = [x_1, x_2]$.
+    \item If $L \equiv \link{a}{M}$ such that $M$ is not a future and
+          $Q$ is a link list with spine $spine(Q) = \vec{x}$, then 
+          $P = \parcomp{a}{b}{L}{Q}$ is a link list with spine $spine(P) = x :: \vec{x}$.
+  \end{enumerate}
+\end{definition}
+
+We can think of a link list as a pool of threads. If every channel
+in the spine is a free occurrence, then every thread is waiting on external communication,
+and we consider the process terminated. Otherwise, if at least one channel
+in the spine is bound, it can pass its message to another thread in the pool.
+
+\begin{lemma}[\rocqicon~Reducibility of link lists] \label{lemma:link-list-reducibility}
+  Let $\Gamma \vdash P$ be a well-typed link list. If some channel
+  $a \in spine(P)$ is bound in $P$, then $P \contr P'$ for some process $P'$.
+\end{lemma}
+\begin{proof}[Proof Sketch]
+  The proof proceeds by strong induction on the length of the spine. It relies
+  on several auxiliary lemmas regarding the reducibility of link lists with specific
+  spine properties. Due to their technical nature, we omit these intermediate
+  results here for brevity, referring the interested reader to the formalization.
+
+  However, the general intuition is as follows: If $a \in spine(P)$ occurs
+  bound in $P$, then, without loss of generality, we may assume that $a$ is bound 
+  by the leftmost scope; i.e., we are looking at the following situation:
+  \[
+    (\nu x a)(L \mid E[\parcomp{c}{d}{\link{a}{M}}{P}]).
+  \]
+  Here, the context $E$ describes a link list prefix whose tail is instantiated 
+  with the link list $\parcomp{c}{d}{\link{a}{M}}{P}$. Through a series of
+  structural congruences, it is possible to commute the binder $(\nu x a)$ 
+  inwards to the link $\link{a}{M}$ to eventually yield a process
+  \[
+    E'[\parcomp{a}{x}{\link{a}{M}}{P'}],
+  \]
+  for a new list prefix $E'$ and tail $P'$. This process may now reduce via
+  \textsc{r-axcut}.
+\end{proof}
+
+\subsection{Final Processes}
+
+\begin{definition}[Final process]
+  A process $P$ is \emph{final} if it satisfies one of the following conditions:
+  \begin{enumerate}[label=(\roman*)]
+    \item $P = \Lambda$.
+    \item $P$ is of the form $\link{x}{M}$ or $\link{M}{x}$.
+    \item There exists a link list $Q$ such that $P \equiv Q$ and
+          every channel $a \in spine(Q)$ is free in $Q$.
+  \end{enumerate}
+\end{definition}
+
+\begin{lemma}[\rocqicon~Final processes are irrecudible]
+  If $\Gamma \vdash P$, then $P$ is final if and only if
+  $P$ is irreducible.
+\end{lemma}
+
+\change[inline]{Give high-level explanation of the proof;
+explain difficulty (that is, no member of the same equivalence can contain a redex)}
+
+\section{Progress}
+
+\begin{lemma}[\rocqicon~Reducibility of canonical cut forms] \label{lemma:cut-list-reducibility}
+  If $\Gamma \vdash P$ is a well-typed cut list,
+  then $P \contr P'$ for some process $P'$ or $P$ is a link list.
+\end{lemma}
+\begin{proof}[Proof Sketch]
+  The proof is by induction on the structure of the cut list $P$.
+  We outline the underlying mechanism:
+  \begin{enumerate}
+    \item As long as a cut list contains a leaf that is not of the form $\link{x}{M}$ (or $\link{M}{x}$),
+          well-typedness guarantees that this leaf can step via \textsc{r-seq} or
+          a $\beta$-reduction.
+
+    \item If all leaves have the shape $\link{x}{M}$ (or $\link{M}{x}$), then $P$ is a link
+          list by definition, which completes the proof.
+  \end{enumerate}
+\end{proof}
+
+\begin{corollary}[\rocqicon~Progress for canonical cut forms] \label{cor:progress-for-cut-list}
+  If $\Gamma \vdash P$ is a cut list, then $P$ is final
+  or $P \contr P'$ for some process $P'$.
+\end{corollary}
+\begin{proof}
+  Using Lemma \ref{lemma:cut-list-reducibility}, we consider the following two cases:
+  \begin{enumerate}[label=(\roman*)]
+    \item $P \contr P'$ for some $P'$. The result follows immediately.
+    \item $P$ is a link list. If all names in its spine are free occurrences,
+          then $P$ is final by definition. Otherwise, some channel in $spine(P)$
+          is bound in $P$, so $P \contr P'$ for some $P'$
+          by Lemma \ref{lemma:link-list-reducibility}.
+  \end{enumerate}
+\end{proof}
+
+\begin{theorem}[\rocqicon~Progress]
+  If $\Gamma \vdash P$, then $P \contr P'$ for some process $P'$ or
+  $P$ is final.
+\end{theorem}
+\begin{proof}
+  By inversion on the typing derivation of $\Gamma \vdash P$.
+  \begin{enumerate}[itemsep=1em, label=Case:, leftmargin=*]
+    \item (\textsc{t-ax}) \\
+      We have $P = \link{M_1}{M_2}$ and observe, that a well-typed link process
+      may either $\beta$-reduce (yielding $P'$) or is of the form $\link{x}{M}$ (or $\link{M}{x}$),
+      in which case $P$ is final.
+
+    \item (\textsc{t-cut}) \\
+      We have $P = \parcomp{x}{y}{P_1}{P_2}$. Using Lemma
+      \ref{lemma:canonical-cut-forms}, there exists a canonical cut form
+      $P'$ such that $P \equiv P'$. By Lemma \ref{lemma:preservation-for-struct-cong},
+      it follows $\Gamma \vdash P'$.
+      Now, applying Lemma \ref{cor:progress-for-cut-list}, we consider
+      the following two subcases for $P'$:
+      \begin{enumerate}[label=(\roman*)]
+        \item $P'$ is final. Since $P$ is a cut, it follows by inversion
+              on $P \equiv P'$, that $P'$ is a link list with no bound
+              name in its spine. Thus, by definition, $P$ is final.
+        \item $P' \contr R$ for some $R$. Consequently, $P \contr R$ via \textsc{r-struct}.
+      \end{enumerate}
+
+    \item (\textsc{t-seq}) \\
+      Now, $P = Q \seq xM$, which reduces to $P \contr Q[M/x] \eqcolon P'$.
+
+    \item (\textsc{t-nil}) \\
+      We have $P = \Lambda$, which is already final.
+  \end{enumerate}
+\end{proof}
+
+\begin{corollary}[\rocqicon~Progress for closed processes]
+  If $\vdash P$, then $P \contr P'$ for some process $P'$ or
+  $P = \Lambda$.
+\end{corollary}
+\begin{proof}
+  Immediate from Lemma \ref{lemma:strict-domains} and the observation that
+  $\Lambda$ is the only closed, final process.
+\end{proof}

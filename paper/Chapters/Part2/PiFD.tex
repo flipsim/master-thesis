@@ -358,6 +358,13 @@ reflects the structure of our Rocq formalization more faithfully.}.
   \end{enumerate}
 \end{definition}
 
+\begin{convention}[Barendregt Variable Convention]
+  Throughout this thesis, we consider processes up to $\alpha$-equivalence.
+  To simplify the presentation, we adopt the
+  \emph{Barendregt variable convention}: in any definition, theorem, or proof, all bound names are
+  assumed to be mutually distinct and disjoint from any free names occurring in the same context.
+\end{convention}
+
 \begin{definition}[Cons for substitutions]
   Extending a substitution $\sigma = [M_1, \hdots, M_n/x_1, \hdots, x_n]$
   to additionally substitute $M$ for $x$, given $x \notin dom(\sigma)$, is
@@ -406,6 +413,14 @@ for substitutions.
       \hypo{\Gamma \vdash \sigma : \Delta''}
       \hypo{\Delta = \Delta' \circ \Delta''}
       \infer3[\textsc{wf-subst-cons}]{x : A, \Gamma \vdash (x \coloneq M) \cdot \sigma : \Delta}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{\Gamma \vdash \sigma : \Delta}
+      \hypo{x \notin dom(\Gamma)}
+      \infer2[\textsc{wf-subst-cons-fv}]{\Gamma \vdash (x \coloneq M) \cdot \sigma : \Delta}
     \end{prooftree}
   \end{center}
 \end{definition}
