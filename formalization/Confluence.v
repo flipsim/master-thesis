@@ -996,7 +996,7 @@ Qed.
          P
       ↠   ↠*
     Q1       Q2
-      ↠*  ↠*
+      ↠*  ↠
          R
 *)
 Lemma church_rosser_par_red_clos_trans_1n_par_red :
@@ -1005,13 +1005,14 @@ Lemma church_rosser_par_red_clos_trans_1n_par_red :
     Relation_Operators.clos_trans_1n process par_reduction P Q2 ->
     exists R,
       Relation_Operators.clos_trans_1n process par_reduction Q1 R /\
-      Relation_Operators.clos_trans_1n process par_reduction Q2 R.
+      Q2 ↠ R.
 Proof.
   intros.
   generalize dependent Q1.
   induction H1; intros.
   + destruct (church_rosser_parallel_reduction _ _ _ _ H H0 H1) as [? [? ?]].
-    eexists; split; econstructor; eauto.
+    eexists; split; try now (econstructor; eauto).
+    assumption.
   + destruct (church_rosser_parallel_reduction _ _ _ _ H H0 H2) as [? [? ?]].
     assert (Γ ⊢ y :#) by apply (par_red_preserves_typing _ _ _ H H0).
     destruct (IHclos_trans_1n H5 _ H3) as [? [? ?]].
@@ -1039,14 +1040,14 @@ Proof.
   generalize dependent Q2.
   induction H0; intros.
   + destruct (church_rosser_par_red_clos_trans_1n_par_red _ _ _ _ H H0 H1) as [? [? ?]].
-    exists x0. apply Operators_Properties.clos_trans_t1n_iff in H2, H3.
+    assert (Relation_Operators.clos_trans_1n process par_reduction Q2 x0). { econstructor. eauto. }
+    exists x0. apply Operators_Properties.clos_trans_t1n_iff in H2, H4.
     split; auto.
   + destruct (church_rosser_par_red_clos_trans_1n_par_red _ _ _ _ H H0 H2) as [? [? ?]].
     assert (Γ ⊢ y :#) by apply (par_red_preserves_typing _ _ _ H H0).
     destruct (IHclos_trans_1n H5 _ H3) as [? [? ?]].
     exists x1. split; auto.
-  apply Operators_Properties.clos_trans_t1n_iff in H4.
-  eapply Relation_Operators.t_trans; eauto.
+    eapply Relation_Operators.t_trans; eauto. econstructor; eauto.
 Qed.
 
 (* ▶ is confluent *)
