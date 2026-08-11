@@ -25,7 +25,7 @@ opposed to the propositions of $\LFD$.
   \end{alignat*}
 \end{definition}
 
-\begin{definition}[Syntax of $\piFD$]
+\begin{definition}[Syntax of $\piFD$] \label{def:pi-fd:syntax}
   \phantom{foo}
   \vspace{-1.5em}
 
@@ -62,7 +62,7 @@ however they allow the operational semantics to be written more concisely.
 Similarly, we add the nil process $\Lambda$ to allow for closed processes,
 at the cost of losing consistency.
 
-\begin{definition}[Contexts]
+\begin{definition}[Contexts] \label{def:pi-fd:contexts}
   The contexts of $\piFD$ are inductively defined by the grammar
   \[
     \Gamma \Coloneqq \varnothing \mid \Gamma, x : A
@@ -80,7 +80,7 @@ contexts are lists ordered based on their de Bruijn index. Many proofs thus
 make use of an induction on the derivation of a context split, which is why
 we did not want to omit their definition.}.
 
-\begin{definition}[Context Split]
+\begin{definition}[Context split] \label{def:pi-fd:ctx-split}
   The relation $\Gamma = \Delta_1 \circ \Delta_2$ is inductively defined by the
   following rules, where we presuppose that $dom(\Delta_1) \cap dom(\Delta_2) = \varnothing$.
   \begin{center}
@@ -103,7 +103,7 @@ we did not want to omit their definition.}.
   \end{center}
 \end{definition}
 
-\begin{definition}[Typing rules of $\piFD$]
+\begin{definition}[Typing rules of $\piFD$] \label{def:pi-fd:typing}
   \phantom{Foo}
   \begin{center}
     \begin{flushright}
@@ -257,7 +257,7 @@ of a link.
 The structural proof conversions of $\LFD$ yield the rules of the \emph{structural congruence}
 $\equiv$ of $\piFD$.
 
-\begin{definition}[Structural congruence]
+\begin{definition}[Structural congruence] \label{def:pi-fd:struct-cong}
   Structural congruence $\equiv$ is defined as the least congruence relation
   that is closed under rules
   \begin{align*}
@@ -282,7 +282,7 @@ In order to present the interesting conversions of process reductions, we
 must first deal with the notions of free variables and substitution. We first
 define the set of free variables of processes, statements and terms.
 
-\begin{definition}[Free variables]
+\begin{definition}[Free variables] \label{def:pi-fd:free-vars}
   The set of free variables, written $fv(P)$ ($fv(M)$) is recursively defined
   as follows:
   {\allowdisplaybreaks
@@ -320,7 +320,7 @@ interaction between concurrent processes. We define it via
 \emph{simultaneous substitutions} \cite{Stoughton1988:SimultaneousSubst} \footnote{This choice
 reflects the structure of our Rocq formalization more faithfully.}.
 
-\begin{definition}[Substitution]
+\begin{definition}[Substitution] \label{def:pi-fd:substitution}
   \begin{enumerate}
   \item A simultaneous substitution of messages $M_1, \hdots, M_n$ for
   the variables $x_1, \hdots, x_n$ ($x_i$ distinct) is defined by the
@@ -365,7 +365,7 @@ reflects the structure of our Rocq formalization more faithfully.}.
   assumed to be mutually distinct and disjoint from any free names occurring in the same context.
 \end{convention}
 
-\begin{definition}[Cons for substitutions]
+\begin{definition}[Cons for substitutions] \label{def:pi-fd:subst-cons}
   Extending a substitution $\sigma = [M_1, \hdots, M_n/x_1, \hdots, x_n]$
   to additionally substitute $M$ for $x$, given $x \notin dom(\sigma)$, is
   defined as
@@ -374,7 +374,7 @@ reflects the structure of our Rocq formalization more faithfully.}.
   \]
 \end{definition}
 
-\begin{definition}[Identity substitution]
+\begin{definition}[Identity substitution] \label{def:pi-fd:id-subst}
   Given a set of variables $\Gamma = \{x_1, \hdots, x_n\}$, we define
   the identity substitution as
   \[
@@ -433,7 +433,7 @@ in pairwise disjoint contexts.
 We can now define the operation of single-step \emph{contraction} $\contr$, which
 allows to eliminate a single redex in a process.
 
-\begin{definition}[Contraction $\contr$]
+\begin{definition}[Contraction $\contr$] \label{def:pi-fd:contr}
   \begin{align}
     % tensor/par
     \link{\ssend{v.P}{z.Q}}{\sreceive{a}{b}{R}}

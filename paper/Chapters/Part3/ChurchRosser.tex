@@ -26,7 +26,7 @@ whose transitive closure coincides with reduction ($\red$).
 
 Specifically, we prove confluence for the relation of \emph{parallel reduction}
 ($\parred$). Because confluence is preserved under transitive closure,
-provivng that $\parred^*$ and $\red$ coincide will immediately yield the
+proving that $\parred^*$ and $\red$ coincide will immediately yield the
 main result.
 
 However, as noted in previous sections, structural congruence ($\equiv$) does
@@ -91,7 +91,7 @@ by the naive rule above. To handle situations where a link is displaced
 arbitrarily deep by repeated application of \textsc{c-assoc}, we introduce
 \emph{evaluation contexts}.
 
-\begin{definition}[Evaluation context]
+\begin{definition}[Evaluation context] \label{def:evaluation-context}
   Evaluation contexts $\mathcal{E}$ are inductively defined by the following grammar:
   \[
     \mathcal{E} \Coloneqq \link{x}{\square} \mid \link{\square}{x} \mid \parcomp{x}{y}{P}{\mathcal{E}} \mid \parcomp{y}{x}{\mathcal{E}}{P}
@@ -102,7 +102,7 @@ The grammar above does not ensure that the resulting context was created
 through a series of \textsc{c-assoc} applications. This is why we additionally
 define a well-formedness predicate for evaluation contexts.
 
-\begin{definition}[Well-formedness of evaluation contexts]
+\begin{definition}[Well-formedness of evaluation contexts] \label{def:wf-eval-ctx}
   An evaluation context $\mathcal{E}$ is well-formed at channel
   $x$, denoted $\textsf{WF} \, \mathcal{E}_x$, if the judgment can be derived
   by the following rules:
@@ -145,7 +145,7 @@ However, given $P$, $\mathcal{E}$, $M$, and the names $x$ and $y$, we can
 directly compute a possible reduct of $\parcomp{y}{x}{P}{\mathcal{E}[M]}$,
 denoted $\textsf{reduct}(E, M, P, x, y)$.
 
-\begin{definition}[\textsc{axcut} reduct]
+\begin{definition}[\textsc{axcut} reduct] \label{def:axcut-reduct}
   We define the reduct of an \textsc{axcut} determined by the process $P$,
   evaluation context $\mathcal{E}$, message $M$, and a channel with endpoints $x$ and $y$
   inductively by the following rules\footnote{Note, that our formalization cannot define $\textsf{reduct}$ through
@@ -165,7 +165,7 @@ denoted $\textsf{reduct}(E, M, P, x, y)$.
 Using the notion of \textsc{axcut} reducts, we now define the relation of
 simple reduction.
 
-\begin{definition}[Simple reduction $\simplred$]
+\begin{definition}[Simple reduction $\simplred$] \label{def:simplred}
   \begin{align}
     % reflexivity
     P &\simplred P
@@ -273,7 +273,7 @@ simple reduction.
 \section{Parallel Reduction}
 Having introduced $\simplred$, we now define parallel reduction.
 
-\begin{definition}[\rocqicon~Parallel reduction $\parred$]
+\begin{definition}[\rocqicon~Parallel reduction $\parred$] \label{def:parred}
   Parallel reduction is defined as the union of simple reduction and structural congruence.
   \[
     \parred \; \coloneq \; \simplred \; \cup \; \equiv
@@ -283,7 +283,7 @@ Having introduced $\simplred$, we now define parallel reduction.
 First, we prove that for any two process $P$ and $Q$, we have $P \red Q$ if and only if
 $P \parred^* Q$. The direction $(\Rightarrow)$ is straightforward.
 
-\begin{lemma}[\rocqicon~$\red$ is a subset of $\parred^*$]
+\begin{lemma}[\rocqicon~$\red$ is a subset of $\parred^*$] \label{lemma:red-subset-parred-star}
   Reduction is contained in the transitive closure of parallel reduction.
   \[
     \red \; \subset \; \parred^*
@@ -304,14 +304,14 @@ an \textsc{axcut} reduct can be obtained using $\equiv$ and $\contr$.
 
 Using Lemma \ref{lemma:simplred-axcut-in-red}, we prove the following results.
 
-\begin{lemma}[\rocqicon~$\simplred$ is a subset of $(\contr \; \cup \; \equiv)$]
+\begin{lemma}[\rocqicon~$\simplred$ is a subset of $(\contr \; \cup \; \equiv)$] \label{lemma:simplred-in-contr-cup-equiv}
   Simple reduction is contained in the union of contraction and structural congruence.
   \[
     \simplred \; \subset \; \contr \; \cup \; \equiv
   \]
 \end{lemma}
 
-\begin{corollary}[\rocqicon~$\parred$ is a subset of $\red$]
+\begin{corollary}[\rocqicon~$\parred$ is a subset of $\red$] \label{cor:parred-in-red}
   Parallel reduction is contained in the relation of reduction.
   \[
     \parred \; \subset \; \red
@@ -602,7 +602,7 @@ compatibility result for parallel reduction:
 \end{center}
 This serves as a generalization of the second diamond above.
 
-\begin{definition}[Directed congruence $\dircong$]
+\begin{definition}[Directed congruence $\dircong$] \label{def:dircong}
   The relation $\dircong$ is (mutually) inductively defined by the following rules.
 
   \begin{center}
@@ -719,7 +719,7 @@ This serves as a generalization of the second diamond above.
   \end{center}
 \end{definition}
 
-\begin{lemma}[\rocqicon~$\dircong$ is a subset of $\equiv$]
+\begin{lemma}[\rocqicon~$\dircong$ is a subset of $\equiv$] \label{lemma:dircong-in-equiv}
   If $P \dircong Q$, then $P \equiv Q$.
 \end{lemma}
 
@@ -729,7 +729,7 @@ This serves as a generalization of the second diamond above.
 
 We extend the notion of directed congruence to evaluation contexts and substitutions as well.
 
-\begin{definition}[Directed congruence for evaluation contexts]
+\begin{definition}[Directed congruence for evaluation contexts] \label{def:dircong-for-ctx}
   The relation $\dircong$ on evaluation contexts is inductively defined by the following rules.
 
   \begin{center}
@@ -843,7 +843,7 @@ We extend the notion of directed congruence to evaluation contexts and substitut
   \end{center}
 \end{definition}
 
-\begin{definition}[Directed congruence for substitutions]
+\begin{definition}[Directed congruence for substitutions] \label{def:dircong-for-subst}
   Given substitutions $\sigma_1 = [M_1, \hdots, M_n / x_1, \hdots, x_n]$
   and $\sigma_2 = [M_1', \hdots, M_n' / x_1, \hdots, x_n]$, we write
   $\sigma_1 \dircong \sigma_2$ if $M_i \dircong M_i'$ for every $i$.
@@ -874,7 +874,7 @@ We first state a few properties about directed congruence and simple reduction.
 Using Lemmata \ref{lemma:dircong-invar-subst} and \ref{lemma:reduct-inver-dircong},
 we can now prove the first result relating simple reduction and structural congruence.
 
-\begin{lemma}[\rocqicon~Compatibility of simple reduction with directed congruence]
+\begin{lemma}[\rocqicon~Compatibility of simple reduction with directed congruence] \label{lemma:compat-simplred-dircong}
   Let $\Gamma \vdash P$ be a well-typed process.
   If $P \dircong Q_1$ and $P \simplred Q_2$, then $Q_1 \simplred R$ and $Q_2 \equiv R$
   for some $R$.

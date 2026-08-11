@@ -1,0 +1,287 @@
+\chapter{Mechanization Map} \label{app:mechanization-map}
+
+This appendix provides a mapping between the theorems, lemmata,
+and definitions presented in this thesis and their corresponding
+formalization in the accompanying Rocq development.
+
+\vspace{1em}
+
+\begin{longtable}{@{}
+    >{\raggedright\arraybackslash}p{0.35\textwidth}
+    >{\raggedright\arraybackslash}p{0.25\textwidth}
+    >{\raggedright\arraybackslash}p{0.40\textwidth}
+@{}}
+\toprule
+\textbf{Thesis Statement} & \textbf{Rocq File} & \textbf{Formal Identifier} \\
+\midrule
+\endfirsthead
+
+% Header for subsequent pages
+\multicolumn{3}{@{}l}{\textit{Mechanization Map (continued)}} \\
+\toprule
+\textbf{Thesis Statement} & \textbf{Rocq File} & \textbf{Formal Identifier} \\
+\midrule
+\endhead
+
+% Footer for pages before the last page
+\midrule
+\multicolumn{3}{r@{}}{\textit{Continued on next page...}} \\
+\endfoot
+
+% Footer for the last page
+\bottomrule
+\endlastfoot
+
+% --- LFD ---
+\multicolumn{3}{@{}l}{\textbf{Section \ref{ch:linear-fd}: Linear Free Deduction}} \\[0.5em]
+Definition \ref{def:lfd:linear-negation} (Linear Negation)
+& \rocqid{Types.v}
+& \rocqid{dual} \\
+
+\\
+
+% --- Term Assignment ---
+\multicolumn{3}{@{}l}{\textbf{Section \ref{ch:pi-fd}: A Term Assignment for LFD}} \\[0.5em]
+Definition \ref{def:pi-fd:types} (Types of $\piFD$)
+& \rocqid{Types.v}
+& \rocqid{type} \\
+
+Definition \ref{def:pi-fd:syntax} (Syntax of $\piFD$)
+& \rocqid{Syntax.v}
+& \rocqid{process}, \rocqid{message}, \rocqid{statement} \\
+
+Definition \ref{def:pi-fd:contexts} (Contexts)
+& \rocqid{Contexts.v}
+& \rocqid{ctx} \\
+
+Definition \ref{def:pi-fd:ctx-split} (Context split)
+& \rocqid{Contexts.v}
+& \rocqid{context_split} \\
+
+Definition \ref{def:pi-fd:typing} (Typing rules of $\piFD$)
+& \rocqid{Typing.v}
+& \rocqid{TypingP}, \rocqid{TypingS}, \rocqid{TypingM} \\
+
+Definition \ref{def:pi-fd:struct-cong} (Structural congruence)
+& \rocqid{StructCong.v}
+& \rocqid{structural_congruence} \\
+
+Definition \ref{def:pi-fd:free-vars} (Free Variables)
+& \rocqid{Syntax.v}
+& \rocqid{occurs_free_process}, \rocqid{occurs_free_message}, \rocqid{occurs_free_statement} \\
+
+Lemma \ref{lemma:strict-domains} (Domains are strict)
+& \rocqid{FreeVars.v}
+& \rocqid{domains_are_strict} \\
+
+Definition \ref{def:pi-fd:substitution} (Substitution)
+& \rocqid{Syntax.v}
+& \rocqid{substitution} \\
+
+Definition \ref{def:pi-fd:subst-cons} (Cons for substitution)
+& \rocqid{Syntax.v}
+& \rocqid{scons} \\
+
+Definition \ref{def:pi-fd:id-subst} (Identity substitution)
+& \rocqid{Syntax.v}
+& \rocqid{id_subst} \\
+
+Definition \ref{def:wf-substitution} (Well-formedness of substitutions)
+& \rocqid{Substitution.v}
+& \rocqid{well_typed_subst} \\
+
+Definition \ref{def:pi-fd:contr} (Contraction $\contr$)
+& \rocqid{Reduction.v}
+& \rocqid{reduces} \\
+
+Definition \ref{def:reduction} (Reduction $\red$)
+& \rocqid{Reduction.v}
+& \rocqid{multi_step_reduction} \\
+
+\\
+
+% --- Type Safety ---
+\multicolumn{3}{@{}l}{\textbf{Section \ref{ch:type-safety}: Type Safety}} \\[0.5em]
+
+Lemma \ref{lemma:preservation-for-struct-cong} (Preservation for $\equiv$)
+& \rocqid{StructCong.v}
+& \rocqid{struct_cong_preserves_typing} \\
+
+Lemma \ref{lemma:subst-partition} (Partitions for well-formed substitutions)
+& \rocqid{Substitution.v}
+& \rocqid{well_typed_subst_partitions_split} \\
+
+Lemma \ref{lemma:substitution} (Substitution)
+& \rocqid{Substitution.v}
+& \rocqid{substitution_preserves_typing} \\
+
+Theorem \ref{theorem:preservation} (Preservation)
+& \rocqid{Preservation.v}
+& \rocqid{preservation} \\
+
+Definition \ref{def:canonical-cut-form} (Canonical cut form)
+& \rocqid{FinalProcess.v}
+& \rocqid{cut_list} \\
+
+Lemma \ref{lemma:cut-list-append} (Appending cut lists)
+& \rocqid{FinalProcess.v}
+& \rocqid{cut_lists_flatten_in_cut} \\
+
+Lemma \ref{lemma:canonical-cut-forms} (Existence of canonical cut forms)
+& \rocqid{FinalProcess.v}
+& \rocqid{canonical_cut_form} \\
+
+Definition \ref{def:link-list} (Link list)
+& \rocqid{FinalProcess.v}
+& \rocqid{link_list_wt} \\
+
+Lemma \ref{lemma:link-list-reducibility} (Reducibility of link lists)
+& \rocqid{FinalProcess.v}
+& \rocqid{link_list_with_0_reduces} \\
+
+Definition \ref{def:final-process} (Final process)
+& \rocqid{FinalProcess.v}
+& \rocqid{is_final} \\
+
+Lemma \ref{lemma:normalforms} (Final processes are irreducible)
+& \rocqid{Irreducibility.v}
+& \rocqid{final_iff_irreducible} \\
+
+Lemma \ref{lemma:cut-list-reducibility} (Reducibility of canonical cut forms)
+& \rocqid{FinalProcess.v}
+& \rocqid{decide_cut_list_link_list} \\
+
+Corollary \ref{cor:progress-for-cut-list} (Progress for canonical cut forms)
+& \rocqid{FinalProcess.v}
+& \rocqid{cut_list_final_or_reduces} \\
+
+Theorem \ref{theorem:progress} (Progress)
+& \rocqid{Progress.v}
+& \rocqid{progress} \\
+
+Corollary \ref{cor:progress-closed-proc} (Progress for closed processes)
+& \rocqid{Progress.v}
+& \rocqid{progress_for_closed_processes} \\
+
+\\
+
+% --- Church-Rosser ---
+\multicolumn{3}{@{}l}{\textbf{Section \ref{ch:church-rosser}: The Church-Rosser Theorem}} \\[0.5em]
+
+Definition \ref{def:evaluation-context} (Evaluation context)
+& \rocqid{AxCutCtx.v}
+& \rocqid{axcut_ctx} \\
+
+Definition \ref{def:wf-eval-ctx} (Well-formedness for evaluation contexts)
+& \rocqid{AxCutCtx.v}
+& \rocqid{well_formed_axcut_ctx} \\
+
+Definition \ref{def:axcut-reduct} (\textsc{axcut} reduct)
+& \rocqid{AxCutCtx.v}
+& \rocqid{reduce_axcut} \\
+
+Definition \ref{def:simplred} (Simple reduction $\simplred$)
+& \rocqid{ParallelReduction.v}
+& \rocqid{equiv_reduces} \\
+
+Definition \ref{def:parred} (Parallel reduction $\parred$)
+& \rocqid{ParallelReduction.v}
+& \rocqid{par_reduction} \\
+
+Lemma \ref{lemma:red-subset-parred-star} ($\red$ is a subset of $\parred^*$)
+& \rocqid{ParallelReduction.v}
+& \rocqid{multi_step_red_in_clos_trans_par_red} \\
+
+Lemma \ref{lemma:simplred-axcut-in-red} (An \textsc{axcut} reduct lies in $\red$)
+& \rocqid{AxCutCtx.v}
+& \rocqid{equiv_red_axcut_in_reduces_axcut} \\
+
+Lemma \ref{lemma:simplred-in-contr-cup-equiv} ($\simplred$ is a subset of $(\contr \; \cup \; \equiv)$)
+& \rocqid{ParallelReduction.v}
+& \rocqid{equiv_reduces_in_reduces_or_struct_cong} \\
+
+Corollary \ref{cor:parred-in-red} ($\parred$ is a subset of $\red$)
+& \rocqid{ParallelReduction.v}
+& \rocqid{par_reduction_in_reduces_or_struct_cong} \\
+
+Lemma \ref{lemma:parred-red-coincides} ($\parred^*$ and $\red$ coincide)
+& \rocqid{ParallelReduction.v}
+& \rocqid{par_reds_clos_trans_multi_step_red_coincide} \\
+
+Lemma \ref{lemma:simplred-invar-subst} (Simple reduction is invariant under substitution)
+& \rocqid{EquivRedProperties.v}
+& \rocqid{equiv_red_invariant_under_substitution} \\
+
+Lemma \ref{lemma:reduct-invar-red-ctx} (\textsc{axcut} reducts are invariant under reduced evaluation contexts)
+& \rocqid{EquivRedProperties.v}
+& \rocqid{reduce_axcut_invariant_under_reduced_context} \\
+
+Lemma \ref{lemma:reduct-invar-substituent} (\textsc{axcut} redcuts are invariant under reduced substituent)
+& \rocqid{EquivRedProperties.v}
+& \rocqid{reduce_axcut_invariant_under_reduced_substituent} \\
+
+Lemma \ref{lemma:uniq-eval-ctx} (Uniqueness of evaluation contexts)
+& \rocqid{EquivRedProperties.v}
+& \rocqid{uniqueness_of_evaluation_context} \\
+
+Lemma \ref{lemma:critical-pairs} (Confluence for \textsc{axcut} reduct pairs)
+& \rocqid{EquivRedProperties.v}
+& \rocqid{confluence_critical_pairs} \\
+
+Lemma \ref{lemma:roncile-simplered} (Reconciling diverging simple reductions)
+& \rocqid{Confluence.v}
+& \rocqid{equiv_red_diamond} \\
+
+Definition \ref{def:dircong} (Directed congruence $\dircong$)
+& \rocqid{DirectedCong.v}
+& \rocqid{directed_congruence}, \rocqid{directed_congruence_message}, \rocqid{directed_congruence_statement} \\
+
+Lemma \ref{lemma:dircong-in-equiv} ($\dircong$ is a subset of $\equiv$)
+& \rocqid{DirectedCong.v}
+& \rocqid{directed_cong_in_struct_cong} \\
+
+Lemma \ref{lemma:equiv-in-dircong-star} ($\equiv$ is a subset of $\dircong^*$)
+& \rocqid{DirectedCong.v}
+& \rocqid{struct_cong_in_trans_directed_cong} \\
+
+Definition \ref{def:dircong-for-ctx} (Directed congruence for evaluation contexts)
+& \rocqid{AxCutCtx.v}
+& \rocqid{directed_congruence_ctx} \\
+
+Definition \ref{def:dircong-for-subst} (Directed congruence for substitutions)
+& \rocqid{DirectedCong.v}
+& \rocqid{subst_dc_equiv} \\
+
+Lemma \ref{lemma:dircong-invar-subst} (Directed congruence is invariant under substitution)
+& \rocqid{DirectedCong.v}
+& \rocqid{directed_cong_invariant_under_substitution} \\
+
+Lemma \ref{lemma:reduct-inver-dircong} (\textsc{axcut} reducts are invariant under directed congruence)
+& \rocqid{ParallelReduction.v}
+& \rocqid{reduce_axcut_invariant_under_directed_cong} \\
+
+Lemma \ref{lemma:compat-simplred-dircong} (Compatibility of simple reduction with directed congruence)
+& \rocqid{Confluence.v}
+& \rocqid{directed_cong_equiv_red_commute} \\
+
+Lemma \ref{lemma:parred-compatible-struct-cong} (Compatibility of parallel reduction with structural congruence)
+& \rocqid{Confluence.v}
+& \rocqid{struct_cong_par_red_commute} \\
+
+Lemma \ref{lemma:church-rosser-for-parred} (Diamond property for parallel reduction)
+& \rocqid{Confluence.v}
+& \rocqid{church_rosser_parallel_reduction} \\
+
+Lemma \ref{lemma:strip-lemma} (Strip lemma)
+& \rocqid{Confluence.v}
+& \rocqid{church_rosser_par_red_clos_trans_1n_par_red} \\
+
+Lemma \ref{lemma:parred-star-diamond} (Diamond property for $\parred^*$)
+& \rocqid{Confluence.v}
+& \rocqid{church_rosser_par_red_clos_trans} \\
+
+Theorem \ref{theorem:church-rosser} (Church-Rosser)
+& \rocqid{Confluence.v}
+& \rocqid{church_rosser}
+
+\end{longtable}

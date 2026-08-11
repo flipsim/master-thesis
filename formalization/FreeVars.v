@@ -143,6 +143,15 @@ Proof.
     exists x. assumption.
 Qed.
 
+Corollary domains_are_strict :
+  forall Γ p n, Γ ⊢ p :# -> (n ∈ p) <-> (exists x, lookup n Γ = Some x).
+Proof.
+  intros; split; intros.
+  + eapply (proj1 free_var_in_ctx); eauto.
+  + destruct H0.
+    eapply (proj1 formula_property); eauto.
+Qed.
+
 Lemma ctx_none_not_free :
   (forall (p : process),
     forall Γ n, Γ ⊢ p :# -> lookup n Γ = None -> ~ (n ∈ p))

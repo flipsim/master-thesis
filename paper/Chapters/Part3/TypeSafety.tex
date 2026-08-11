@@ -97,7 +97,7 @@ for well-formed, simultaneous substitutions.
 
 The proof of preservation follows naturally using the previously established results.
 
-\begin{theorem}[\rocqicon~Preservation]
+\begin{theorem}[\rocqicon~Preservation] \label{theorem:preservation}
   If $\Gamma \vdash P$ and $P \contr Q$, then $\Gamma \vdash Q$.
 \end{theorem}
 \begin{proof}
@@ -162,7 +162,7 @@ where cuts have been reorganized into a flat topology, a form we call
 \emph{canonical cut form}.
 
 \subsection{Canonical Cut Forms and Link Lists}
-\begin{definition}[Canonical cut form]
+\begin{definition}[Canonical cut form] \label{def:canonical-cut-form}
   The set of cuts that are in \emph{canonical cut form} is inductively defined by the following clauses.
   \begin{enumerate}[label=(\roman*)]
     \item If $L$ and $R$ are not cuts, then
@@ -234,7 +234,7 @@ pending communications. We call this special case of a cut list a
 \emph{link list}. Informally, a link list is a degenerate tree of cuts whose leaves
 are link processes of the form $\link{x_i}{M_i}$ (or symmetrically $\link{M_i}{x_i}$).
 
-\begin{definition}[Link list]
+\begin{definition}[Link list] \label{def:link-list}
   The set of \emph{link lists} and their associated \emph{spines} (sequences of names) are
   inductively defined by the following clauses.
   \begin{enumerate}[label=(\roman*)]
@@ -287,7 +287,7 @@ We can now classify the shape of terminated processes. A process is \emph{final}
 if it has exhausted all internal communications, meaning it is either the empty
 process, or a solitary link or link list waiting solely on external channels.
 
-\begin{definition}[Final process]
+\begin{definition}[Final process] \label{def:final-process}
   A process $P$ is \emph{final} if it satisfies one of the following conditions:
   \begin{enumerate}[label=(\roman*)]
     \item $P = \Lambda$.
@@ -401,7 +401,7 @@ The progress theorem establishes deadlock freedom for all well-typed processes.
 However, for closed programs, this guarantee specializes even further:
 well-typed, closed processes either continue to reduce, or they are the empty process $\Lambda$.
 
-\begin{corollary}[\rocqicon~Progress for closed processes]
+\begin{corollary}[\rocqicon~Progress for closed processes] \label{cor:progress-closed-proc}
   If $\vdash P$, then $P \contr P'$ for some process $P'$ or
   $P = \Lambda$.
 \end{corollary}
