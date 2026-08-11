@@ -1,5 +1,1036 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{The Church-Rosser Theorem}\label{ch:church-rosser}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% command for labels in commuting diagrams
+\newcommand{\zb}[2][1em]{\makebox[#1]{$\displaystyle#2$}}
 
-\change[inline]{TODO}
+This chapter establishes the Church-Rosser theorem for $\piFD$. The theorem
+states that if a process $P$ reduces to two distinct processes, $M$ and $N$,
+there always exists a common reduct $R$ such that both $M$ and $N$ reduce to $R$.
+Pictorially:
+
+\begin{center}
+  \begin{tikzcd}[
+      row sep={1.5cm,between origins},
+      column sep={1.5cm,between origins}
+    ]
+        & \zb{P} \arrow[dl, "\red"'] \arrow[dr, "\red"] & \\
+    \zb{M} \arrow[dr, dashrightarrow, "\red"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\red"] \\
+        & \zb{R} &
+  \end{tikzcd}
+\end{center}
+
+We adopt a proof strategy akin to Barendregt \cite{Barendregt1984:LambdaCalcAndTypes}
+for the $\lambda$-calculus: we establish confluence for an intermediate relation
+whose transitive closure coincides with reduction ($\red$).
+
+Specifically, we prove confluence for the relation of \emph{parallel reduction}
+($\parred$). Because confluence is preserved under transitive closure,
+provivng that $\parred^*$ and $\red$ coincide will immediately yield the
+main result.
+
+However, as noted in previous sections, structural congruence ($\equiv$) does
+not preserve the exact set of redexes contained within a process. This complicates
+the search for an appropriate $\parred$ relation, as we must ultimately prove
+the following diamond:
+
+\begin{center}
+  \begin{tikzcd}[
+      row sep={1.5cm,between origins},
+      column sep={1.5cm,between origins}
+    ]
+        & \zb{P} \arrow[dl, "\equiv"'] \arrow[dr, "\parred"] & \\
+    \zb{M} \arrow[dr, dashrightarrow, "\parred"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\equiv"] \\
+        & \zb{R} &
+  \end{tikzcd}
+\end{center}
+
+In other words, any reduction available to a process must also be executable
+in every other member of its structural equivalence class.
+While standard reduction ($\red$) implicitly achieves this compatibility
+via the \textsc{r-struct} rule, attempting to prove the Church-Rosser
+property directly on $\red$ is overwhelmingly complex. The arbitrary
+rearrangements permitted by $\equiv$ make it intractable to track exactly how
+diverging redexes interact across equivalence classes.
+
+To regain control over structural congruence and make the proof manageable,
+we first introduce the auxiliary concept of \emph{simple reduction} ($\simplred$). To successfully
+close the diamond above, we will subsequently rely on a technical device
+which we refer to as \emph{directed congruence} ($\dircong$).
+
+\begin{remark}
+  We only prove confluence for well-typed processes because many intermediate
+  results require channels to be used linearly.
+\end{remark}
+
+\section{Simple Reduction}
+The crux of simple reduction is that it no longer relies on the rule \textsc{r-struct}
+to expose redexes hidden within other members of the same equivalence class.
+Instead, the notion of structural congruence is embedded directly into the
+reduction rules.
+
+To account for the commutation of links and cuts, $\simplred$ introduces
+a symmetric counterpart for every rule of $\contr$. The rule \textsc{c-assoc},
+however, requires special care due to its interaction with \textsc{r-axcut}.
+Consider the following equivalence:
+\[
+  \parcomp{x}{y}{\parcomp{z}{w}{\link{z}{M}}{Q}}{P} \equiv
+  \parcomp{w}{z}{Q}{\parcomp{x}{y}{\link{z}{M}}{P}}
+\]
+Here, \textsc{c-assoc} commutes scope restrictions in such a way that
+\textsc{r-axcut} no longer applies across all structurally congruent variants.
+Naively, one might extend $\simplred$ with computation rules of the following form:
+\begin{align*}
+  \parcomp{w}{z}{Q}{\parcomp{x}{y}{\link{z}{M}}{P}}
+  &\simplred \parcomp{x}{y}{Q[M/w]}{P}
+\end{align*}
+However, if $P$ itself is a cut, structural congruence allows further
+applications of \textsc{c-assoc}. This can push the link $\link{z}{M}$ even
+further from its binder $(\nu w z)$, creating a situation that is not captured
+by the naive rule above. To handle situations where a link is displaced
+arbitrarily deep by repeated application of \textsc{c-assoc}, we introduce
+\emph{evaluation contexts}.
+
+\begin{definition}[Evaluation context]
+  Evaluation contexts $\mathcal{E}$ are inductively defined by the following grammar:
+  \[
+    \mathcal{E} \Coloneqq \link{x}{\square} \mid \link{\square}{x} \mid \parcomp{x}{y}{P}{\mathcal{E}} \mid \parcomp{y}{x}{\mathcal{E}}{P}
+  \]
+\end{definition}
+
+The grammar above does not ensure that the resulting context was created
+through a series of \textsc{c-assoc} applications. This is why we additionally
+define a well-formedness predicate for evaluation contexts.
+
+\begin{definition}[Well-formedness of evaluation contexts]
+  An evaluation context $\mathcal{E}$ is well-formed at channel
+  $x$, denoted $\textsf{WF} \, \mathcal{E}_x$, if the judgment can be derived
+  by the following rules:
+  \begin{center}
+    \begin{prooftree}
+      \hypo{}
+      \infer1[\textsc{wf-link-l}]{\textsf{WF} \, (\link{x}{\square})_x}
+    \end{prooftree}
+    \qquad
+    \begin{prooftree}
+      \hypo{}
+      \infer1[\textsc{wf-link-r}]{\textsf{WF} \, (\link{\square}{x})_x}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{\textsf{WF} \, \mathcal{E}_x}
+      \hypo{x \notin fv(P)}
+      \hypo{a, b \neq x}
+      \infer3[\textsc{wf-cons-l}]{\textsf{WF} \, (\parcomp{a}{b}{P}{\mathcal{E}})_x}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{\textsf{WF} \, \mathcal{E}_x}
+      \hypo{x \notin fv(P)}
+      \hypo{a, b \neq x}
+      \infer3[\textsc{wf-cons-r}]{\textsf{WF} \, (\parcomp{b}{a}{\mathcal{E}}{P})_x}
+    \end{prooftree}
+  \end{center}
+\end{definition}
+
+Assuming $\textsf{WF} \, \mathcal{E}_x$, the process
+$\parcomp{y}{x}{P}{\mathcal{E}[M]}$ contains
+a link $\link{x}{M}$ that can forward its message $M$ via \textsc{r-axcut}, provided
+we transition to an appropriate member of its equivalence class.
+However, given $P$, $\mathcal{E}$, $M$, and the names $x$ and $y$, we can
+directly compute a possible reduct of $\parcomp{y}{x}{P}{\mathcal{E}[M]}$,
+denoted $\textsf{reduct}(E, M, P, x, y)$.
+
+\begin{definition}[\textsc{axcut} reduct]
+  We define the reduct of an \textsc{axcut} determined by the process $P$,
+  evaluation context $\mathcal{E}$, message $M$, and a channel with endpoints $x$ and $y$
+  inductively by the following rules\footnote{Note, that our formalization cannot define $\textsf{reduct}$ through
+  a structural recursion. $\mathcal{E}$ must be renamed in the recursive
+  call, requiring a definition using well-founded recursion. For this purpose,
+  we use Rocq's \enquote{Equations} plugin.}:
+  \begin{align*}
+    \textsf{reduct}(\link{x}{\square}, M, P, x, y) &\coloneq P[M/y] \\
+    \textsf{reduct}(\link{\square}{x}, M, P, x, y) &\coloneq P[M/y] \\
+    \textsf{reduct}(\parcomp{a}{b}{Q}{\mathcal{E}}, M, P, x, y)
+      &\coloneq \parcomp{a}{b}{Q}{\textsf{reduct}(\mathcal{E}, M, P, x, y)} \\
+    \textsf{reduct}(\parcomp{b}{a}{\mathcal{E}}{Q}, M, P, x, y)
+      &\coloneq \parcomp{b}{a}{\textsf{reduct}(\mathcal{E}, M, P, x, y)}{Q}
+  \end{align*}
+\end{definition}
+
+Using the notion of \textsc{axcut} reducts, we now define the relation of
+simple reduction.
+
+\begin{definition}[Simple reduction $\simplred$]
+  \begin{align}
+    % reflexivity
+    P &\simplred P
+    \tag{\textsc{sr-refl}}
+    \\
+    % tensor/par l
+    \link{\ssend{v.P}{z.Q}}{\sreceive{a}{b}{R}}
+    &\simplred \parcomp{b}{z}{\parcomp{a}{v}{R}{P}}{Q}
+    \tag{\textsc{sr-$\otimes\parr$-l}}
+    \\
+    % tensor/par r
+    \link{\sreceive{a}{b}{R}}{\ssend{v.P}{z.Q}}
+    &\simplred \parcomp{b}{z}{\parcomp{a}{v}{R}{P}}{Q}
+    \tag{\textsc{sr-$\otimes\parr$-r}}
+    \\
+    % plus/with 1 l
+    \link{\slselect{z.P}}{\schoice{v.Q}{w.R}}
+    &\simplred \parcomp{z}{v}{P}{Q}
+    \tag{\textsc{sr-$\oplus\with_1$-l}}
+    \\
+    % plus/with 1 r
+    \link{\schoice{v.Q}{w.R}}{\slselect{z.P}}
+    &\simplred \parcomp{z}{v}{P}{Q}
+    \tag{\textsc{sr-$\oplus\with_1$-r}}
+    \\
+    % plus/with 2 l
+    \link{\srselect{z.P}}{\schoice{v.Q}{w.R}}
+    &\simplred \parcomp{z}{w}{P}{R}
+    \tag{\textsc{sr-$\oplus\with_2$-l}}
+    \\
+    % plus/with 2 r
+    \link{\schoice{v.Q}{w.R}}{\srselect{z.P}}
+    &\simplred \parcomp{z}{w}{P}{R}
+    \tag{\textsc{sr-$\oplus\with_2$-r}}
+    \\
+    % 1/bot l
+    \link{\sclose}{\swait{P}}
+    &\simplred P
+    \tag{\textsc{sr-$1\bot$}}
+    \\
+    % 1/bot r
+    \link{\swait{P}}{\sclose}
+    &\simplred P
+    \tag{\textsc{sr-$1\bot$-r}}
+    \\
+    % Seq
+    P \seq xS
+    &\simplred P[S/x]
+    \tag{\textsc{sr-seq}}
+  \end{align}
+  \vspace{-2.0em}
+  \begin{center}
+    % axcut l
+    \hfill
+    \begin{prooftree}
+      \hypo{\textsf{WF} \, \mathcal{E}_x}
+      \infer1[]{\parcomp{x}{y}{\mathcal{E}[M]}{P} \simplred \textsf{reduct}(\mathcal{E}, M, P, x, y)}
+    \end{prooftree}
+    \hfill (\textsc{sr-axcut-l})
+
+    \bigskip
+
+    % axcut r
+    \hfill
+    \begin{prooftree}
+      \hypo{\textsf{WF} \, \mathcal{E}_x}
+      \infer1[]{\parcomp{y}{x}{P}{\mathcal{E}[M]} \simplred \textsf{reduct}(\mathcal{E}, M, P, x, y)}
+    \end{prooftree}
+    \hfill (\textsc{sr-axcut-r})
+
+    \bigskip
+
+    % congruence: cut l
+    \hfill
+    \begin{prooftree}
+      \hypo{P \simplred P'}
+      \infer1[]{\parcomp{x}{y}{P}{Q} \simplred \parcomp{x}{y}{P'}{Q}}
+    \end{prooftree}
+    \hfill (\textsc{sr-cong-cut-l})
+
+    \bigskip
+
+    % congruence: cut r
+    \hfill
+    \begin{prooftree}
+      \hypo{Q \simplred Q'}
+      \infer1[]{\parcomp{x}{y}{P}{Q} \simplred \parcomp{x}{y}{P}{Q'}}
+    \end{prooftree}
+    \hfill (\textsc{sr-cong-cut-r})
+
+    \bigskip
+
+    % congruence: seq
+    \hfill
+    \begin{prooftree}
+      \hypo{P \simplred P'}
+      \infer1[]{P \seq s \simplred P' \seq s}
+    \end{prooftree}
+    \hfill
+    (\textsc{sr-cong-seq})
+  \end{center}
+\end{definition}
+
+
+\section{Parallel Reduction}
+Having introduced $\simplred$, we now define parallel reduction.
+
+\begin{definition}[\rocqicon~Parallel reduction $\parred$]
+  Parallel reduction is defined as the union of simple reduction and structural congruence.
+  \[
+    \parred \; \coloneq \; \simplred \; \cup \; \equiv
+  \]
+\end{definition}
+
+First, we prove that for any two process $P$ and $Q$, we have $P \red Q$ if and only if
+$P \parred^* Q$. The direction $(\Rightarrow)$ is straightforward.
+
+\begin{lemma}[\rocqicon~$\red$ is a subset of $\parred^*$]
+  Reduction is contained in the transitive closure of parallel reduction.
+  \[
+    \red \; \subset \; \parred^*
+  \]
+\end{lemma}
+
+For the direction $(\Leftarrow)$, we observe that the result of computing
+an \textsc{axcut} reduct can be obtained using $\equiv$ and $\contr$.
+
+\begin{lemma}[\rocqicon~An \textsc{axcut} reduct lies in $\red$] \label{lemma:simplred-axcut-in-red}
+  Let $Q$ be a process such that $Q = \mathcal{E}[M]$ and $\textsf{WF} \; \mathcal{E}_x$.
+  There exists a process $L$ such that
+  \[
+    \parcomp{x}{y}{Q}{P} \equiv L \quad {and} \quad
+    L \contr \textsf{reduct}(\mathcal{E}, M, P, x, y).
+  \]
+\end{lemma}
+
+Using Lemma \ref{lemma:simplred-axcut-in-red}, we prove the following results.
+
+\begin{lemma}[\rocqicon~$\simplred$ is a subset of $(\contr \; \cup \; \equiv)$]
+  Simple reduction is contained in the union of contraction and structural congruence.
+  \[
+    \simplred \; \subset \; \contr \; \cup \; \equiv
+  \]
+\end{lemma}
+
+\begin{corollary}[\rocqicon~$\parred$ is a subset of $\red$]
+  Parallel reduction is contained in the relation of reduction.
+  \[
+    \parred \; \subset \; \red
+  \]
+\end{corollary}
+
+\begin{lemma}[\rocqicon~$\parred^*$ and $\red$ coincide] \label{lemma:parred-red-coincides}
+  $P \parred^* Q$ if and only if $P \red Q$.
+\end{lemma}
+
+What remains is to prove that $\parred$ possesses the diamond property.
+If $P \parred M$ and $P \parred N$, then there are three cases to consider.
+
+\begin{enumerate}
+  \item $P \simplred M$ and $P \simplred N$.
+  \item $P \simplred M$ and $P \equiv N$, or $P \equiv M$ and $P \simplred N$.
+  \item $P \equiv M$ and $P \equiv N$.
+\end{enumerate}
+
+We will prove the following three diamonds, corresponding to the three cases above.
+
+\begin{center}
+\begin{minipage}{0.3\textwidth}
+  \begin{center}
+    \begin{tikzcd}[
+        row sep={1.5cm,between origins},
+        column sep={1.5cm,between origins}
+      ]
+          & \zb{P} \arrow[dl, "\simplred"'] \arrow[dr, "\simplred"] & \\
+      \zb{M} \arrow[dr, dashrightarrow, "\parred"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\parred"] \\
+          & \zb{R} &
+    \end{tikzcd}
+  \end{center}
+\end{minipage}
+\begin{minipage}{0.3\textwidth}
+  \begin{center}
+    \begin{tikzcd}[
+        row sep={1.5cm,between origins},
+        column sep={1.5cm,between origins}
+      ]
+          & \zb{P} \arrow[dl, "\equiv"'] \arrow[dr, "\simplred"] & \\
+      \zb{M} \arrow[dr, dashrightarrow, "\simplred"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\parred"] \\
+          & \zb{R} &
+    \end{tikzcd}
+  \end{center}
+\end{minipage}
+\begin{minipage}{0.3\textwidth}
+  \begin{center}
+    \begin{tikzcd}[
+        row sep={1.5cm,between origins},
+        column sep={1.5cm,between origins}
+      ]
+          & \zb{P} \arrow[dl, "\equiv"'] \arrow[dr, "\equiv"] & \\
+      \zb{M} \arrow[dr, dashrightarrow, "\equiv"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\equiv"] \\
+          & \zb{R} &
+    \end{tikzcd}
+  \end{center}
+\end{minipage}
+\end{center}
+
+The diamond property for $\parred$ is an immediate consequence of these three
+intermediate results. We observe that the third case follows trivially from
+the symmetry of structural congruence. The remaining cases, however,
+are more elaborate.
+
+\subsection{Diverging Simple Reductions}
+
+To prove the first diamond, we first state a few properties about simple reduction
+and evaluation contexts.
+
+\begin{lemma}[\rocqicon~Simple reduction is invariant under substitution] \label{lemma:simplred-invar-subst}
+  Let $\Gamma \vdash P$ be a well-typed process. If $P \simplred P'$, then
+  $P\sigma \simplred P'\sigma$.
+\end{lemma}
+
+\begin{lemma}[\rocqicon~\textsc{axcut} reducts are invariant under reduced evaluation contexts] \label{lemma:reduct-invar-red-ctx}
+  Let $\Gamma \vdash Q$ and $\Gamma' \vdash P$ be well-typed processes such that $Q = \mathcal{E}[M]$
+  and $\textsf{WF} \; \mathcal{E}_x$. If $Q \simplred Q'$, then one of the following holds:
+  \begin{enumerate}[label=(\roman*)]
+    \item There exists $\mathcal{E}'$ and $M'$ such that $Q' = \mathcal{E}'[M']$,
+          $\textsf{WF} \; \mathcal{E}'_x$ and
+          \[
+            \textsf{reduct}(\mathcal{E}, M, P, x, y) \simplred
+            \textsf{reduct}(\mathcal{E}', M', P, x, y),
+          \]
+          or
+    \item $\textsf{reduct}(\mathcal{E}, M, P, x, y) \equiv \parcomp{x}{y}{Q'}{P}$
+  \end{enumerate}
+\end{lemma}
+
+\begin{lemma}[\rocqicon~\textsc{axcut} reducts are invariant under reduced substituent] \label{lemma:reduct-invar-substituent}
+  Let $\Gamma \vdash P$ be a well-typed process. If $P \simplred P'$, then
+  \[
+    \textsf{reduct}(\mathcal{E}, M, P, x, y) \simplred
+    \textsf{reduct}(\mathcal{E}, M, P', x, y).
+  \]
+\end{lemma}
+
+\begin{lemma}[\rocqicon~Uniqueness of evaluation contexts] \label{lemma:uniq-eval-ctx}
+  Let $\mathcal{E}$ and $\mathcal{E}'$ be evaluation contexts such that
+  $\textsf{WF} \; \mathcal{E}_x$ and $\textsf{WF} \; \mathcal{E}'_x$.
+  If $\Gamma \vdash \mathcal{E}[M]$ and $\mathcal{E}[M] = \mathcal{E}'[M']$, then $\mathcal{E} = \mathcal{E}'$ and
+  $M = M'$.
+\end{lemma}
+
+\begin{lemma}[\rocqicon~Confluence for \textsc{axcut} reduct pairs] \label{lemma:critical-pairs}
+  Let $\mathcal{E}$ and $\mathcal{E}'$ be evaluation contexts such that
+  $\textsf{WF} \; \mathcal{E}_x$ and $\textsf{WF} \; \mathcal{E}'_y$.
+  If $x \notin fv(M)$ and $y \notin fv(M')$, then
+  \[
+    \textsf{reduct}(\mathcal{E}, M, \mathcal{E}'[M'], x, y) \equiv
+    \textsf{reduct}(\mathcal{E}', M', \mathcal{E}[M], y, x).
+  \]
+\end{lemma}
+
+\begin{remark}
+  Lemma \ref{lemma:critical-pairs} highlights a property that distinguishes a $\pi$-calculus
+  like $\piFD$ from classical sequent calculi.
+  The equivalence described in the conclusion
+  is the result of two possible reductions of a critical pair. In $\piFD$,
+  these two reducts turn out to be structurally congruent. Intuitively, an evaluation context
+  can be viewed as a list of processes. The expression
+  \[
+    \textsf{reduct}(\mathcal{E}, M, \mathcal{E}'[M'], x, y)
+  \]
+  thus represents the concatenation of two such lists.
+  Because structural congruence allows us to ignore the concrete order of processes in
+  a parallel composition, the order in which these lists are joined becomes immaterial.
+\end{remark}
+
+Using these auxiliary results, we can now show that diverging simple reductions
+can always be reconciled.
+
+\begin{lemma}[\rocqicon~Reconciling diverging simple reductions] \label{lemma:roncile-simplered}
+  Let $\Gamma \vdash P$ be a well-typed process.
+  If $P \simplred M$ and $P \simplred N$, then $M \parred R$ and $N \parred R$
+  for some $R$.
+\end{lemma}
+\begin{proof}
+  By induction on the derivation of $P \simplred M$.
+  The cases \textsc{sr-refl} and all $\beta$-reductions are straightforward.
+  For the remaining cases, we proceed as follows.
+
+  \begin{enumerate}[itemsep=1em, label=Case:, leftmargin=*]
+    \item (\textsc{sr-seq}) \\
+      The last rule of the derivation of $P \simplred N$ may be one of the following:
+      \textsc{sr-refl}, \textsc{sr-seq} or \textsc{sr-cong-seq}. For the first two,
+      the result follows trivially. For the latter, we are looking at the following situation:
+      \[
+         P = Q \seq xS \simplred Q[S/x] = M \quad \text{and} \quad
+         P = Q \seq xS \simplred Q' \seq xS = N \quad
+      \]
+      with $Q \simplred Q'$. Thus, using Lemma \ref{lemma:simplred-invar-subst},
+      we have $Q[S/x] \simplred Q'[S/x]$. Therefore,
+      \[
+        M = Q[S/x] \parred Q'[S/x] = R
+      \]
+      and
+      \[
+        N = Q' \seq xS \parred Q'[S/x] = R.
+      \]
+
+    \item (\textsc{sr-cong-seq}) \\
+      Again, the last rule of the derivation of $P \simplred N$ may be one of the following:
+      \textsc{sr-refl}, \textsc{sr-seq} or \textsc{sr-cong-seq}. The case \textsc{sr-refl} follows trivially.
+      If the derivation ends with \textsc{sr-seq}, we argue using Lemma
+      \ref{lemma:simplred-invar-subst} as above. Lastly, for \textsc{sr-cong-seq},
+      we have
+      \[
+        P = Q \seq xS \simplred Q_1 \seq xS = M \quad \text{and} \quad
+        P = Q \seq xS \simplred Q_2 \seq xS = N \quad
+      \]
+      with $Q \simplred Q_1$ and $Q \simplred Q_2$. Thus, by induction hypothesis,
+      there exists $Q'$ s.t. $Q_1 \parred Q'$ and $Q_2 \parred Q'$.
+      The result follows.
+
+    \item (\textsc{sr-cong-cut-l}) \\
+      An inversion on the premise $P \simplred N$ yields the subcases
+      \textsc{sr-refl}, \textsc{sr-axcut-l}, \textsc{sr-axcut-r}, \textsc{sr-cong-cut-l},
+      and \textsc{sr-cong-cut-r}. We only highlight the cases
+      \textsc{sr-axcut-l} and \textsc{sr-axcut-r}. The other cases follow
+      immediately or by application of the induction hypothesis.
+      \begin{enumerate}[itemsep=1em, label=Subcase:]
+        \item (\textsc{sr-axcut-l}) \\
+          We have
+          \[
+            P = \parcomp{x}{y}{\mathcal{E}[M]}{Q} \simplred \parcomp{x}{y}{P'}{Q} = M
+          \]
+          with $\mathcal{E}[M] \simplred P'$ and
+          \[
+            P = \parcomp{x}{y}{\mathcal{E}[M]}{Q} \simplred \textsf{reduct}(\mathcal{E}, M, Q, x, y) = N.
+          \]
+          By Lemma \ref{lemma:reduct-invar-red-ctx}, we consider two cases.
+
+          First, we may have $P' = \mathcal{E}'[M']$ for some $\mathcal{E}'$ and $M'$
+          such that $\textsf{WF} \; \mathcal{E}'_x$ and
+          \[
+            \textsf{reduct}(\mathcal{E}, M, Q, x, y) \simplred \textsf{reduct}(\mathcal{E}', M', Q, x, y).
+          \]
+          Thus,
+          \[
+            M = \parcomp{x}{y}{\mathcal{E}'[M']}{Q}
+            \parred \textsf{reduct}(\mathcal{E}', M', Q, x, y)
+          \]
+          and
+          \[
+            N = \textsf{reduct}(\mathcal{E}, M, Q, x, y) \parred \textsf{reduct}(\mathcal{E}', M', Q, x, y).
+          \]
+
+          Second, we may have $\textsf{reduct}(\mathcal{E}, M, Q, x, y) \equiv \parcomp{x}{y}{P'}{Q}$.
+          The result follows immediately.
+        \item (\textsc{sr-axcut-r}) \\
+          We have
+          \[
+            P = \parcomp{x}{y}{Q}{\mathcal{E}[M]} \simplred \parcomp{x}{y}{Q'}{\mathcal{E}[M]} = M
+          \]
+          and
+          \[
+            P = \parcomp{x}{y}{Q}{\mathcal{E}[M]} \simplred \textsf{reduct}(\mathcal{E}, M, Q, x, y) = N.
+          \]
+          The result follows using Lemma \ref{lemma:reduct-invar-substituent}.
+      \end{enumerate}
+    \item (\textsc{sr-cong-cut-r}) \\
+      Analogous to the previous case.
+
+    \item (\textsc{sr-axcut-l}) \\
+      An inversion on the premise $P \simplred N$ yields five subcases. We
+      only highlight the cases \textsc{sr-axcut-l} and \textsc{sr-axcut-r}.
+      The other cases are similar to previous ones.
+      \begin{enumerate}[itemsep=1em, label=Subcase:]
+        \item (\textsc{sr-axcut-l}) \\
+          By the uniqueness of evaluation contexts (Lemma \ref{lemma:uniq-eval-ctx}),
+          we already have $M = N$. The result follows trivially.
+
+        \item (\textsc{sr-axcut-r}) \\
+          We are looking at the following situation:
+          \begin{align*}
+            P &= \parcomp{x}{y}{\mathcal{E}[M]}{\mathcal{E'}[M']} \\ & \simplred
+              \textsf{reduct}(\mathcal{E}, M, \mathcal{E'}[M'], x, y) = M
+          \end{align*}
+          and
+          \begin{align*}
+            P & = \parcomp{x}{y}{\mathcal{E}[M]}{\mathcal{E'}[M']} \\ & \simplred
+              \textsf{reduct}(E', M', \mathcal{E}[M], y, x) = N
+          \end{align*}
+          with $\textsf{WF} \; \mathcal{E}_x$ and $\textsf{WF} \; \mathcal{E}'_y$.
+          The results follow using Lemma \ref{lemma:critical-pairs}, since $M \equiv N$.
+      \end{enumerate}
+    \item (\textsc{sr-axcut-r}) \\
+      Analogous to the previous case.
+  \end{enumerate}
+\end{proof}
+
+\subsection{Compatibility of Simple Reduction with Structural Congruence}
+To prove that simple reduction is compatible with structural congruence,
+we introduce the relation of \emph{directed congruence} ($\dircong$).
+Unlike standard structural congruence ($\equiv$), directed congruence is neither
+transitive nor symmetric by definition.
+Omitting symmetry ensures that the relation remains syntax-directed, avoiding
+circular derivations during rule-inductive proofs.
+Although symmetry is not built into the relation itself, we can show that it is admissible.
+
+Together, these two properties allow us to establish the following commutation
+between directed congruence and simple reduction:
+\begin{center}
+  \begin{tikzcd}[
+      row sep={1.5cm,between origins},
+      column sep={1.5cm,between origins}
+    ]
+        & \zb{P} \arrow[dl, "\dircong"'] \arrow[dr, "\simplred"] & \\
+    \zb{M} \arrow[dr, dashrightarrow, "\simplred"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\equiv"] \\
+        & \zb{R} &
+  \end{tikzcd}
+\end{center}
+
+Because structural congruence corresponds to the reflexive-transitive closure of
+directed congruence ($\dircong^*$), iterating this property yields the desired
+compatibility result for parallel reduction:
+\begin{center}
+  \begin{tikzcd}[
+      row sep={1.5cm,between origins},
+      column sep={1.5cm,between origins}
+    ]
+        & \zb{P} \arrow[dl, "\equiv"'] \arrow[dr, "\parred"] & \\
+    \zb{M} \arrow[dr, dashrightarrow, "\parred"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\equiv"] \\
+        & \zb{R} &
+  \end{tikzcd}
+\end{center}
+This serves as a generalization of the second diamond above.
+
+\begin{definition}[Directed congruence $\dircong$]
+  The relation $\dircong$ is (mutually) inductively defined by the following rules.
+
+  \begin{center}
+    \begin{prooftree}[center=false]
+      \hypo{}
+      \infer1[\textsc{dc-nil}]{\Lambda \dircong \Lambda}
+    \end{prooftree}
+    \quad
+    \begin{prooftree}[center=false]
+      \hypo{M_{l1} \Rrightarrow M_{l2}}
+      \hypo{M_{r1} \Rrightarrow M_{r2}}
+      \infer2[\textsc{dc-link}]{\link{M_{l1}}{M_{r1}} \Rrightarrow \link{M_{r2}}{M_{l2}}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{M_{l1} \Rrightarrow M_{l2}}
+      \hypo{M_{r1} \Rrightarrow M_{r2}}
+      \infer2[\textsc{dc-cong-link}]{\link{M_{l1}}{M_{r1}} \Rrightarrow \link{M_{l2}}{M_{r2}}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{P \dircong P'}
+      \hypo{Q \dircong Q'}
+      \infer2[\textsc{dc-cut-comm}]{\parcomp{x}{y}{P}{Q} \dircong \parcomp{y}{x}{Q'}{P'}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{P \dircong P'}
+      \hypo{Q \dircong Q'}
+      \infer2[\textsc{dc-cong-cut}]{\parcomp{x}{y}{P}{Q} \dircong \parcomp{x}{y}{P'}{Q'}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{P \Rrightarrow P'}
+      \hypo{Q \Rrightarrow Q'}
+      \hypo{R \Rrightarrow R'}
+      \infer3[\textsc{dc-assoc-l}]{\parcomp{v}{z}{\parcomp{x}{y}{P}{Q}}{R} \dircong \parcomp{x}{y}{P'}{\parcomp{v}{z}{Q'}{R'}}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{P \Rrightarrow P'}
+      \hypo{Q \Rrightarrow Q'}
+      \hypo{R \Rrightarrow R'}
+      \infer3[\textsc{dc-assoc-r}]{\parcomp{x}{y}{P}{\parcomp{v}{z}{Q}{R}} \dircong \parcomp{v}{z}{\parcomp{x}{y}{P'}{Q'}}{R'}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{P \dircong P'}
+      \hypo{S \dircong S'}
+      \infer2[\textsc{dc-cong-seq}]{P \seq xS \dircong P' \seq xS'}
+    \end{prooftree}
+    \quad
+    \begin{prooftree}
+      \hypo{}
+      \infer1[\textsc{dc-refl-msg}]{M \dircong M}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{P \dircong P'}
+      \infer1[\textsc{dc-$\oplus$-l}]{\slselect{P} \dircong \slselect{P'}}
+    \end{prooftree}
+    \quad
+    \begin{prooftree}
+      \hypo{P \dircong P'}
+      \infer1[\textsc{dc-$\oplus$-r}]{\srselect{P} \dircong \srselect{P'}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{P \dircong P'}
+      \hypo{Q \dircong Q'}
+      \infer2[\textsc{dc-$\with$}]{\schoice{x.P}{y.Q} \dircong \schoice{x.P'}{y.Q'}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{P \dircong P'}
+      \hypo{Q \dircong Q'}
+      \infer2[\textsc{dc-$\otimes$}]{\ssend{x.P}{y.Q} \dircong \ssend{x.P'}{y.Q'}}
+    \end{prooftree}
+    \quad
+    \begin{prooftree}
+      \hypo{P \dircong P'}
+      \infer1[\textsc{dc-$\parr$}]{\sreceive{x}{y}{P} \dircong \sreceive{x}{y}{P'}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}[center=false]
+      \hypo{}
+      \infer1[\textsc{dc-$1$}]{\sclose \dircong \sclose}
+    \end{prooftree}
+    \quad
+    \begin{prooftree}[center=false]
+      \hypo{P \dircong P'}
+      \infer1[\textsc{dc-$\bot$}]{\swait{P} \dircong \swait{P'}}
+    \end{prooftree}
+  \end{center}
+\end{definition}
+
+\begin{lemma}[\rocqicon~$\dircong$ is a subset of $\equiv$]
+  If $P \dircong Q$, then $P \equiv Q$.
+\end{lemma}
+
+\begin{lemma}[\rocqicon~$\equiv$ is a subset of $\dircong^*$] \label{lemma:equiv-in-dircong-star}
+  If $P \equiv Q$, then $P \dircong^* Q$.
+\end{lemma}
+
+We extend the notion of directed congruence to evaluation contexts and substitutions as well.
+
+\begin{definition}[Directed congruence for evaluation contexts]
+  The relation $\dircong$ on evaluation contexts is inductively defined by the following rules.
+
+  \begin{center}
+    \begin{prooftree}[center=false]
+      \hypo{}
+      \infer1[\textsc{edc-nil-l}]{\link{x}{\square} \dircong \link{\square}{x}}
+    \end{prooftree}
+    \quad
+    \begin{prooftree}[center=false]
+      \hypo{}
+      \infer1[\textsc{edc-nil-r}]{\link{\square}{x} \dircong \link{x}{\square}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}[center=false]
+      \hypo{}
+      \infer1[\textsc{edc-nil-refl-l}]{\link{x}{\square} \dircong \link{x}{\square}}
+    \end{prooftree}
+    \quad
+    \begin{prooftree}[center=false]
+      \hypo{}
+      \infer1[\textsc{edc-nil-refl-r}]{\link{\square}{x} \dircong \link{\square}{x}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{P \dircong P'}
+      \hypo{\mathcal{E} \dircong \mathcal{E}'}
+      \infer2[\textsc{edc-cong-cons-l}]{\parcomp{x}{y}{P}{\mathcal{E}} \dircong \parcomp{x}{y}{P'}{\mathcal{E}'}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{P \dircong P'}
+      \hypo{\mathcal{E} \dircong \mathcal{E}'}
+      \infer2[\textsc{edc-cong-cons-r}]{\parcomp{x}{y}{\mathcal{E}}{P} \dircong \parcomp{x}{y}{\mathcal{E}'}{P'}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{P \dircong P'}
+      \hypo{\mathcal{E} \dircong \mathcal{E}'}
+      \infer2[\textsc{edc-comm-l}]{\parcomp{x}{y}{P}{\mathcal{E}} \dircong \parcomp{y}{x}{\mathcal{E}'}{P'}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{P \dircong P'}
+      \hypo{\mathcal{E} \dircong \mathcal{E}'}
+      \infer2[\textsc{edc-comm-r}]{\parcomp{x}{y}{\mathcal{E}}{P} \dircong \parcomp{y}{x}{P'}{\mathcal{E}'}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{P \dircong P'}
+      \hypo{Q \dircong Q'}
+      \hypo{\mathcal{E} \dircong \mathcal{E}'}
+      \infer3[\textsc{edc-assoc-rl}]{\parcomp{v}{z}{\parcomp{x}{y}{P}{\mathcal{E}}}{Q} \dircong \parcomp{x}{y}{P'}{\parcomp{v}{z}{\mathcal{E}'}{Q'}}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{P \dircong P'}
+      \hypo{Q \dircong Q'}
+      \hypo{\mathcal{E} \dircong \mathcal{E}'}
+      \infer3[\textsc{edc-assoc-rr}]{\parcomp{v}{z}{\parcomp{x}{y}{\mathcal{E}}{P}}{Q} \dircong \parcomp{v}{z}{\mathcal{E}'}{\parcomp{x}{y}{P'}{Q'}}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{P \dircong P'}
+      \hypo{Q \dircong Q'}
+      \hypo{\mathcal{E} \dircong \mathcal{E}'}
+      \infer3[\textsc{edc-assoc-lr}]{\parcomp{x}{y}{P}{\parcomp{v}{z}{\mathcal{E}}{Q}} \dircong \parcomp{v}{z}{\parcomp{x}{y}{P'}{\mathcal{E}'}}{Q'}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{P \dircong P'}
+      \hypo{Q \dircong Q'}
+      \hypo{\mathcal{E} \dircong \mathcal{E}'}
+      \infer3[\textsc{edc-assoc-ll}]{\parcomp{x}{y}{P}{\parcomp{v}{z}{Q}{\mathcal{E}}} \dircong \parcomp{x}{y}{\parcomp{v}{z}{P'}{Q'}}{\mathcal{E}'}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{P \dircong P'}
+      \hypo{Q \dircong Q'}
+      \hypo{\mathcal{E} \dircong \mathcal{E}'}
+      \infer3[\textsc{edc-assoc-cut-l}]{\parcomp{v}{z}{\parcomp{x}{y}{P}{Q}}{\mathcal{E}} \dircong \parcomp{x}{y}{P'}{\parcomp{v}{z}{Q'}{\mathcal{E}'}}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{P \dircong P'}
+      \hypo{Q \dircong Q'}
+      \hypo{\mathcal{E} \dircong \mathcal{E}'}
+      \infer3[\textsc{edc-assoc-cut-r}]{\parcomp{x}{y}{\mathcal{E}}{\parcomp{v}{z}{P}{Q}} \dircong \parcomp{v}{z}{\parcomp{x}{y}{\mathcal{E}'}{P'}}{Q'}}
+    \end{prooftree}
+  \end{center}
+\end{definition}
+
+\begin{definition}[Directed congruence for substitutions]
+  Given substitutions $\sigma_1 = [M_1, \hdots, M_n / x_1, \hdots, x_n]$
+  and $\sigma_2 = [M_1', \hdots, M_n' / x_1, \hdots, x_n]$, we write
+  $\sigma_1 \dircong \sigma_2$ if $M_i \dircong M_i'$ for every $i$.
+\end{definition}
+
+We first state a few properties about directed congruence and simple reduction.
+
+\begin{lemma}[\rocqicon~Directed congruence is invariant under substitution] \label{lemma:dircong-invar-subst}
+  \mbox{}
+  \begin{enumerate}[label=(\roman*)]
+    \item If $P \dircong P'$ and $\sigma_1 \dircong \sigma_2$, then $P\sigma_1 \dircong P'\sigma_2$.
+    \item If $M \dircong M'$ and $\sigma_1 \dircong \sigma_2$, then $M\sigma_1 \dircong M'\sigma_2$.
+    \item If $S \dircong S'$ and $\sigma_1 \dircong \sigma_2$, then $S\sigma_1 \dircong S'\sigma_2$.
+  \end{enumerate}
+\end{lemma}
+
+\begin{lemma}[\rocqicon~\textsc{axcut} reducts are invariant under directed congruence] \label{lemma:reduct-inver-dircong}
+  Let $\Gamma \vdash Q$ be a well-typed process such that $Q = \mathcal{E}[M]$
+  and $\textsf{WF} \; \mathcal{E}_x$.
+  If $P \dircong P'$ and $Q \dircong R$, then there exist $\mathcal{E}'$ and $M'$ such that:
+  \begin{enumerate}[label=(\roman*)]
+    \item $R = \mathcal{E}'[M']$,
+    \item $\mathcal{E} \dircong \mathcal{E}'$, and
+    \item $\textsf{reduct}(\mathcal{E}, M, P, x, y) \dircong \textsf{reduct}(\mathcal{E}', M', P', x, y)$.
+  \end{enumerate}
+\end{lemma}
+
+Using Lemmata \ref{lemma:dircong-invar-subst} and \ref{lemma:reduct-inver-dircong},
+we can now prove the first result relating simple reduction and structural congruence.
+
+\begin{lemma}[\rocqicon~Compatibility of simple reduction with directed congruence]
+  Let $\Gamma \vdash P$ be a well-typed process.
+  If $P \dircong Q_1$ and $P \simplred Q_2$, then $Q_1 \simplred R$ and $Q_2 \equiv R$
+  for some $R$.
+\end{lemma}
+\begin{proof}[Proof Sketch]
+  By induction on the derivation of $P \dircong Q_1$. The cases
+  \textsc{dc-nil}, \textsc{dc-link}, and \textsc{dc-cong-link} follow straightforwardly
+  by case analysis on the derivation $P \simplred Q_2$.
+
+  We omit the cases \textsc{dc-assoc-l} and \textsc{dc-assoc-r}.
+  Because associativity rearranges the process tree,
+  analyzing these cases requires a cascade of nested inversions
+  on the sub-derivations of $P \simplred Q_2$.
+  The complete, formalized proof can be found in the accompanying Rocq development.
+  Instead, we only highlight those cases that demonstrate how the previously established
+  results come into play.
+
+  \begin{enumerate}[itemsep=1em, label=Case:, leftmargin=*]
+    \item (\textsc{dc-cong-seq}) \\
+      A case analysis on the last rule of $P \simplred Q_2$ yields three subcases,
+      where the case \textsc{dc-refl} follows trivially.
+      \begin{enumerate}[itemsep=1em, label=Subcase:]
+        \item (\textsc{sr-seq}) \\
+          We have
+          \[
+            P = Q \seq xS \dircong Q' \seq xS' = Q_1 \simplred Q'[S'/x]
+          \]
+          with $Q \dircong Q'$ and $S \dircong S'$, and
+          \[
+            P = Q \seq xS \simplred Q[S/x] \dircong Q'[S'/x]
+          \]
+          where we use Lemma \ref{lemma:dircong-invar-subst} for the last step.
+        \item (\textsc{sr-cong-seq}) \\
+          We have $P = Q \seq xS \dircong Q' \seq xS' = Q_1$ and $P \simplred Q'' \seq xS = Q_2$.
+          By induction hypothesis, there exists an $R$ such that $Q' \simplred R$
+          and $Q'' \dircong R$. Thus,
+          \[
+            Q_1 \simplred R \seq xS' \quad \text{and} \quad
+            Q_2 \equiv R \seq xS'.
+          \]
+      \end{enumerate}
+    \item (\textsc{dc-cut-comm}) \\
+      Again, we proceed by inversion on the derivation of $P \simplred Q_2$.
+      We only highlight the subcase \textsc{sr-axcut-l}; the remaining cases
+      follow similarly or by straightforward use of the induction hypothesis.
+
+      We are looking at the following situation:
+      \[
+        P = \parcomp{x}{y}{\mathcal{E}[M]}{Q} \dircong \parcomp{y}{x}{Q'}{P'} = Q_1
+      \]
+      with $Q \dircong Q'$ and $\mathcal{E}[M] \dircong P'$, and
+      \[
+        P \simplred \textsf{reduct}(\mathcal{E}, M, Q, x, y) = Q_2.
+      \]
+      Using Lemma \ref{lemma:reduct-inver-dircong}, there exist $\mathcal{E}'$ and $M'$
+      such that $P' = \mathcal{E}'[M']$, $\mathcal{E} \dircong \mathcal{E}'$ and
+      $\textsf{reduct}(\mathcal{E}, M, Q, x, y) \dircong \textsf{reduct}(\mathcal{E}', M', Q', x, y)$.
+      Thus,
+      \[
+        Q_1 = \parcomp{y}{x}{Q'}{\mathcal{E}'[M']} \simplred \textsf{reduct}(\mathcal{E}', M', Q', x, y)
+      \]
+      and
+      \[
+        Q_2 = \textsf{reduct}(\mathcal{E}, M, Q, x, y) \equiv \textsf{reduct}(\mathcal{E}', M', Q', x, y).
+      \]
+  \end{enumerate}
+\end{proof}
+
+By Lemma \ref{lemma:equiv-in-dircong-star}, we obtain the compatibility of
+$\parred$ with $\equiv$.
+
+\begin{lemma}[\rocqicon~Compatibility of parallel reduction with structural congruence] \label{lemma:parred-compatible-struct-cong}
+  Let $\Gamma \vdash P$ be a well-typed process.
+  If $P \equiv Q_1$ and $P \parred Q_2$, then $Q_1 \parred R$ and $Q_2 \equiv R$ for some $R$.
+\end{lemma}
+
+\begin{lemma}[\rocqicon~Diamond property for parallel reduction] \label{lemma:church-rosser-for-parred}
+  Let $\Gamma \vdash P$ be a well-typed process.
+  If $P \parred M$ and $P \parred N$, then $M \parred R$ and $N \parred R$ for some $R$, pictorially
+  \begin{center}
+    \begin{tikzcd}[
+        row sep={1.5cm,between origins},
+        column sep={1.5cm,between origins}
+      ]
+          & \zb{P} \arrow[dl, "\parred"'] \arrow[dr, "\parred"] & \\
+      \zb{M} \arrow[dr, dashrightarrow, "\parred"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\parred"] \\
+          & \zb{R} &
+    \end{tikzcd}
+  \end{center}
+\end{lemma}
+\begin{proof}
+  Immediate consequence of Lemma \ref{lemma:roncile-simplered} and \ref{lemma:parred-compatible-struct-cong}.
+\end{proof}
+
+\section{Church-Rosser}
+With the diamond property for single-step parallel reduction established in
+Lemma \ref{lemma:church-rosser-for-parred}, we can now generalize this result to its transitive closure.
+Following standard techniques from rewriting theory, we proceed in two stages.
+First, we establish the \emph{strip lemma} as an intermediate result, which
+reconciles a diverging reduction between a single parallel reduction
+and a multi-step sequence.
+
+\begin{lemma}[\rocqicon~Strip lemma] \label{lemma:strip-lemma}
+  Let $\Gamma \vdash P$ be a well-typed process.
+  If $P \parred M$ and $P \parred^* N$, then $M \parred^* R$ and $N \parred R$ for some $R$.
+\end{lemma}
+\begin{proof}
+  By induction on the length of the reduction sequence $P \parred^* N$
+  and repeated use of Lemma \ref{lemma:church-rosser-for-parred}, pictorially
+  \begin{center}
+  \begin{tikzcd}[
+      row sep={1.5cm,between origins},
+      column sep={1.5cm,between origins}
+    ]
+     & \zb{P} \arrow[dl, "\parred"'] \arrow[dr, "\parred"] & & & \\
+    \zb{M} \arrow[dr, dashrightarrow, "\parred"'] & & \zb{N_1} \arrow[dl, dashrightarrow, "\parred"] \arrow[dr, "\parred"] & & \\
+     & \zb{T_1} \arrow[dr, dashrightarrow, "\parred"'] & & \zb{N_2} \arrow[dl, dashrightarrow, "\parred"] \arrow[dr, dotted, "\parred"] & \\
+     &     & \zb{T_2} \arrow[dr, dotted, "\parred"'] & & \zb{N_n} \arrow[dl, dashrightarrow, "\parred"] \\
+     &     &     & \zb{R} &
+  \end{tikzcd}
+\end{center}
+\end{proof}
+
+Having shown that a single step of $\parred$ commutes with its transitive closure,
+we can now prove the diamond property for $\parred^*$ by inductively applying
+the strip lemma to fill out the larger diamond.
+
+\begin{lemma}[\rocqicon~Diamond property for $\parred^*$] \label{lemma:parred-star-diamond}
+  Let $\Gamma \vdash P$ be a well-typed process.
+  If $P \parred^* M$ and $P \parred^* N$, then $M \parred^* R$ and $N \parred^* R$ for some $R$.
+\end{lemma}
+\begin{proof}
+  By induction on the length of the reduction sequence $P \parred^* M$
+  and repeated use of Lemma \ref{lemma:strip-lemma}. Pictorially:
+  \begin{center}
+  \begin{tikzcd}[
+      row sep={1.5cm,between origins},
+      column sep={1.5cm,between origins}
+    ]
+    &       &       & \zb{P} \arrow[dl, "\parred"'] \arrow[dr, "\parred"]     &       &       &    \\
+    &       & \zb{\cdot} \arrow[dl, dotted, "\parred"'] \arrow[dr, dashrightarrow] &       & \zb{\cdot} \arrow[dl, dashrightarrow] \arrow[dr, dotted, "\parred"] &       &    \\
+    & \zb{\cdot} \arrow[dl, "\parred"']  &       & \zb{\cdot} \arrow[dr, dotted] &       & \zb{\cdot} \arrow[dl, dashrightarrow] \arrow[dr, "\parred"] &    \\
+  \zb{M} \arrow[dr, dashrightarrow, "\parred"'] &       & \zb{\phantom{\cdot}} &       & \cdot  \arrow[dr, dashrightarrow] &       & \zb{N} \arrow[dl, dashrightarrow, "\parred"]  \\
+    & \zb{\cdot} \arrow[dr, dotted, "\parred"'] &       & \zb{\phantom{\cdot}} &       & \zb{\cdot} \arrow[dl, dotted, "\parred"] &    \\
+    &       & \zb{\cdot} \arrow[dr, dashrightarrow, "\parred"'] &       & \zb{\cdot} \arrow[dl, dashrightarrow, "\parred"] &       &    \\
+    &       &       & \zb{R}     &       &       &
+  \end{tikzcd}
+\end{center}
+\end{proof}
+
+Finally, we obtain the main result.
+Because we established earlier (Lemma \ref{lemma:parred-red-coincides}) that
+normal reduction ($\red$) coincides with the transitive closure of parallel reduction ($\parred^*$),
+the confluence of $\parred^*$ immediately implies the Church-Rosser property.
+
+\begin{theorem}[\rocqicon~Church-Rosser] \label{theorem:church-rosser}
+  Let $\Gamma \vdash P$ be a well-typed process.
+  If $P \red M$ and $P \red N$, then $M \red R$ and $N \red R$ for some $R$.
+\end{theorem}

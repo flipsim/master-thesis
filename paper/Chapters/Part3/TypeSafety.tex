@@ -2,9 +2,16 @@
 \chapter{Type Safety}\label{ch:type-safety}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\change[inline]{Add fluff text between lemmata.}
+This section develops the metatheory of $\piFD$. We first establish the
+standard result of preservation. Then, as a prerequisite for proving progress --- which
+in the context of $\piFD$ expresses deadlock freedom --- we formally define
+the notion of terminated processes, along with various normal forms, and prove
+their core properties.
 
 \section{Preservation}
+We begin by proving the standard result of type preservation. Since reduction
+in $\piFD$ is defined modulo structural congruence, we first show that
+structurally congruent processes share the same typing.
 
 \begin{lemma}[\rocqicon~Preservation for $\equiv$] \label{lemma:preservation-for-struct-cong}
   If $P \equiv Q$, then $\Gamma \vdash P$ if and only if $\Gamma \vdash Q$.
@@ -12,6 +19,13 @@
 \begin{proof}
   By induction on the derivation of $P \equiv Q$.
 \end{proof}
+
+Having established that typing is preserved under structural congruence,
+the remainder of the preservation proof relies on showing that substitution
+preserves typing. Since $\piFD$ possesses a linear typing discipline, substituting
+a term into a process requires carefully splitting the typing context.
+Thus, we first demonstrate that well-formed substitutions soundly map context
+splits in their domain into context splits in their codomain.
 
 \begin{lemma}[\rocqicon~Partitions for well-formed substitutions] \label{lemma:subst-partition}
   If $\Gamma = \Gamma_1 \circ \Gamma_2$ and $\Gamma \vdash \sigma : \Delta$, then
@@ -25,6 +39,9 @@
 \begin{proof}
   By induction on the length of the tail of $\Gamma$.
 \end{proof}
+
+Using Lemma \ref{lemma:subst-partition}, we can now prove the substitution lemma
+for well-formed, simultaneous substitutions.
 
 \begin{lemma}[\rocqicon~Substitution]\label{lemma:substitution}\mbox{}
   \begin{enumerate}[label=(\roman*)]
@@ -77,6 +94,8 @@
   \end{center}
   where we use the fact that $P\sigma = P((x \coloneq x) \cdot \sigma)$.
 \end{proof}
+
+The proof of preservation follows naturally using the previously established results.
 
 \begin{theorem}[\rocqicon~Preservation]
   If $\Gamma \vdash P$ and $P \contr Q$, then $\Gamma \vdash Q$.
@@ -135,9 +154,16 @@
 \end{proof}
 
 \section{Terminated Processes}
+We now turn toward the progress property, which states that a well-typed
+process can either take a step or has successfully terminated. To make the
+notion of \emph{terminated process} precise for $\piFD$, we must formalize
+the shape of such processes. To this end, we characterize processes
+where cuts have been reorganized into a flat topology, a form we call
+\emph{canonical cut form}.
+
 \subsection{Canonical Cut Forms and Link Lists}
 \begin{definition}[Canonical cut form]
-  The set of cuts that is in \emph{canonical cut form} is inductively defined by the following clauses.
+  The set of cuts that are in \emph{canonical cut form} is inductively defined by the following clauses.
   \begin{enumerate}[label=(\roman*)]
     \item If $L$ and $R$ are not cuts, then
           $\parcomp{x}{y}{L}{R}$ is in canonical cut form.
@@ -152,6 +178,9 @@
   to a cut in canonical cut form as a cut list.
 \end{remark}
 
+Since, conceptually, canonical cut forms can be viewed as lists, we can
+concatenate two of them into a single, flattened canonical cut form.
+
 \begin{lemma}[\rocqicon~Appending cut lists] \label{lemma:cut-list-append}
   If $\Gamma \vdash \parcomp{x}{y}{P}{Q}$ and both $P$ and $Q$ are in canonical
   cut form, then there exists an $R$ in canonical cut form such that $\parcomp{x}{y}{P}{Q} \equiv R$.
@@ -159,6 +188,11 @@
 \begin{proof}
   By induction on the depth of $P$ and appropriate application of structural congruences for cuts.
 \end{proof}
+
+Crucially, every well-typed cut can be reorganized into this flat structure.
+We can often leverage the existence of these canonical cut forms to simplify
+reasoning, choosing a member of the same equivalence class that is already
+flattened.
 
 \begin{lemma}[\rocqicon~Existence of canonical cut forms] \label{lemma:canonical-cut-forms}
   If $\Gamma \vdash \parcomp{x}{y}{L}{R}$, then there exists
@@ -194,9 +228,11 @@
   \end{enumerate}
 \end{proof}
 
-A special case of a cut list is a \emph{link list}, which,
-informally, is a degenerate tree of cuts whose leaves are link processes
-of the form $\link{x_i}{M_i}$ (or symmetrically $\link{M_i}{x_i}$).
+For our current development, a particularly interesting subclass
+of canonical cut forms arises when the process consists exclusively of
+pending communications. We call this special case of a cut list a
+\emph{link list}. Informally, a link list is a degenerate tree of cuts whose leaves
+are link processes of the form $\link{x_i}{M_i}$ (or symmetrically $\link{M_i}{x_i}$).
 
 \begin{definition}[Link list]
   The set of \emph{link lists} and their associated \emph{spines} (sequences of names) are
@@ -215,6 +251,9 @@ We can think of a link list as a pool of threads. If every channel
 in the spine is a free occurrence, then every thread is waiting on external communication,
 and we consider the process terminated. Otherwise, if at least one channel
 in the spine is bound, it can pass its message to another thread in the pool.
+
+The following lemma formalizes this intuition: if a link list contains a bound channel,
+it is not yet terminated; instead, an internal communication can still occur.
 
 \begin{lemma}[\rocqicon~Reducibility of link lists] \label{lemma:link-list-reducibility}
   Let $\Gamma \vdash P$ be a well-typed link list. If some channel
@@ -244,6 +283,9 @@ in the spine is bound, it can pass its message to another thread in the pool.
 \end{proof}
 
 \subsection{Final Processes}
+We can now classify the shape of terminated processes. A process is \emph{final}
+if it has exhausted all internal communications, meaning it is either the empty
+process, or a solitary link or link list waiting solely on external channels.
 
 \begin{definition}[Final process]
   A process $P$ is \emph{final} if it satisfies one of the following conditions:
@@ -255,15 +297,32 @@ in the spine is bound, it can pass its message to another thread in the pool.
   \end{enumerate}
 \end{definition}
 
-\begin{lemma}[\rocqicon~Final processes are irrecudible]
+For the set of final processes, we can formally verify that being final coincides
+with being irreducible. Note that none of the cases above describe a deadlocked
+situation: a final process is halted because it contains free channel names, i.e.,
+the process requires external interaction to proceed.
+
+\begin{lemma}[\rocqicon~Final processes are irreducible] \label{lemma:normalforms}
   If $\Gamma \vdash P$, then $P$ is final if and only if
   $P$ is irreducible.
 \end{lemma}
 
-\change[inline]{Give high-level explanation of the proof;
-explain difficulty (that is, no member of the same equivalence can contain a redex)}
+The proof of Lemma \ref{lemma:normalforms} is straightforward when $P$ is anything
+other than a cut. The direction ($\Leftarrow$) is an immediate
+consequence of Theorem \ref{theorem:progress} (Progress). However, the
+direction ($\Rightarrow$) requires several auxiliary results. The main difficulty
+lies in showing that if $P$ is final and congruent to a link list, then $P$
+itself cannot contain a redex, and furthermore, that no process in its structural
+congruence equivalence class contains a redex. To establish the latter, we
+generalize link lists to a tree-shaped structure called \emph{link trees},
+for which we prove both irreducibility and closure of irreducibility under
+structural congruence.
 
 \section{Progress}
+With a notion of terminated process formalized, we can now turn to proving progress.
+The proof is built up incrementally, starting by showing that cut lists either
+step or degenerate into link lists. For link lists, we have already established
+a progress property (Lemma \ref{lemma:link-list-reducibility}).
 
 \begin{lemma}[\rocqicon~Reducibility of canonical cut forms] \label{lemma:cut-list-reducibility}
   If $\Gamma \vdash P$ is a well-typed cut list,
@@ -282,6 +341,11 @@ explain difficulty (that is, no member of the same equivalence can contain a red
   \end{enumerate}
 \end{proof}
 
+From this reducibility property, we immediately obtain progress for canonical cut forms:
+if a cut list cannot step, it must be a link list (Lemma \ref{lemma:cut-list-reducibility}); and if it is a link list,
+it either steps or is waiting exclusively on free names, thus being final
+(Lemma \ref{lemma:link-list-reducibility}).
+
 \begin{corollary}[\rocqicon~Progress for canonical cut forms] \label{cor:progress-for-cut-list}
   If $\Gamma \vdash P$ is a cut list, then $P$ is final
   or $P \contr P'$ for some process $P'$.
@@ -297,7 +361,9 @@ explain difficulty (that is, no member of the same equivalence can contain a red
   \end{enumerate}
 \end{proof}
 
-\begin{theorem}[\rocqicon~Progress]
+Finally, we generalize these results to arbitrary well-typed processes.
+
+\begin{theorem}[\rocqicon~Progress] \label{theorem:progress}
   If $\Gamma \vdash P$, then $P \contr P'$ for some process $P'$ or
   $P$ is final.
 \end{theorem}
@@ -305,7 +371,7 @@ explain difficulty (that is, no member of the same equivalence can contain a red
   By inversion on the typing derivation of $\Gamma \vdash P$.
   \begin{enumerate}[itemsep=1em, label=Case:, leftmargin=*]
     \item (\textsc{t-ax}) \\
-      We have $P = \link{M_1}{M_2}$ and observe, that a well-typed link process
+      We have $P = \link{M_1}{M_2}$ and observe that a well-typed link process
       may either $\beta$-reduce (yielding $P'$) or is of the form $\link{x}{M}$ (or $\link{M}{x}$),
       in which case $P$ is final.
 
@@ -330,6 +396,10 @@ explain difficulty (that is, no member of the same equivalence can contain a red
       We have $P = \Lambda$, which is already final.
   \end{enumerate}
 \end{proof}
+
+The progress theorem establishes deadlock freedom for all well-typed processes.
+However, for closed programs, this guarantee specializes even further:
+well-typed, closed processes either continue to reduce, or they are the empty process $\Lambda$.
 
 \begin{corollary}[\rocqicon~Progress for closed processes]
   If $\vdash P$, then $P \contr P'$ for some process $P'$ or
