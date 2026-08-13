@@ -84,7 +84,3 @@ Scheme process_typing_ind   := Induction for TypingP Sort Prop
   with message_typying_ind  := Induction for TypingM Sort Prop
   with statement_typing_ind := Induction for TypingS Sort Prop.
 Combined Scheme typing_ind from process_typing_ind, message_typying_ind, statement_typing_ind.
-
-(******************************************************************************)
-(* Properties about typing                                                    *)
-(******************************************************************************)

@@ -273,41 +273,6 @@ with subst_statement (s : statement) (σ : substitution) : statement :=
   end.
 
 (******************************************************************************)
-(* Single Substitution                                                        *)
-(******************************************************************************)
-(* Definition insert_future (m : message) (i k : nat) : message :=
-  match Nat.compare k i with
-  | Lt => future (pred i)
-  | Eq => shift m k
-  | Gt => future i
-  end.
-
-Fixpoint subst_process (p : process) (m : message) (k : nat) : process :=
-  match p with
-  | link ml mr => link (subst_message ml m k) (subst_message mr m k)
-  | cut pl pr => cut (subst_process pl (upM m) (S k)) (subst_process pr (upM m) (S k))
-  | seq p s => seq (subst_process p (upM m) (S k)) (subst_statement s m k)
-  | stop => stop
-  end
-with subst_message (m' m : message) (k : nat) : message :=
-  match m' with
-  | future i => insert_future m i k
-  | prefix s => prefix (subst_statement s m k)
-  end
-with subst_statement (s : statement) (m : message) (k : nat) : statement :=
-  match s with
-  | choose_left p => choose_left (subst_process p (upM m) (S k))
-  | choose_right p => choose_right (subst_process p (upM m) (S k))
-  | offer_choice p1 p2 => offer_choice (subst_process p1 (upM m) (S k)) (subst_process p2 (upM m) (S k))
-  | send p1 p2 => send (subst_process p1 (upM m) (S k)) (subst_process p2 (upM m) (S k))
-  | receive p => receive (subst_process p (shift m 2) (S (S k)))
-  | close => close
-  | wait p => wait (subst_process p m k)
-  end.
-
-Definition subst p m := subst_process p m 0. *)
-
-(******************************************************************************)
 (* Renamings                                                                  *)
 (******************************************************************************)
 Definition renaming := nat -> nat.
