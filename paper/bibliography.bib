@@ -363,3 +363,152 @@ doi = {10.4230/LIPIcs.CSL.2012.228}
 	year = {1984}
 }
 
+@InProceedings{Parigot1992:lambda-mu,
+author="Parigot, Michel",
+editor="Voronkov, Andrei",
+title="$\lambda$$\mu$-Calculus: An algorithmic interpretation of classical natural deduction",
+booktitle="Logic Programming and Automated Reasoning",
+year="1992",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="190--201",
+isbn="978-3-540-47279-7"
+}
+
+@inbook{Paykin2016:lambda-mu-is-cp,
+author = {Paykin, Jennifer and Zdancewic, S.},
+year = {2016},
+month = {03},
+pages = {273-291},
+title = {Linear $\lambda\mu$ is $\textsc{CP}$ (more or less)},
+volume = {9600},
+isbn = {978-3-319-30935-4},
+doi = {10.1007/978-3-319-30936-1_15}
+}
+
+@InProceedings{Pfennig2011:ProofCarryingCodeInSessionCalculi,
+author="Pfenning, Frank
+and Caires, Luis
+and Toninho, Bernardo",
+editor="Jouannaud, Jean-Pierre
+and Shao, Zhong",
+title="Proof-Carrying Code in a Session-Typed Process Calculus",
+booktitle="Certified Programs and Proofs",
+year="2011",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="21--36",
+abstract="Dependent session types allow us to describe not only properties of the I/O behavior of processes but also of the exchanged data. In this paper we show how to exploit dependent session types to express proof-carrying communication. We further introduce two modal operators into the type theory to provide detailed control about how much information is communicated: one based on traditional proof irrelevance and one integrating digital signatures.",
+isbn="978-3-642-25379-9"
+}
+
+@inproceedings{Toninho2011:DependentSessionTypesIntuitionisticTypeTheory,
+author = {Toninho, Bernardo and Caires, Lu{\'i}s and Pfenning, Frank},
+title = {Dependent session types via intuitionistic linear type theory},
+year = {2011},
+isbn = {9781450307765},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2003476.2003499},
+doi = {10.1145/2003476.2003499},
+abstract = {We develop an interpretation of linear type theory as dependent session types for a term passing extension of the pi-calculus. The type system allows us to express rich constraints on sessions, such as interface contracts and proof-carrying certification, which go beyond existing session type systems, and are here justified on purely logical grounds. We can further refine our interpretation using proof irrelevance to eliminate communication overhead for proofs between trusted parties. Our technical results include type preservation and global progress, which in our setting naturally imply compliance to all properties declared in interface contracts expressed by dependent types.},
+booktitle = {Proceedings of the 13th International ACM SIGPLAN Symposium on Principles and Practices of Declarative Programming},
+pages = {161–172},
+numpages = {12},
+keywords = {process calculus, type theory},
+location = {Odense, Denmark},
+series = {PPDP '11}
+}
+
+@article{Orchard2019:granule,
+author = {Orchard, Dominic and Liepelt, Vilem-Benjamin and Eades III, Harley},
+title = {Quantitative program reasoning with graded modal types},
+year = {2019},
+issue_date = {August 2019},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {3},
+number = {ICFP},
+url = {https://doi.org/10.1145/3341714},
+doi = {10.1145/3341714},
+abstract = {In programming, some data acts as a resource (e.g., file handles, channels) subject to usage constraints. This poses a challenge to software correctness as most languages are agnostic to constraints on data. The approach of linear types provides a partial remedy, delineating data into resources to be used but never copied or discarded, and unconstrained values. Bounded Linear Logic provides a more fine-grained approach, quantifying non-linear use via an indexed-family of modalities. Recent work on coeffect types generalises this idea to graded comonads, providing type systems which can capture various program properties. Here, we propose the umbrella notion of graded modal types, encompassing coeffect types and dual notions of type-based effect reasoning via graded monads. In combination with linear and indexed types, we show that graded modal types provide an expressive type theory for quantitative program reasoning, advancing the reach of type systems to capture and verify a broader set of program properties. We demonstrate this approach via a type system embodied in a fully-fledged functional language called Granule, exploring various examples.},
+journal = {Proc. ACM Program. Lang.},
+month = jul,
+articleno = {110},
+numpages = {30},
+keywords = {linear types, implementation, graded modal types, coeffects}
+}
+
+@InProceedings{Kokke2019:RacesInLinearLogic,
+author="Kokke, Wen
+and Morris, J. Garrett
+and Wadler, Philip",
+editor="Riis Nielson, Hanne 
+and Tuosto, Emilio",
+title="Towards Races in Linear Logic",
+booktitle="Coordination Models and Languages",
+year="2019",
+publisher="Springer International Publishing",
+address="Cham",
+pages="37--53",
+abstract="Process calculi based in logic, such as {\$}{\$}{\backslash}uppi {\$}{\$}DILL and CP, provide a foundation for deadlock-free concurrent programming, but exclude non-determinism and races. {\$}{\$}{\backslash}text {\{}HCP{\}}{\$}{\$}is a reformulation of CP which addresses a fundamental shortcoming: the fundamental operator for parallel composition from the {\$}{\$}{\backslash}uppi {\$}{\$}-calculus does not correspond to any rule of linear logic, and therefore not to any term construct in CP.",
+isbn="978-3-030-22397-7"
+}
+
+@article{Qian2021:CoExponentials,
+author = {Qian, Zesen and Kavvos, G. A. and Birkedal, Lars},
+title = {Client-server sessions in linear logic},
+year = {2021},
+issue_date = {August 2021},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {5},
+number = {ICFP},
+url = {https://doi.org/10.1145/3473567},
+doi = {10.1145/3473567},
+abstract = {We introduce coexponentials, a new set of modalities for Classical Linear Logic. As duals to exponentials, the coexponentials codify a distributed form of the structural rules of weakening and contraction. This makes them a suitable logical device for encapsulating the pattern of a server receiving requests from an arbitrary number of clients on a single channel. Guided by this intuition we formulate a system of session types based on Classical Linear Logic with coexponentials, which is suited to modelling client-server interactions. We also present a session-typed functional programming language for client-server programming, which we translate to our system of coexponentials.},
+journal = {Proc. ACM Program. Lang.},
+month = aug,
+articleno = {62},
+numpages = {31},
+keywords = {session types, propositions as sessions, pi-calculus, linear logic, coexponential modality, client-server architecture, Curry-Howard}
+}
+
+@article{10.1145/1328897.1328472,
+author = {Honda, Kohei and Yoshida, Nobuko and Carbone, Marco},
+title = {Multiparty asynchronous session types},
+year = {2008},
+issue_date = {January 2008},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {43},
+number = {1},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/1328897.1328472},
+doi = {10.1145/1328897.1328472},
+abstract = {Communication is becoming one of the central elements in software development. As a potential typed foundation for structured communication-centred programming, session types have been studied over the last decade for a wide range of process calculi and programming languages, focussing on binary (two-party) sessions. This work extends the foregoing theories of binary session types to multiparty, asynchronous sessions, which often arise in practical communication-centred applications. Presented as a typed calculus for mobile processes, the theory introduces a new notion of types in which interactions involving multiple peers are directly abstracted as a global scenario. Global types retain a friendly type syntax of binary session types while capturing complex causal chains of multiparty asynchronous interactions. A global type plays the role of a shared agreement among communication peers, and is used as a basis of efficient type checking through its projection onto individual peers. The fundamental properties of the session type discipline such as communication safety, progress and session fidelity are established for generaln-party asynchronous interactions.},
+journal = {SIGPLAN Not.},
+month = jan,
+pages = {273–284},
+numpages = {12},
+keywords = {structured programming, session types, multiparty, mobile processes, communications, choreography, causality}
+}
+
+@inproceedings{Honda2008:MPST,
+author = {Honda, Kohei and Yoshida, Nobuko and Carbone, Marco},
+title = {Multiparty asynchronous session types},
+year = {2008},
+isbn = {9781595936899},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/1328438.1328472},
+doi = {10.1145/1328438.1328472},
+abstract = {Communication is becoming one of the central elements in software development. As a potential typed foundation for structured communication-centred programming, session types have been studied over the last decade for a wide range of process calculi and programming languages, focussing on binary (two-party) sessions. This work extends the foregoing theories of binary session types to multiparty, asynchronous sessions, which often arise in practical communication-centred applications. Presented as a typed calculus for mobile processes, the theory introduces a new notion of types in which interactions involving multiple peers are directly abstracted as a global scenario. Global types retain a friendly type syntax of binary session types while capturing complex causal chains of multiparty asynchronous interactions. A global type plays the role of a shared agreement among communication peers, and is used as a basis of efficient type checking through its projection onto individual peers. The fundamental properties of the session type discipline such as communication safety, progress and session fidelity are established for generaln-party asynchronous interactions.},
+booktitle = {Proceedings of the 35th Annual ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages},
+pages = {273–284},
+numpages = {12},
+keywords = {structured programming, session types, multiparty, mobile processes, communications, choreography, causality},
+location = {San Francisco, California, USA},
+series = {POPL '08}
+}
+
