@@ -1,0 +1,51 @@
+%*******************************************************
+% Zusammenfassung
+%*******************************************************
+%\renewcommand{\abstractname}{Abstract}
+\begin{otherlanguage}{ngerman}
+\pdfbookmark[1]{Zusammenfassung}{Zusammenfassung}
+\begingroup
+\let\clearpage\relax
+\let\cleardoublepage\relax
+\let\cleardoublepage\relax
+
+\chapter*{Zusammenfassung}
+In der strukturellen Beweistheorie kombiniert der Kalkül des natürlichen
+Schließens ($\ND$) Einführungs- und Eliminationsregeln, während Gentzens
+$\LK$ durch duale Einführungsregeln definiert ist.
+Durch die Curry-Howard-Korrespondenz erfassen der $\lambda$-Kalkül
+und der $\lambda\mu\tilde{\mu}$-Kalkül den rechnerischen Kern der Normalisierung
+in diesen jeweiligen Systemen. Es existieren jedoch auch alternative logische Systeme
+wie Parigots \enquote{Free Deduction} ($\FD$), welche
+ausschließlich auf Eliminationsregeln basieren.
+Zwar lassen sich das Termzuweisungssystem und die Semantik eines solchen Kalküls
+anhand seiner Übersetzung in entweder $\ND$ oder $\LK$ verstehen, doch fehlt
+uns eine eigenständige operationalle Interpretation für
+ein solches System.
+
+In dieser Arbeit präsentieren wir mit $\piFD$ eine moderne Rekonstruktion von Free Deduction
+als Prozesskalkül auf der Basis linearer Logik---ähnlich zu Negris
+\enquote{Uniform Calculus for Classical Linear Logic} (UCL).
+Indem wir logische Axiome als Session-Kanäle und Eliminationsregeln
+als die Erfüllung eines Futures bzw. Promises interpretieren,
+erhalten wir einen Kalkül, in dem die Schnittregel (\textsc{cut}) als
+Fork-Primitive dient, die lediglich die Interaktion zwischen parallelen Prozessen,
+nicht jedoch die Kommunikation zwischen Endpunkten eines Kommunikationskanals ermöglicht.
+Dieser Ansatz liefert eine alternative Grundlage für den Entwurf von
+Session-Typ-basierten Sprachen, die von den traditionellen
+Curry-Howard-Interpretationen von Girards linearer Logik abweicht.
+
+Wir formalisieren die Metatheorie von $\piFD$ in Rocq und liefern maschinengeprüfte
+Beweise für die Typsicherheit und die Church-Rosser-Eigenschaft.
+Diese Ergebnisse schaffen eine fundierte Grundlage für die Analyse
+kommunizierender, nebenläufiger Prozesse in eliminationsbasierten Systemen.
+Letztendlich vertieft diese Arbeit die Curry-Howard-Korrespondenz für
+parallele und kommunikationsbasierte Kalküle und bietet neue Einblicke
+in die Beziehung zwischen logischer Elimination und Session-basierter
+Nebenläufigkeit.
+
+\end{otherlanguage}
+
+\endgroup
+
+\vfill

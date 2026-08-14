@@ -1,0 +1,43 @@
+%*******************************************************
+% Abstract
+%*******************************************************
+%\renewcommand{\abstractname}{Abstract}
+\pdfbookmark[1]{Abstract}{Abstract}
+\begingroup
+\let\clearpage\relax
+\let\cleardoublepage\relax
+\let\cleardoublepage\relax
+
+\chapter*{Abstract}
+In structural proof theory, natural deduction ($\ND$) combines introduction and elimination rules,
+while Gentzen's $\LK$ is defined by dual introduction forms.
+Through the Curry-Howard correspondence, the $\lambda$-calculus and $\lambda\mu\tilde{\mu}$-calculus
+capture the computational essence of normalization in these respective frameworks.
+However, alternative logical systems exist, such as Parigot's \enquote{Free Deduction} ($\FD$),
+which relies exclusively on elimination rules.
+While the term assignment system and semantics of such a calculus can be understood
+in terms of its translation to either $\ND$ or $\LK$, we lack a standalone
+computational interpretation for such a framework.
+
+In this thesis, we present a modern reconstruction of Free Deduction,
+titled $\piFD$, as a process calculus grounded in linear logic---akin
+to Negri's \enquote{Uniform Calculus for Classical Linear Logic} (UCL).
+By interpreting logical axioms as concurrent session channels and elimination
+rules as the fulfillment of a future or promise,
+we obtain a framework where the rule of
+\textsc{cut} serves as a fork primitive, only facilitating interaction between
+concurrent processes but not between endpoints of a channel.
+This approach yields an alternative foundation for the design of session-typed disciplines that
+diverges from traditional Curry-Howard interpretations of Girard's linear logic.
+
+We formalize the metatheory of $\piFD$ within Rocq, providing mechanized
+proofs for type safety and the Church-Rosser property.
+These results establish a rigorous foundation for reasoning about concurrent
+communication in elimination-based systems.
+Ultimately, this work deepens the Curry-Howard correspondence for parallel and
+communication-based calculi, offering new insights into the relationship
+between logical elimination and session-based concurrency.
+
+\endgroup
+
+\vfill
