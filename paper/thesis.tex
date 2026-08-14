@@ -74,40 +74,6 @@
 % Mainmatter
 %*******************************************************
 
-%%%%%%%%%%%%%%%%%%%%%%%
-% Preliminary Structure
-%%%%%%%%%%%%%%%%%%%%%%%
-% Part 1: Introduction and Elimination
-%   1. Introduction
-%   2. Free Deduction
-%     2.1 Some kind of intro to FD
-%     2.2 Cut Elimination in FD
-%   3. Linear Free Deduction
-%     (3.1 Linearity)
-%     (3.2 Negri's UCl)
-%     3.3 System LFD (<- first novelty)
-%
-% Part 2: Free Deduction as Sessions
-%   4. Sessions as Propositions
-%      (Pfennig πDILL/Wadler's CP/etc.)
-%   5. Term Assignment for LFD: πFD
-%     5.1 Syntax and Typing
-%     5.2 Operational Semantics
-%       5.2.1 Multiplicatives as Input and Output
-%       5.2.2 Additives as Selection and Choice
-%       5.2.3 Units as Close and Wait
-%     (5.3 Relation to the asynchronous π-calculus (+ why no direct correspondence with CP e.g.))
-%   6. Programming with πFD/Examples/contrast to CP (or as subsection in 5?)
-%     6.1 Example: Ephemeral Booleans
-%     6.2 Example: Asynchronous Computation
-%
-% Part 3: Metatheory
-%   7. Type Safety
-%     7.1 Preservation
-%     7.2 Progress
-%   8. Church-Rosser
-
-
 \cleardoublepage\pagenumbering{arabic}
 %\setcounter{page}{90}
 % use \cleardoublepage here to avoid problems with pdfbookmark
@@ -116,14 +82,7 @@
 \include{Chapters/Part1/Introduction}
 \include{Chapters/Part1/FreeDeduction}
 \include{Chapters/Part1/LinearFD}
-% \include{Chapters/Chapter01}
 \cleardoublepage
-% \ctparttext{You can put some informational part preamble text here. 
-% Illo principalmente su nos. Non message \emph{occidental} angloromanic
-% da. Debitas effortio simplificate sia se, auxiliar summarios da que,
-% se avantiate publicationes via. Pan in terra summarios, capital
-% interlingua se que. Al via multo esser specimen, campo responder que
-% da. Le usate medical addresses pro, europa origine sanctificate nos se.}
 \part{Free Deduction as Sessions}
 \include{Chapters/Part2/PiFD}
 \include{Chapters/Part2/Examples}
@@ -131,6 +90,7 @@
 \part{Metatheory}
 \include{Chapters/Part3/TypeSafety}
 \include{Chapters/Part3/ChurchRosser}
+\include{Chapters/Part3/Conclusion}
 % ********************************************************************
 % Backmatter
 %*******************************************************
