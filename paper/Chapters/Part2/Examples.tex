@@ -31,7 +31,7 @@ we may also choose the following encoding instead:
   true &\coloneq \slselect{z.\link{z}{\sclose}} \\
   false &\coloneq \srselect{z.\link{z}{\sclose}}
 \end{align*}
-We will use both encoding throughout the examples.
+We will use both encodings throughout the examples.
 For readability, we will sometimes use a different notation for sequencing in examples.
 
 \begin{definition}[Notation for sequencing]
@@ -43,14 +43,14 @@ For readability, we will sometimes use a different notation for sequencing in ex
 To consume boolean messages, we encode branching:
 \[
   if \; x \; then \; P \; else \; Q
-  \coloneq \link{x}{\schoice{x. \link{x}{\swait{P}}}{\link{x}{\swait{Q}}}}
+  \coloneq \link{x}{\schoice{x.\link{x}{\swait{P}}}{x.\link{x}{\swait{Q}}}}
 \]
-where $x \notin fv(P)$ and $x \notin fv(Q)$. If we fulfill the future $x$
+where $x \notin \fv(P)$ and $x \notin \fv(Q)$. If we fulfill the future $x$
 of the branching process $if \; x \; then \; P \; else \; Q$ with a boolean value,
 we end up with the following reductions:
 \begin{align*}
         &\; if \; x \; then \; P \; else \; Q \seq x \leftarrow true \\
-  \contr&\; \link{true}{\schoice{x. \link{x}{\swait{P}}}{\link{x}{\swait{Q}}}} \\
+  \contr&\; \link{true}{\schoice{x.\link{x}{\swait{P}}}{x.\link{x}{\swait{Q}}}} \\
   \contr&\; \parcomp{z}{x}{\link{z}{\sclose}}{\link{x}{\swait{P}}} \\
   \contr&\; \link{\sclose}{\swait{P}} \\
   \contr&\; P
@@ -58,10 +58,10 @@ we end up with the following reductions:
 And similarly, $(if \; x \; then \; P \; else \; Q \seq x \leftarrow false) \red Q$.
 
 \subsection{A Negation Server}
-Using the definitions above, we can now implement a simple negation server, that
+Using the definitions above, we can now implement a simple negation server that
 receives a boolean and returns its negation. This communication protocol
 is captured by the session types $\bool \otimes \cobool$ and $\cobool \parr \bool$,
-where the latter is implemented by the server and former by the client.
+where the latter is implemented by the server and the former by the client.
 \begin{align*}
   &not(client : \bool \otimes \cobool) \coloneq \\
   &\qquad \link{client}{server} \seq \\
@@ -98,7 +98,7 @@ reduction.
   &\contr &&\; \ssend{x.true(x)}{res.\link{res}{\star}} \leftrightarrow \\
   &       &&\; ?(input, output). \\
   &       &&\; \quad if \; input \; then \; \{\link{output}{false}\} \; else \; \{\link{output}{true}\} \\
-  &\contr &&\; (\nu \; output \; x) (\nu \; input \; x) \\
+  &\contr &&\; (\nu \; output \; res) (\nu \; input \; x) \\
   &       &&\; \quad ((if \; input \; then \; \{\link{output}{false}\} \; else \; \{\link{output}{true}\} \\
   &       &&\; \quad \mid true(x)) \\
   &       &&\; \quad \mid \link{res}{\star}) \\
@@ -110,7 +110,7 @@ reduction.
 
 \section{Revisiting Swap}
 In the introduction, we considered the proposition $\tau \coloneq (A \otimes B) \multimap (B \otimes A)$
-and their term assignments in $\ND$ and $\LK$ corresponding to functions swapping
+and its term assignment in $\ND$ and $\LK$, which correspond to functions swapping
 the components of a pair. Similarly, in $\piFD$, we can define a $swap$ server that coerces a session
 of type $A \otimes B$ into a session of type $B \otimes A$. Since implication is not
 built into the type system of $\piFD$, we define linear implication $\multimap$, and its dual, subtraction $\prec$:
@@ -169,7 +169,7 @@ a server that computes the conjunction of two boolean values.
   &\quad \quad \quad if \; b_1 \; then \\
   &\quad \quad \quad \; \; \{if \; b_2 \; then \; \{\link{output}{true}\} \; else \; \{\link{output}{false}\}\} \\
   &\quad \quad \quad else \\
-  &\quad \quad \quad \; \; \{if \; b_2 \; then \; \{\link{output}{false}\} \; else \; \link{output}{false}\}\} \\
+  &\quad \quad \quad \; \; \{if \; b_2 \; then \; \{\link{output}{false}\} \; else \; \{\link{output}{false}\}\} \\
   &\quad \quad \} \\
   &\quad \} \\
 \end{align*}
@@ -234,7 +234,7 @@ For demonstration, we will show their term assignment for the rule of $\otimes$:
   their term assignment to classical linear logic.
 \end{remark}
 
-The particle $x\langle\tilde{y},\tilde{x}\rangle$ forwards the output and continuation channel
+The \enquote{particle}---as Boudol calls them---$x\langle\tilde{y},\tilde{x}\rangle$ forwards the output and continuation channel
 to the receiver and can be encoded as
 \[
   x\langle\tilde{y},\tilde{x}\rangle \coloneq \link{x}{\ssend{y.\link{y}{\tilde{y}}}{x.\link{x}{\tilde{x}}}}

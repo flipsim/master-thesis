@@ -3,8 +3,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This section develops the metatheory of $\piFD$. We first establish the
-standard result of preservation. Then, as a prerequisite for proving progress --- which
-in the context of $\piFD$ expresses deadlock freedom --- we formally define
+standard result of preservation. Then, as a prerequisite for proving progress---which
+in the context of $\piFD$ expresses deadlock freedom---we formally define
 the notion of terminated processes, along with various normal forms, and prove
 their core properties.
 
@@ -57,7 +57,7 @@ for well-formed, simultaneous substitutions.
   By induction on the typing derivation. We will only highlight the case
   for \textsc{t-cut}, the remaining cases follow immediately or analogously.
 
-  We may assume that the names of free and bound variables are unique, i.e.
+  We may assume that the names of free and bound variables are unique, i.e.,
   $\parcomp{x}{y}{P}{Q}\sigma = \parcomp{x}{y}{P\sigma}{Q\sigma}$.
   Given
   \begin{center}
@@ -204,7 +204,7 @@ flattened.
   by a case analysis on the structure of $L$ and $R$. Excluding the vacuous
   cases which are impossible due to typing, we end up with five valid cases:
   four where one premise is a link or sequencing and the other is a cut,
-  and a fifth, where both $L$ and $R$ are cuts.
+  and a fifth where both $L$ and $R$ are cuts.
 
   \begin{enumerate}[itemsep=1em, label=Case:, leftmargin=*]
   \item ($L = \link{M_1}{M_2}$ and $R = \parcomp{a}{b}{Q_1}{Q_2}$) \\
@@ -225,6 +225,8 @@ flattened.
     and both $L'$ and $R'$ are in canonical cut form.
     Thus, $\parcomp{x}{y}{L}{R} \equiv \parcomp{x}{y}{L'}{R'}$. The result then
     follows by applying Lemma \ref{lemma:cut-list-append}.
+
+    \qedhere
   \end{enumerate}
 \end{proof}
 
@@ -240,10 +242,10 @@ are link processes of the form $\link{x_i}{M_i}$ (or symmetrically $\link{M_i}{x
   \begin{enumerate}[label=(\roman*)]
     \item If $P_1 \equiv \link{x_1}{M_1}$ and $P_2 \equiv \link{x_2}{M_2}$ such that
           $M_1$ and $M_2$ are not futures, then $\parcomp{x}{y}{P_1}{P_2}$
-          is a link list with spine $spine(P) = [x_1, x_2]$.
-    \item If $L \equiv \link{a}{M}$ such that $M$ is not a future and
-          $Q$ is a link list with spine $spine(Q) = \vec{x}$, then 
-          $P = \parcomp{a}{b}{L}{Q}$ is a link list with spine $spine(P) = x :: \vec{x}$.
+          is a link list with spine $\spine(P) = [x_1, x_2]$.
+    \item If $L \equiv \link{x}{M}$ such that $M$ is not a future and
+          $Q$ is a link list with spine $\spine(Q) = \vec{x}$, then 
+          $P = \parcomp{a}{b}{L}{Q}$ is a link list with spine $\spine(P) = x :: \vec{x}$.
   \end{enumerate}
 \end{definition}
 
@@ -257,7 +259,7 @@ it is not yet terminated; instead, an internal communication can still occur.
 
 \begin{lemma}[\rocqicon~Reducibility of link lists] \label{lemma:link-list-reducibility}
   Let $\Gamma \vdash P$ be a well-typed link list. If some channel
-  $a \in spine(P)$ is bound in $P$, then $P \contr P'$ for some process $P'$.
+  $a \in \spine(P)$ is bound in $P$, then $P \contr P'$ for some process $P'$.
 \end{lemma}
 \begin{proof}[Proof Sketch]
   The proof proceeds by strong induction on the length of the spine. It relies
@@ -265,7 +267,7 @@ it is not yet terminated; instead, an internal communication can still occur.
   spine properties. Due to their technical nature, we omit these intermediate
   results here for brevity, referring the interested reader to the formalization.
 
-  However, the general intuition is as follows: If $a \in spine(P)$ occurs
+  However, the general intuition is as follows: If $a \in \spine(P)$ occurs
   bound in $P$, then, without loss of generality, we may assume that $a$ is bound 
   by the leftmost scope; i.e., we are looking at the following situation:
   \[
@@ -293,7 +295,7 @@ process, or a solitary link or link list waiting solely on external channels.
     \item $P = \Lambda$.
     \item $P$ is of the form $\link{x}{M}$ or $\link{M}{x}$.
     \item There exists a link list $Q$ such that $P \equiv Q$ and
-          every channel $a \in spine(Q)$ is free in $Q$.
+          every channel $a \in \spine(Q)$ is free in $Q$.
   \end{enumerate}
 \end{definition}
 
@@ -338,6 +340,8 @@ a progress property (Lemma \ref{lemma:link-list-reducibility}).
 
     \item If all leaves have the shape $\link{x}{M}$ (or $\link{M}{x}$), then $P$ is a link
           list by definition, which completes the proof.
+
+          \qedhere
   \end{enumerate}
 \end{proof}
 
@@ -355,7 +359,7 @@ it either steps or is waiting exclusively on free names, thus being final
   \begin{enumerate}[label=(\roman*)]
     \item $P \contr P'$ for some $P'$. The result follows immediately.
     \item $P$ is a link list. If all names in its spine are free occurrences,
-          then $P$ is final by definition. Otherwise, some channel in $spine(P)$
+          then $P$ is final by definition. Otherwise, some channel in $\spine(P)$
           is bound in $P$, so $P \contr P'$ for some $P'$
           by Lemma \ref{lemma:link-list-reducibility}.
   \end{enumerate}
@@ -380,7 +384,7 @@ Finally, we generalize these results to arbitrary well-typed processes.
       \ref{lemma:canonical-cut-forms}, there exists a canonical cut form
       $P'$ such that $P \equiv P'$. By Lemma \ref{lemma:preservation-for-struct-cong},
       it follows $\Gamma \vdash P'$.
-      Now, applying Lemma \ref{cor:progress-for-cut-list}, we consider
+      Now, applying Corollary \ref{cor:progress-for-cut-list}, we consider
       the following two subcases for $P'$:
       \begin{enumerate}[label=(\roman*)]
         \item $P'$ is final. Since $P$ is a cut, it follows by inversion
@@ -406,6 +410,6 @@ well-typed, closed processes either continue to reduce, or they are the empty pr
   $P = \Lambda$.
 \end{corollary}
 \begin{proof}
-  Immediate from Lemma \ref{lemma:strict-domains} and the observation that
+  Immediate from Theorem \ref{theorem:progress}, using Lemma \ref{lemma:strict-domains} and the observation that
   $\Lambda$ is the only closed, final process.
 \end{proof}

@@ -104,7 +104,7 @@ In $\LK$, the formula property holds for neither the antecedent nor the succeden
 \begin{remark}
   In a system with implicit structural rules, the property must be relaxed
   to every non-weakened formula $A$ and axiom of the shape $\Pi, A \vdash A, \Theta$.
-  However, if one considers elimination rules for exponentials (see Negri'S $\UCL$ \cite{Negri2002:varieties-of-linear-calculi}),
+  However, if one considers elimination rules for exponentials (see Negri's $\UCL$ \cite{Negri2002:varieties-of-linear-calculi}),
   the formula property still holds in the presence of explicit structural rules.
 \end{remark}
 
@@ -179,7 +179,7 @@ if we also consider their units $0$ and $1$, and their corresponding elimination
 The phenomenon that logical redexes derive cuts arises,
 because cuts are \emph{internalized} in $\FD$ (as in natural deduction). However,
 we can make them explicit by translating the derivations so that they only
-use introduction rules and cuts, as described by \cite{Ostermann2022:IntroElim}:
+use introduction rules and cuts, as described by \citet{Ostermann2022:IntroElim}:
 \begin{center}
   \begin{prooftree}
     \hypo{0 \oplus A \vdash 0 \oplus A}
@@ -196,7 +196,7 @@ use introduction rules and cuts, as described by \cite{Ostermann2022:IntroElim}:
 Removing the administrative redexes on the left and the resulting $\beta_\oplus$-redex
 will leave us exactly with the rule of \textsc{cut}.
 
-The translation demonstrates, that every elimination rule in $\FD$ can be derived
+The translation demonstrates that every elimination rule in $\FD$ can be derived
 by its dual introduction rule and a cut in the
 classical sequent calculus. Vice versa, every introduction rule
 of the classical sequent calculus can be derived in $\FD$ by instantiating the main
@@ -264,8 +264,8 @@ when considering a normalization procedure for $\FD$, the notion
 of \emph{cut-free} proofs has to be defined separately.
 
 \section{Cut Elimination}
-As explained above, a detour in a proof of Free Deduction involves that
-it involves both a left and its corresponding right elimination.
+As explained above, a detour in a proof of Free Deduction occurs when a proof
+contains both a left and its corresponding right elimination.
 In the simplest case, both rules are adjacent. However, this need not be the
 case in general. Parigot thus differentiates between \emph{logical} and
 \emph{structural cuts}.
@@ -363,12 +363,12 @@ the substitution based on the polarity of the connective.
   and interpret $\FD$ proofs as proof nets.
 \end{remark}
 
-What remains is to discuss what we should do not, if a left and right
+What remains is to discuss what we should do, if a left and right
 elimination do not immediately succeed their axiom. Parigot refers to these
 situations as \emph{structural redexes}.
 
 \subsection{Structural Cuts}
-Whenever, a logical rule does not follow its axiom, we can make use of
+Whenever a logical rule does not follow its axiom, we can make use of
 the \emph{permutation property}, which states that every logical rule may freely
 be permuted upwards towards its axiom. Generally speaking, if we want to permute
 a logical rule above the conclusion of another logical rule, then we are looking
@@ -403,12 +403,17 @@ is not an active formula. Permuting $L\odot$ above $\mathcal{R}$ results in
   \end{prooftree}
 \end{center}
 
+Here, the intermediate contexts $\Gamma''$ and $\Delta''$ are distinct from
+$\Gamma'$ and $\Delta'$, as they are the result of applying \textsc{l$\odot$}
+to the premise $\Gamma_i, A \odot B \vdash \Delta_i$---merging $\Gamma_i$ and $\Delta_i$
+with the contexts from the side premises $P_1', \hdots, P_m'$.
+
 \begin{remark}
   In a system with explicit structural rules, we would also have to consider
   the cases of permuting a logical rule above a weakening or contraction.
 \end{remark}
 
-Instead of permuting on rule at a time, we will permute a rule directly to its
+Instead of permuting one rule at a time, we will permute a rule directly to its
 axiom. This operation can be expressed through a substitution that replaces
 the axiom $A \odot B \vdash A \odot B$ in $\mathcal{D}$ with the derivation
 
@@ -417,17 +422,20 @@ the axiom $A \odot B \vdash A \odot B$ in $\mathcal{D}$ with the derivation
     \hypo{}
     \infer1[\textsc{ax}]{A \odot B \vdash A \odot B}
     \hypo{P_1', \hdots, P_m'}
-    \infer2[\textsc{l$\odot$}]{\Pi \vdash \Theta}
+    \infer2[\textsc{l$\odot$}]{\Pi \vdash A \odot B, \Theta}
   \end{prooftree}
 \end{center}
+
+Here, the contexts $\Pi$ and $\Theta$ represent the combined contexts
+of $P_1', \hdots, P_m'$.
 
 By continually permuting rules up to their axioms, we can identify logical redexes
 and eliminate them. This procedure eventually terminates yielding a
 cut-free proof which satisfies the subformula property. If a derivation contains
-neither logical nor structural redexes, then it is in normalform.
+neither logical nor structural redexes, then it is in normal form.
 
-\begin{definition}[Normalform]
-  A derivation in $\FD$ is in normalform if every main premise is an axiom.
+\begin{definition}[Normal form]
+  A derivation in $\FD$ is in normal form if every main premise is an axiom.
 \end{definition}
 
 The next step in our development involves some changes to $\FD$, that make

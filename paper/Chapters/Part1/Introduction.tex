@@ -56,14 +56,14 @@ perspective to extensions of traditional logics.
 The extensions of logic this thesis is concerned with are derivates of
 Girard's \emph{Linear Logic} $\LL$ \cite{Girard19871:LinearLogic}. Term assignments for $\LL$ have also been studied,
 both in the intuitionistic \cite{Caires2010:ILLasSessions} and classical setting \cite{Wadler2012:PropositionsAsSessions}.
-The languages thus obtained are a form $\pi$-calculus, with propositions being interpreted as session types
+The languages thus obtained are a form of $\pi$-calculus, with propositions being interpreted as session types
 instead of data types. Following the approach explained above, our aim is to
 explore the design of concurrent programs by considering a different choice
 of sequent calculus as our basis for concurrent computation.
 For this purpose, we will first consider the options from which we can choose
 when designing the rules of a sequent calculus.
 
-\section{Designing Sequent Calculi}
+\section{Designing Sequent-Style Calculi}
 The meaning of the logical connectives can be understood in terms of the logical rules
 which define their justifications or refutations. In a sequent calculus, these rules
 can be classified using two criteria: rules either \emph{introduce} their connective
@@ -141,7 +141,7 @@ In particular, left-introduction and right-elimination (as well as left-eliminat
 can be obtained through each other.
 
 This phenomenon is captured by the notion of \emph{bi-expressibility} introduced
-by \cite{Ostermann2022:IntroElim}, who demonstrate that the choice of inference rules
+by \citet{Ostermann2022:IntroElim}, who demonstrate that the choice of inference rules
 gives rise to four functionally complete sub-calculi which correspond to one
 of the rows or columns of the table above.
 
@@ -377,7 +377,7 @@ eliminations rule.
   \end{prooftree}
 \end{center}
 
-Substituting the axiom $A \land B \vdash A \land B$ for the proof of $A \land B$
+Substituting the proof of $A \land B$ for the axiom $A \land B \vdash A \land B$
 yields the first simplification step.
 
 \begin{center}
@@ -414,7 +414,7 @@ can also be discharged via proof composition to yield the following normal form.
 This looks similar to the normal form we reached in $\LK$, but the axiom
 $B \land A \vdash B \land A$ cannot be eliminated - and it does not have to be in order to
 satisfy the subformula property. Previously, we could interpret
-the resulting normal forms as an order pair $(b, a)$. This analogy fails in $\FD$
+the resulting normal forms as an ordered pair $(b, a)$. This analogy fails in $\FD$
 due to the presence of an additional axiom. Therefore, we suggest for $\FD$ to be
 interpreted in the context of communicating processes: The axiom $B \land A \vdash B \land A$
 creates a binary session channel, and every elimination rule specifies the \enquote{payload}

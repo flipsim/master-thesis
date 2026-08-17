@@ -5,8 +5,8 @@
 \newcommand{\zb}[2][1em]{\makebox[#1]{$\displaystyle#2$}}
 
 This chapter establishes the Church-Rosser theorem for $\piFD$. The theorem
-states that if a process $P$ reduces to two distinct processes, $M$ and $N$,
-there always exists a common reduct $R$ such that both $M$ and $N$ reduce to $R$.
+states that if a process $P$ reduces to two distinct processes, $Q$ and $N$,
+there always exists a common reduct $R$ such that both $Q$ and $N$ reduce to $R$.
 Pictorially:
 
 \begin{center}
@@ -15,7 +15,7 @@ Pictorially:
       column sep={1.5cm,between origins}
     ]
         & \zb{P} \arrow[dl, "\red"'] \arrow[dr, "\red"] & \\
-    \zb{M} \arrow[dr, dashrightarrow, "\red"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\red"] \\
+    \zb{Q} \arrow[dr, dashrightarrow, "\red"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\red"] \\
         & \zb{R} &
   \end{tikzcd}
 \end{center}
@@ -40,7 +40,7 @@ the following diamond:
       column sep={1.5cm,between origins}
     ]
         & \zb{P} \arrow[dl, "\equiv"'] \arrow[dr, "\parred"] & \\
-    \zb{M} \arrow[dr, dashrightarrow, "\parred"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\equiv"] \\
+    \zb{Q} \arrow[dr, dashrightarrow, "\parred"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\equiv"] \\
         & \zb{R} &
   \end{tikzcd}
 \end{center}
@@ -104,61 +104,61 @@ define a well-formedness predicate for evaluation contexts.
 
 \begin{definition}[Well-formedness of evaluation contexts] \label{def:wf-eval-ctx}
   An evaluation context $\mathcal{E}$ is well-formed at channel
-  $x$, denoted $\textsf{WF} \, \mathcal{E}_x$, if the judgment can be derived
+  $x$, denoted $\mathsf{WF} \, \mathcal{E}_x$, if the judgment can be derived
   by the following rules:
   \begin{center}
     \begin{prooftree}
       \hypo{}
-      \infer1[\textsc{wf-link-l}]{\textsf{WF} \, (\link{x}{\square})_x}
+      \infer1[\textsc{wf-link-l}]{\mathsf{WF} \, (\link{x}{\square})_x}
     \end{prooftree}
     \qquad
     \begin{prooftree}
       \hypo{}
-      \infer1[\textsc{wf-link-r}]{\textsf{WF} \, (\link{\square}{x})_x}
+      \infer1[\textsc{wf-link-r}]{\mathsf{WF} \, (\link{\square}{x})_x}
     \end{prooftree}
 
     \bigskip
 
     \begin{prooftree}
-      \hypo{\textsf{WF} \, \mathcal{E}_x}
-      \hypo{x \notin fv(P)}
+      \hypo{\mathsf{WF} \, \mathcal{E}_x}
+      \hypo{x \notin \fv(P)}
       \hypo{a, b \neq x}
-      \infer3[\textsc{wf-cons-l}]{\textsf{WF} \, (\parcomp{a}{b}{P}{\mathcal{E}})_x}
+      \infer3[\textsc{wf-cons-l}]{\mathsf{WF} \, (\parcomp{a}{b}{P}{\mathcal{E}})_x}
     \end{prooftree}
 
     \bigskip
 
     \begin{prooftree}
-      \hypo{\textsf{WF} \, \mathcal{E}_x}
-      \hypo{x \notin fv(P)}
+      \hypo{\mathsf{WF} \, \mathcal{E}_x}
+      \hypo{x \notin \fv(P)}
       \hypo{a, b \neq x}
-      \infer3[\textsc{wf-cons-r}]{\textsf{WF} \, (\parcomp{b}{a}{\mathcal{E}}{P})_x}
+      \infer3[\textsc{wf-cons-r}]{\mathsf{WF} \, (\parcomp{b}{a}{\mathcal{E}}{P})_x}
     \end{prooftree}
   \end{center}
 \end{definition}
 
-Assuming $\textsf{WF} \, \mathcal{E}_x$, the process
+Assuming $\mathsf{WF} \, \mathcal{E}_x$, the process
 $\parcomp{y}{x}{P}{\mathcal{E}[M]}$ contains
 a link $\link{x}{M}$ that can forward its message $M$ via \textsc{r-axcut}, provided
 we transition to an appropriate member of its equivalence class.
 However, given $P$, $\mathcal{E}$, $M$, and the names $x$ and $y$, we can
 directly compute a possible reduct of $\parcomp{y}{x}{P}{\mathcal{E}[M]}$,
-denoted $\textsf{reduct}(E, M, P, x, y)$.
+denoted $\mathsf{reduct}(E, M, P, x, y)$.
 
 \begin{definition}[\textsc{axcut} reduct] \label{def:axcut-reduct}
   We define the reduct of an \textsc{axcut} determined by the process $P$,
   evaluation context $\mathcal{E}$, message $M$, and a channel with endpoints $x$ and $y$
-  inductively by the following rules\footnote{Note, that our formalization cannot define $\textsf{reduct}$ through
+  inductively by the following rules\footnote{Note that our formalization cannot define $\mathsf{reduct}$ through
   a structural recursion. $\mathcal{E}$ must be renamed in the recursive
   call, requiring a definition using well-founded recursion. For this purpose,
   we use Rocq's \enquote{Equations} plugin.}:
   \begin{align*}
-    \textsf{reduct}(\link{x}{\square}, M, P, x, y) &\coloneq P[M/y] \\
-    \textsf{reduct}(\link{\square}{x}, M, P, x, y) &\coloneq P[M/y] \\
-    \textsf{reduct}(\parcomp{a}{b}{Q}{\mathcal{E}}, M, P, x, y)
-      &\coloneq \parcomp{a}{b}{Q}{\textsf{reduct}(\mathcal{E}, M, P, x, y)} \\
-    \textsf{reduct}(\parcomp{b}{a}{\mathcal{E}}{Q}, M, P, x, y)
-      &\coloneq \parcomp{b}{a}{\textsf{reduct}(\mathcal{E}, M, P, x, y)}{Q}
+    \mathsf{reduct}(\link{x}{\square}, M, P, x, y) &\coloneq P[M/y] \\
+    \mathsf{reduct}(\link{\square}{x}, M, P, x, y) &\coloneq P[M/y] \\
+    \mathsf{reduct}(\parcomp{a}{b}{Q}{\mathcal{E}}, M, P, x, y)
+      &\coloneq \parcomp{a}{b}{Q}{\mathsf{reduct}(\mathcal{E}, M, P, x, y)} \\
+    \mathsf{reduct}(\parcomp{b}{a}{\mathcal{E}}{Q}, M, P, x, y)
+      &\coloneq \parcomp{b}{a}{\mathsf{reduct}(\mathcal{E}, M, P, x, y)}{Q}
   \end{align*}
 \end{definition}
 
@@ -221,8 +221,8 @@ simple reduction.
     % axcut l
     \hfill
     \begin{prooftree}
-      \hypo{\textsf{WF} \, \mathcal{E}_x}
-      \infer1[]{\parcomp{x}{y}{\mathcal{E}[M]}{P} \simplred \textsf{reduct}(\mathcal{E}, M, P, x, y)}
+      \hypo{\mathsf{WF} \, \mathcal{E}_x}
+      \infer1[]{\parcomp{x}{y}{\mathcal{E}[M]}{P} \simplred \mathsf{reduct}(\mathcal{E}, M, P, x, y)}
     \end{prooftree}
     \hfill (\textsc{sr-axcut-l})
 
@@ -231,8 +231,8 @@ simple reduction.
     % axcut r
     \hfill
     \begin{prooftree}
-      \hypo{\textsf{WF} \, \mathcal{E}_x}
-      \infer1[]{\parcomp{y}{x}{P}{\mathcal{E}[M]} \simplred \textsf{reduct}(\mathcal{E}, M, P, x, y)}
+      \hypo{\mathsf{WF} \, \mathcal{E}_x}
+      \infer1[]{\parcomp{y}{x}{P}{\mathcal{E}[M]} \simplred \mathsf{reduct}(\mathcal{E}, M, P, x, y)}
     \end{prooftree}
     \hfill (\textsc{sr-axcut-r})
 
@@ -294,11 +294,11 @@ For the direction $(\Leftarrow)$, we observe that the result of computing
 an \textsc{axcut} reduct can be obtained using $\equiv$ and $\contr$.
 
 \begin{lemma}[\rocqicon~An \textsc{axcut} reduct lies in $\red$] \label{lemma:simplred-axcut-in-red}
-  Let $Q$ be a process such that $Q = \mathcal{E}[M]$ and $\textsf{WF} \; \mathcal{E}_x$.
+  Let $Q$ be a process such that $Q = \mathcal{E}[M]$ and $\mathsf{WF} \, \mathcal{E}_x$.
   There exists a process $L$ such that
   \[
     \parcomp{x}{y}{Q}{P} \equiv L \quad {and} \quad
-    L \contr \textsf{reduct}(\mathcal{E}, M, P, x, y).
+    L \contr \mathsf{reduct}(\mathcal{E}, M, P, x, y).
   \]
 \end{lemma}
 
@@ -323,12 +323,12 @@ Using Lemma \ref{lemma:simplred-axcut-in-red}, we prove the following results.
 \end{lemma}
 
 What remains is to prove that $\parred$ possesses the diamond property.
-If $P \parred M$ and $P \parred N$, then there are three cases to consider.
+If $P \parred Q$ and $P \parred N$, then there are three cases to consider.
 
 \begin{enumerate}
-  \item $P \simplred M$ and $P \simplred N$.
-  \item $P \simplred M$ and $P \equiv N$, or $P \equiv M$ and $P \simplred N$.
-  \item $P \equiv M$ and $P \equiv N$.
+  \item $P \simplred Q$ and $P \simplred N$.
+  \item $P \simplred Q$ and $P \equiv N$, or $P \equiv Q$ and $P \simplred N$.
+  \item $P \equiv Q$ and $P \equiv N$.
 \end{enumerate}
 
 We will prove the following three diamonds, corresponding to the three cases above.
@@ -341,7 +341,7 @@ We will prove the following three diamonds, corresponding to the three cases abo
         column sep={1.5cm,between origins}
       ]
           & \zb{P} \arrow[dl, "\simplred"'] \arrow[dr, "\simplred"] & \\
-      \zb{M} \arrow[dr, dashrightarrow, "\parred"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\parred"] \\
+      \zb{Q} \arrow[dr, dashrightarrow, "\parred"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\parred"] \\
           & \zb{R} &
     \end{tikzcd}
   \end{center}
@@ -353,7 +353,7 @@ We will prove the following three diamonds, corresponding to the three cases abo
         column sep={1.5cm,between origins}
       ]
           & \zb{P} \arrow[dl, "\equiv"'] \arrow[dr, "\simplred"] & \\
-      \zb{M} \arrow[dr, dashrightarrow, "\simplred"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\parred"] \\
+      \zb{Q} \arrow[dr, dashrightarrow, "\simplred"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\parred"] \\
           & \zb{R} &
     \end{tikzcd}
   \end{center}
@@ -365,7 +365,7 @@ We will prove the following three diamonds, corresponding to the three cases abo
         column sep={1.5cm,between origins}
       ]
           & \zb{P} \arrow[dl, "\equiv"'] \arrow[dr, "\equiv"] & \\
-      \zb{M} \arrow[dr, dashrightarrow, "\equiv"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\equiv"] \\
+      \zb{Q} \arrow[dr, dashrightarrow, "\equiv"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\equiv"] \\
           & \zb{R} &
     \end{tikzcd}
   \end{center}
@@ -389,41 +389,41 @@ and evaluation contexts.
 
 \begin{lemma}[\rocqicon~\textsc{axcut} reducts are invariant under reduced evaluation contexts] \label{lemma:reduct-invar-red-ctx}
   Let $\Gamma \vdash Q$ and $\Gamma' \vdash P$ be well-typed processes such that $Q = \mathcal{E}[M]$
-  and $\textsf{WF} \; \mathcal{E}_x$. If $Q \simplred Q'$, then one of the following holds:
+  and $\mathsf{WF} \, \mathcal{E}_x$. If $Q \simplred Q'$, then one of the following holds:
   \begin{enumerate}[label=(\roman*)]
     \item There exists $\mathcal{E}'$ and $M'$ such that $Q' = \mathcal{E}'[M']$,
-          $\textsf{WF} \; \mathcal{E}'_x$ and
+          $\mathsf{WF} \, \mathcal{E}'_x$ and
           \[
-            \textsf{reduct}(\mathcal{E}, M, P, x, y) \simplred
-            \textsf{reduct}(\mathcal{E}', M', P, x, y),
+            \mathsf{reduct}(\mathcal{E}, M, P, x, y) \simplred
+            \mathsf{reduct}(\mathcal{E}', M', P, x, y),
           \]
           or
-    \item $\textsf{reduct}(\mathcal{E}, M, P, x, y) \equiv \parcomp{x}{y}{Q'}{P}$
+    \item $\mathsf{reduct}(\mathcal{E}, M, P, x, y) \equiv \parcomp{x}{y}{Q'}{P}$
   \end{enumerate}
 \end{lemma}
 
 \begin{lemma}[\rocqicon~\textsc{axcut} reducts are invariant under reduced substituent] \label{lemma:reduct-invar-substituent}
   Let $\Gamma \vdash P$ be a well-typed process. If $P \simplred P'$, then
   \[
-    \textsf{reduct}(\mathcal{E}, M, P, x, y) \simplred
-    \textsf{reduct}(\mathcal{E}, M, P', x, y).
+    \mathsf{reduct}(\mathcal{E}, M, P, x, y) \simplred
+    \mathsf{reduct}(\mathcal{E}, M, P', x, y).
   \]
 \end{lemma}
 
 \begin{lemma}[\rocqicon~Uniqueness of evaluation contexts] \label{lemma:uniq-eval-ctx}
   Let $\mathcal{E}$ and $\mathcal{E}'$ be evaluation contexts such that
-  $\textsf{WF} \; \mathcal{E}_x$ and $\textsf{WF} \; \mathcal{E}'_x$.
+  $\mathsf{WF} \, \mathcal{E}_x$ and $\mathsf{WF} \, \mathcal{E}'_x$.
   If $\Gamma \vdash \mathcal{E}[M]$ and $\mathcal{E}[M] = \mathcal{E}'[M']$, then $\mathcal{E} = \mathcal{E}'$ and
   $M = M'$.
 \end{lemma}
 
 \begin{lemma}[\rocqicon~Confluence for \textsc{axcut} reduct pairs] \label{lemma:critical-pairs}
   Let $\mathcal{E}$ and $\mathcal{E}'$ be evaluation contexts such that
-  $\textsf{WF} \; \mathcal{E}_x$ and $\textsf{WF} \; \mathcal{E}'_y$.
-  If $x \notin fv(M)$ and $y \notin fv(M')$, then
+  $\mathsf{WF} \, \mathcal{E}_x$ and $\mathsf{WF} \, \mathcal{E}'_y$.
+  If $x \notin \fv(M)$ and $y \notin \fv(M')$, then
   \[
-    \textsf{reduct}(\mathcal{E}, M, \mathcal{E}'[M'], x, y) \equiv
-    \textsf{reduct}(\mathcal{E}', M', \mathcal{E}[M], y, x).
+    \mathsf{reduct}(\mathcal{E}, M, \mathcal{E}'[M'], x, y) \equiv
+    \mathsf{reduct}(\mathcal{E}', M', \mathcal{E}[M], y, x).
   \]
 \end{lemma}
 
@@ -435,7 +435,7 @@ and evaluation contexts.
   these two reducts turn out to be structurally congruent. Intuitively, an evaluation context
   can be viewed as a list of processes. The expression
   \[
-    \textsf{reduct}(\mathcal{E}, M, \mathcal{E}'[M'], x, y)
+    \mathsf{reduct}(\mathcal{E}, M, \mathcal{E}'[M'], x, y)
   \]
   thus represents the concatenation of two such lists.
   Because structural congruence allows us to ignore the concrete order of processes in
@@ -447,11 +447,11 @@ can always be reconciled.
 
 \begin{lemma}[\rocqicon~Reconciling diverging simple reductions] \label{lemma:roncile-simplered}
   Let $\Gamma \vdash P$ be a well-typed process.
-  If $P \simplred M$ and $P \simplred N$, then $M \parred R$ and $N \parred R$
+  If $P \simplred Q$ and $P \simplred N$, then $Q \parred R$ and $N \parred R$
   for some $R$.
 \end{lemma}
 \begin{proof}
-  By induction on the derivation of $P \simplred M$.
+  By induction on the derivation of $P \simplred Q$.
   The cases \textsc{sr-refl} and all $\beta$-reductions are straightforward.
   For the remaining cases, we proceed as follows.
 
@@ -461,17 +461,17 @@ can always be reconciled.
       \textsc{sr-refl}, \textsc{sr-seq} or \textsc{sr-cong-seq}. For the first two,
       the result follows trivially. For the latter, we are looking at the following situation:
       \[
-         P = Q \seq xS \simplred Q[S/x] = M \quad \text{and} \quad
-         P = Q \seq xS \simplred Q' \seq xS = N \quad
+         P = Q' \seq xS \simplred Q'[S/x] = Q \quad \text{and} \quad
+         P = Q' \seq xS \simplred Q'' \seq xS = N \quad
       \]
-      with $Q \simplred Q'$. Thus, using Lemma \ref{lemma:simplred-invar-subst},
-      we have $Q[S/x] \simplred Q'[S/x]$. Therefore,
+      with $Q' \simplred Q''$. Thus, using Lemma \ref{lemma:simplred-invar-subst},
+      we have $Q'[S/x] \simplred Q''[S/x]$. Therefore,
       \[
-        M = Q[S/x] \parred Q'[S/x] = R
+        Q = Q'[S/x] \parred Q''[S/x] = R
       \]
       and
       \[
-        N = Q' \seq xS \parred Q'[S/x] = R.
+        N = Q'' \seq xS \parred Q''[S/x] = R.
       \]
 
     \item (\textsc{sr-cong-seq}) \\
@@ -481,11 +481,11 @@ can always be reconciled.
       \ref{lemma:simplred-invar-subst} as above. Lastly, for \textsc{sr-cong-seq},
       we have
       \[
-        P = Q \seq xS \simplred Q_1 \seq xS = M \quad \text{and} \quad
-        P = Q \seq xS \simplred Q_2 \seq xS = N \quad
+        P = Q' \seq xS \simplred Q_1 \seq xS = Q \quad \text{and} \quad
+        P = Q' \seq xS \simplred Q_2 \seq xS = N \quad
       \]
-      with $Q \simplred Q_1$ and $Q \simplred Q_2$. Thus, by induction hypothesis,
-      there exists $Q'$ s.t. $Q_1 \parred Q'$ and $Q_2 \parred Q'$.
+      with $Q' \simplred Q_1$ and $Q' \simplred Q_2$. Thus, by induction hypothesis,
+      there exists $Q''$ s.t. $Q_1 \parred Q''$ and $Q_2 \parred Q''$.
       The result follows.
 
     \item (\textsc{sr-cong-cut-l}) \\
@@ -498,39 +498,39 @@ can always be reconciled.
         \item (\textsc{sr-axcut-l}) \\
           We have
           \[
-            P = \parcomp{x}{y}{\mathcal{E}[M]}{Q} \simplred \parcomp{x}{y}{P'}{Q} = M
+            P = \parcomp{x}{y}{\mathcal{E}[M]}{Q'} \simplred \parcomp{x}{y}{P'}{Q'} = Q
           \]
           with $\mathcal{E}[M] \simplred P'$ and
           \[
-            P = \parcomp{x}{y}{\mathcal{E}[M]}{Q} \simplred \textsf{reduct}(\mathcal{E}, M, Q, x, y) = N.
+            P = \parcomp{x}{y}{\mathcal{E}[M]}{Q'} \simplred \mathsf{reduct}(\mathcal{E}, M, Q', x, y) = N.
           \]
           By Lemma \ref{lemma:reduct-invar-red-ctx}, we consider two cases.
 
           First, we may have $P' = \mathcal{E}'[M']$ for some $\mathcal{E}'$ and $M'$
-          such that $\textsf{WF} \; \mathcal{E}'_x$ and
+          such that $\mathsf{WF} \, \mathcal{E}'_x$ and
           \[
-            \textsf{reduct}(\mathcal{E}, M, Q, x, y) \simplred \textsf{reduct}(\mathcal{E}', M', Q, x, y).
+            \mathsf{reduct}(\mathcal{E}, M, Q', x, y) \simplred \mathsf{reduct}(\mathcal{E}', M', Q', x, y).
           \]
           Thus,
           \[
-            M = \parcomp{x}{y}{\mathcal{E}'[M']}{Q}
-            \parred \textsf{reduct}(\mathcal{E}', M', Q, x, y)
+            Q = \parcomp{x}{y}{\mathcal{E}'[M']}{Q'}
+            \parred \mathsf{reduct}(\mathcal{E}', M', Q', x, y)
           \]
           and
           \[
-            N = \textsf{reduct}(\mathcal{E}, M, Q, x, y) \parred \textsf{reduct}(\mathcal{E}', M', Q, x, y).
+            N = \mathsf{reduct}(\mathcal{E}, M, Q', x, y) \parred \mathsf{reduct}(\mathcal{E}', M', Q', x, y).
           \]
 
-          Second, we may have $\textsf{reduct}(\mathcal{E}, M, Q, x, y) \equiv \parcomp{x}{y}{P'}{Q}$.
+          Second, we may have $\mathsf{reduct}(\mathcal{E}, M, Q', x, y) \equiv \parcomp{x}{y}{P'}{Q'}$.
           The result follows immediately.
         \item (\textsc{sr-axcut-r}) \\
           We have
           \[
-            P = \parcomp{x}{y}{Q}{\mathcal{E}[M]} \simplred \parcomp{x}{y}{Q'}{\mathcal{E}[M]} = M
+            P = \parcomp{x}{y}{Q'}{\mathcal{E}[M]} \simplred \parcomp{x}{y}{Q''}{\mathcal{E}[M]} = Q
           \]
           and
           \[
-            P = \parcomp{x}{y}{Q}{\mathcal{E}[M]} \simplred \textsf{reduct}(\mathcal{E}, M, Q, x, y) = N.
+            P = \parcomp{x}{y}{Q'}{\mathcal{E}[M]} \simplred \mathsf{reduct}(\mathcal{E}, M, Q', x, y) = N.
           \]
           The result follows using Lemma \ref{lemma:reduct-invar-substituent}.
       \end{enumerate}
@@ -544,20 +544,20 @@ can always be reconciled.
       \begin{enumerate}[itemsep=1em, label=Subcase:]
         \item (\textsc{sr-axcut-l}) \\
           By the uniqueness of evaluation contexts (Lemma \ref{lemma:uniq-eval-ctx}),
-          we already have $M = N$. The result follows trivially.
+          we already have $Q = N$. The result follows trivially.
 
         \item (\textsc{sr-axcut-r}) \\
           We are looking at the following situation:
           \begin{align*}
             P &= \parcomp{x}{y}{\mathcal{E}[M]}{\mathcal{E'}[M']} \\ & \simplred
-              \textsf{reduct}(\mathcal{E}, M, \mathcal{E'}[M'], x, y) = M
+              \mathsf{reduct}(\mathcal{E}, M, \mathcal{E'}[M'], x, y) = Q
           \end{align*}
           and
           \begin{align*}
             P & = \parcomp{x}{y}{\mathcal{E}[M]}{\mathcal{E'}[M']} \\ & \simplred
-              \textsf{reduct}(E', M', \mathcal{E}[M], y, x) = N
+              \mathsf{reduct}(E', M', \mathcal{E}[M], y, x) = N
           \end{align*}
-          with $\textsf{WF} \; \mathcal{E}_x$ and $\textsf{WF} \; \mathcal{E}'_y$.
+          with $\mathsf{WF} \, \mathcal{E}_x$ and $\mathsf{WF} \, \mathcal{E}'_y$.
           The results follow using Lemma \ref{lemma:critical-pairs}, since $M \equiv N$.
       \end{enumerate}
     \item (\textsc{sr-axcut-r}) \\
@@ -582,7 +582,7 @@ between directed congruence and simple reduction:
       column sep={1.5cm,between origins}
     ]
         & \zb{P} \arrow[dl, "\dircong"'] \arrow[dr, "\simplred"] & \\
-    \zb{M} \arrow[dr, dashrightarrow, "\simplred"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\equiv"] \\
+    \zb{Q} \arrow[dr, dashrightarrow, "\simplred"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\equiv"] \\
         & \zb{R} &
   \end{tikzcd}
 \end{center}
@@ -596,7 +596,7 @@ compatibility result for parallel reduction:
       column sep={1.5cm,between origins}
     ]
         & \zb{P} \arrow[dl, "\equiv"'] \arrow[dr, "\parred"] & \\
-    \zb{M} \arrow[dr, dashrightarrow, "\parred"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\equiv"] \\
+    \zb{Q} \arrow[dr, dashrightarrow, "\parred"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\equiv"] \\
         & \zb{R} &
   \end{tikzcd}
 \end{center}
@@ -862,12 +862,12 @@ We first state a few properties about directed congruence and simple reduction.
 
 \begin{lemma}[\rocqicon~\textsc{axcut} reducts are invariant under directed congruence] \label{lemma:reduct-inver-dircong}
   Let $\Gamma \vdash Q$ be a well-typed process such that $Q = \mathcal{E}[M]$
-  and $\textsf{WF} \; \mathcal{E}_x$.
+  and $\mathsf{WF} \, \mathcal{E}_x$.
   If $P \dircong P'$ and $Q \dircong R$, then there exist $\mathcal{E}'$ and $M'$ such that:
   \begin{enumerate}[label=(\roman*)]
     \item $R = \mathcal{E}'[M']$,
     \item $\mathcal{E} \dircong \mathcal{E}'$, and
-    \item $\textsf{reduct}(\mathcal{E}, M, P, x, y) \dircong \textsf{reduct}(\mathcal{E}', M', P', x, y)$.
+    \item $\mathsf{reduct}(\mathcal{E}, M, P, x, y) \dircong \mathsf{reduct}(\mathcal{E}', M', P', x, y)$.
   \end{enumerate}
 \end{lemma}
 
@@ -927,18 +927,18 @@ we can now prove the first result relating simple reduction and structural congr
       \]
       with $Q \dircong Q'$ and $\mathcal{E}[M] \dircong P'$, and
       \[
-        P \simplred \textsf{reduct}(\mathcal{E}, M, Q, x, y) = Q_2.
+        P \simplred \mathsf{reduct}(\mathcal{E}, M, Q, x, y) = Q_2.
       \]
       Using Lemma \ref{lemma:reduct-inver-dircong}, there exist $\mathcal{E}'$ and $M'$
       such that $P' = \mathcal{E}'[M']$, $\mathcal{E} \dircong \mathcal{E}'$ and
-      $\textsf{reduct}(\mathcal{E}, M, Q, x, y) \dircong \textsf{reduct}(\mathcal{E}', M', Q', x, y)$.
+      $\mathsf{reduct}(\mathcal{E}, M, Q, x, y) \dircong \mathsf{reduct}(\mathcal{E}', M', Q', x, y)$.
       Thus,
       \[
-        Q_1 = \parcomp{y}{x}{Q'}{\mathcal{E}'[M']} \simplred \textsf{reduct}(\mathcal{E}', M', Q', x, y)
+        Q_1 = \parcomp{y}{x}{Q'}{\mathcal{E}'[M']} \simplred \mathsf{reduct}(\mathcal{E}', M', Q', x, y)
       \]
       and
       \[
-        Q_2 = \textsf{reduct}(\mathcal{E}, M, Q, x, y) \equiv \textsf{reduct}(\mathcal{E}', M', Q', x, y).
+        Q_2 = \mathsf{reduct}(\mathcal{E}, M, Q, x, y) \equiv \mathsf{reduct}(\mathcal{E}', M', Q', x, y).
       \]
   \end{enumerate}
 \end{proof}
@@ -953,14 +953,14 @@ $\parred$ with $\equiv$.
 
 \begin{lemma}[\rocqicon~Diamond property for parallel reduction] \label{lemma:church-rosser-for-parred}
   Let $\Gamma \vdash P$ be a well-typed process.
-  If $P \parred M$ and $P \parred N$, then $M \parred R$ and $N \parred R$ for some $R$, pictorially
+  If $P \parred Q$ and $P \parred N$, then $Q \parred R$ and $N \parred R$ for some $R$, pictorially
   \begin{center}
     \begin{tikzcd}[
         row sep={1.5cm,between origins},
         column sep={1.5cm,between origins}
       ]
           & \zb{P} \arrow[dl, "\parred"'] \arrow[dr, "\parred"] & \\
-      \zb{M} \arrow[dr, dashrightarrow, "\parred"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\parred"] \\
+      \zb{Q} \arrow[dr, dashrightarrow, "\parred"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\parred"] \\
           & \zb{R} &
     \end{tikzcd}
   \end{center}
@@ -979,7 +979,7 @@ and a multi-step sequence.
 
 \begin{lemma}[\rocqicon~Strip lemma] \label{lemma:strip-lemma}
   Let $\Gamma \vdash P$ be a well-typed process.
-  If $P \parred M$ and $P \parred^* N$, then $M \parred^* R$ and $N \parred R$ for some $R$.
+  If $P \parred Q$ and $P \parred^* N$, then $Q \parred^* R$ and $N \parred R$ for some $R$.
 \end{lemma}
 \begin{proof}
   By induction on the length of the reduction sequence $P \parred^* N$
@@ -990,7 +990,7 @@ and a multi-step sequence.
       column sep={1.5cm,between origins}
     ]
      & \zb{P} \arrow[dl, "\parred"'] \arrow[dr, "\parred"] & & & \\
-    \zb{M} \arrow[dr, dashrightarrow, "\parred"'] & & \zb{N_1} \arrow[dl, dashrightarrow, "\parred"] \arrow[dr, "\parred"] & & \\
+    \zb{Q} \arrow[dr, dashrightarrow, "\parred"'] & & \zb{N_1} \arrow[dl, dashrightarrow, "\parred"] \arrow[dr, "\parred"] & & \\
      & \zb{T_1} \arrow[dr, dashrightarrow, "\parred"'] & & \zb{N_2} \arrow[dl, dashrightarrow, "\parred"] \arrow[dr, dotted, "\parred"] & \\
      &     & \zb{T_2} \arrow[dr, dotted, "\parred"'] & & \zb{N_n} \arrow[dl, dashrightarrow, "\parred"] \\
      &     &     & \zb{R} &
@@ -1004,7 +1004,7 @@ the strip lemma to fill out the larger diamond.
 
 \begin{lemma}[\rocqicon~Diamond property for $\parred^*$] \label{lemma:parred-star-diamond}
   Let $\Gamma \vdash P$ be a well-typed process.
-  If $P \parred^* M$ and $P \parred^* N$, then $M \parred^* R$ and $N \parred^* R$ for some $R$.
+  If $P \parred^* Q$ and $P \parred^* N$, then $Q \parred^* R$ and $N \parred^* R$ for some $R$.
 \end{lemma}
 \begin{proof}
   By induction on the length of the reduction sequence $P \parred^* M$
@@ -1017,7 +1017,7 @@ the strip lemma to fill out the larger diamond.
     &       &       & \zb{P} \arrow[dl, "\parred"'] \arrow[dr, "\parred"]     &       &       &    \\
     &       & \zb{\cdot} \arrow[dl, dotted, "\parred"'] \arrow[dr, dashrightarrow] &       & \zb{\cdot} \arrow[dl, dashrightarrow] \arrow[dr, dotted, "\parred"] &       &    \\
     & \zb{\cdot} \arrow[dl, "\parred"']  &       & \zb{\cdot} \arrow[dr, dotted] &       & \zb{\cdot} \arrow[dl, dashrightarrow] \arrow[dr, "\parred"] &    \\
-  \zb{M} \arrow[dr, dashrightarrow, "\parred"'] &       & \zb{\phantom{\cdot}} &       & \cdot  \arrow[dr, dashrightarrow] &       & \zb{N} \arrow[dl, dashrightarrow, "\parred"]  \\
+  \zb{Q} \arrow[dr, dashrightarrow, "\parred"'] &       & \zb{\phantom{\cdot}} &       & \cdot  \arrow[dr, dashrightarrow] &       & \zb{N} \arrow[dl, dashrightarrow, "\parred"]  \\
     & \zb{\cdot} \arrow[dr, dotted, "\parred"'] &       & \zb{\phantom{\cdot}} &       & \zb{\cdot} \arrow[dl, dotted, "\parred"] &    \\
     &       & \zb{\cdot} \arrow[dr, dashrightarrow, "\parred"'] &       & \zb{\cdot} \arrow[dl, dashrightarrow, "\parred"] &       &    \\
     &       &       & \zb{R}     &       &       &
@@ -1032,5 +1032,5 @@ the confluence of $\parred^*$ immediately implies the Church-Rosser property.
 
 \begin{theorem}[\rocqicon~Church-Rosser] \label{theorem:church-rosser}
   Let $\Gamma \vdash P$ be a well-typed process.
-  If $P \red M$ and $P \red N$, then $M \red R$ and $N \red R$ for some $R$.
+  If $P \red Q$ and $P \red N$, then $Q \red R$ and $N \red R$ for some $R$.
 \end{theorem}

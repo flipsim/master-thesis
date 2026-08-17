@@ -24,12 +24,12 @@ of linear logic, however, we omit the additive units.
   \]
 \end{definition}
 
-Opposed to Parigot's representation, we drop implication for ease of
+As opposed to Parigot's representation, we drop implication for ease of
 representation and instead define linear implication $A \to B$ as usual ($A^\bot \parr B$).
 Additionally, following other representations of classical linear logic, we no longer
 use two-sided sequents. Instead, we collapse all formulas into the antecedent
 via linear negation. Whether to collapse the formulas into the antecedent or
-succedent plays little role in the logical framework, however, choosing
+succedent plays little role in the logical framework; however, choosing
 the former allows the connectives to retain their typical interpretation
 in the process calculus setting.
 
@@ -213,7 +213,7 @@ into one-sided sequents (Figure \ref{sec:linear-fd:logical-cuts}).
 \end{figure}
 
 \section{Proof Conversions}
-Following \cite{Caires2010:ILLasSessions,Wadler2012:PropositionsAsSessions},
+Following \citet{Caires2010:ILLasSessions,Wadler2012:PropositionsAsSessions},
 we consider cut elimination up to a class of
 sound proof conversions (Figure \ref{sec:linear-fd:structural-proof-conversions}).
 These proof conversions are not necessary for cut elimination,
@@ -267,17 +267,17 @@ to the structural congruence of processes in the $\pi$-calculus.
       \begin{aligned}
         & \begin{prooftree}
             \hypo{A \odot B, A^\bot \overline{\odot} B^\bot \vdash}
-            \hypo{P_1 \hdots P_n}
+            \hypo{P_1, \hdots, P_n}
             \infer2[$\odot$]{\Gamma, A^\bot \overline{\odot} B^\bot \vdash}
-            \hypo{P_1' \hdots P_k'}
+            \hypo{P_1', \hdots, P_k'}
             \infer2[$\overline{\odot}$]{\Gamma, \Delta \vdash}
           \end{prooftree} \\[1em]
         & \quad\equiv\quad
           \begin{prooftree}
             \hypo{A \odot B, A^\bot \overline{\odot} B^\bot \vdash}
-            \hypo{P_1' \hdots P_k'}
+            \hypo{P_1', \hdots, P_k'}
             \infer2[$\overline{\odot}$]{\Delta, A \odot B \vdash}
-            \hypo{P_1 \hdots P_n}
+            \hypo{P_1, \hdots, P_n}
             \infer2[$\odot$]{\Gamma, \Delta \vdash}
           \end{prooftree}
       \end{aligned}
@@ -295,7 +295,7 @@ However, the presence of \textsc{cut} adds new structural reductions. If we assu
 all logical rules are maximally permuted, then there are three new situations to consider.
 
 \begin{enumerate}
-  \item A cut where one of the derivation is an axiom. The reduction is given by the other derivation.
+  \item A cut where one of the derivations is an axiom. The reduction is given by the other derivation.
   \item A cut where one derivation is an axiom followed by an elimination rule, and
         the principal formula of the cut is the axiom's remaining formula. The reduction
         is given by removing the cut and applying the elimination rule to the other derivation.
@@ -318,14 +318,14 @@ The following derivation illustrates a commuting conversion for $\otimes$.
           \hypo{\Gamma_2, B^\bot \vdash}
           \infer3[$\otimes$]{\Gamma_1, \Gamma_2, C, A^\bot \parr B^\bot \vdash}
           \hypo{\Delta, C^\bot \vdash}
-          \infer2[Cut]{\Gamma_1, \Gamma_2, \Delta, A^\bot \parr B^\bot \vdash}
+          \infer2[\textsc{cut}]{\Gamma_1, \Gamma_2, \Delta, A^\bot \parr B^\bot \vdash}
         \end{prooftree} \\[1em]
       & \quad \rhd\quad
       \begin{prooftree}
         \hypo{A \otimes B, A^\bot \parr B^\bot \vdash}
         \hypo{\Gamma_1, C, A^\bot \vdash}
         \hypo{\Delta, C^\bot \vdash}
-        \infer2[Cut]{\Gamma_1, \Delta, A^\bot \vdash}
+        \infer2[\textsc{cut}]{\Gamma_1, \Delta, A^\bot \vdash}
         \hypo{\Gamma_2, B^\bot \vdash}
         \infer3[$\otimes$]{\Gamma_1, \Gamma_2, \Delta, A^\bot \parr B^\bot \vdash}
       \end{prooftree}
@@ -341,7 +341,7 @@ The following derivation illustrates a commuting conversion for $\otimes$.
       \begin{prooftree}
         \hypo{A, A^\bot \vdash}
         \hypo{\Gamma, A \vdash}
-        \infer2[Cut]{\Gamma, A \vdash}
+        \infer2[\textsc{cut}]{\Gamma, A \vdash}
       \end{prooftree}
       \quad\rhd\quad
       \begin{prooftree}
@@ -353,16 +353,16 @@ The following derivation illustrates a commuting conversion for $\otimes$.
     \adjustbox{valign=t}{$\displaystyle
       \begin{aligned}
         & \begin{prooftree}
-          \hypo{A \odot B, A^\bot \overline{\odot} B^\bot}
-          \hypo{P_1 \hdots P_n}
+          \hypo{A \odot B, A^\bot \overline{\odot} B^\bot \vdash}
+          \hypo{P_1, \hdots, P_n}
           \infer2[$\odot$]{\Gamma, A^\bot \overline{\odot} B^\bot \vdash}
           \hypo{\Delta, A \odot B \vdash}
-          \infer2[Cut]{\Gamma, \Delta \vdash}
+          \infer2[\textsc{cut}]{\Gamma, \Delta \vdash}
         \end{prooftree} \\[1em] 
         & \qquad\qquad \rhd\quad
         \begin{prooftree}
           \hypo{\Delta, A \odot B \vdash}
-          \hypo{P_1 \hdots P_n}
+          \hypo{P_1, \hdots, P_n}
           \infer2[$\odot$]{\Gamma, \Delta \vdash}
         \end{prooftree}
       \end{aligned}
@@ -384,13 +384,13 @@ The insight is that if all formulas occurring in the context are cut
 with appropriate derivations, the reordering cannot be detected once the
 now blocking prefix performs its communication.
 
-If we take commuting conversions into account, the normalforms of $\LFD$ are the
-similar to the ones of $\FD$ except for use of one-sided sequents. However,
+If we take commuting conversions into account, the normal forms of $\LFD$ are
+similar to the ones of $\FD$ except for the use of one-sided sequents. However,
 if we omit contextual rewriting and commuting conversions, each derivation of $\LFD$
-has a \emph{weak normalform}.
+has a \emph{weak normal form}.
 
-\begin{definition}[Weak normalform]
-  A derivation $\mathcal{D}$ is in weak normalform, if $\mathcal{D} \equiv \mathcal{N}$,
+\begin{definition}[Weak normal form]
+  A derivation $\mathcal{D}$ is in weak normal form, if $\mathcal{D} \equiv \mathcal{N}$,
   where $\mathcal{N}$ is of the form
   \begin{center}
     \begin{prooftree}
@@ -402,9 +402,9 @@ has a \emph{weak normalform}.
       \hypo{\mathcal{D}_n}
       \ellipsis{}{\Gamma_n, A_n^\bot, C_{n - 1}^\bot \vdash}
       \infer2[\textsc{cut}]{\Gamma_{n-1}', A_{n-1}^\bot, A_n^\bot, C_{n-2}^\bot \vdash}
-      \infer1[]{\vdots}
+      \infer[no rule]1{\vdots}
       \infer3[\textsc{cut}]{\Gamma_2', A_2^\bot, \hdots, A_n^\bot, C_1^\bot \vdash}
-      \infer2[\textsc{cut}]{\Gamma_1', A_1^\bot, A_2^\bot \hdots, A_n^\bot \vdash}
+      \infer2[\textsc{cut}]{\Gamma_1', A_1^\bot, A_2^\bot, \hdots, A_n^\bot \vdash}
     \end{prooftree}
   \end{center}
   such that every $\mathcal{D}_i$ has the shape
@@ -424,7 +424,7 @@ modifying the $\pi$-calculus reduction strategy and its notion of structural con
 or adapting the cut elimination procedure.
 
 Bellin and Scott worked out a tight correspondence between a synchronous $\pi$-calculus
-and multiplicative linear logic \cite{Bellin1994:PiCalcAndLinearLogic}, which however
+and multiplicative linear logic \cite{Bellin1994:PiCalcAndLinearLogic}, which, however, 
 comes at the cost of additional congruences for processes allowing for two reads
 to be permuted along the same thread. Caires and Pfenning \cite{Caires2010:ILLasSessions}, on the other hand,
 achieve a tight correspondence only by restricting cut elimination to omit

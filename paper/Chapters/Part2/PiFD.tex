@@ -5,14 +5,15 @@
 In this section, we introduce a term assignment system for $\LFD$: $\piFD$.
 We present its syntax, typing, and operational semantics, as well as the
 interpretation of the logical connectives in the process calculus setting.
-A demonstration on how to program using $\piFD$ is given in
+A demonstration of how to program using $\piFD$ is given in
 Section \ref{ch:programming-with-sessions}. A detailed presentation of
 $\piFD$'s metatheory is postponed to the third part of this thesis.
 
 \section{Syntax and Typing}
-The language of types if given by Definition \ref{def:pi-fd:types}.
+The language of types is given by Definition \ref{def:pi-fd:types};
+the constructs themselves will be explained in detail in Section \ref{ch:pi-fd:op-semantics}.
 Since we do not consider polymorphism, we will drop propositional variables,
-opposed to the propositions of $\LFD$.
+as opposed to the propositions of $\LFD$.
 
 \begin{definition}[Types of $\piFD$] \label{def:pi-fd:types}
   \begin{alignat*}{4}
@@ -69,7 +70,7 @@ at the cost of losing consistency.
   \]
   and are treated as unordered lists. The subjects of the declarations in
   a context are pairwise distinct. We refer to the set of all subjects of
-  a context $\Gamma$ as the \emph{domain} $dom(\Gamma)$.
+  a context $\Gamma$ as the \emph{domain} $\dom(\Gamma)$.
 \end{definition}
 
 Since we are dealing with a linear typing discipline, we define the relation
@@ -82,7 +83,7 @@ we did not want to omit their definition.}.
 
 \begin{definition}[Context split] \label{def:pi-fd:ctx-split}
   The relation $\Gamma = \Delta_1 \circ \Delta_2$ is inductively defined by the
-  following rules, where we presuppose that $dom(\Delta_1) \cap dom(\Delta_2) = \varnothing$.
+  following rules, where we presuppose that $\dom(\Delta_1) \cap \dom(\Delta_2) = \varnothing$.
   \begin{center}
     \begin{prooftree}
       \hypo{}
@@ -235,7 +236,7 @@ possesses four different term assignments
   \link{x}{\swait{P}} \seq x\sclose \\
   \link{\sclose}{\swait{P}}
 \end{gather*}
-given $\Gamma \vdash P$ for some $\Gamma$. They correspond to no, one or both
+given $\Gamma \vdash P$ for some $\Gamma$. They correspond to no, one, or both
 futures representing a channel being fulfilled. Once both sides are fulfilled,
 we obtain a logical redex.
 
@@ -266,12 +267,12 @@ $\equiv$ of $\piFD$.
     \parcomp{v}{z}{\parcomp{x}{y}{P}{Q}}{R}
       &\equiv \parcomp{x}{y}{P}{\parcomp{v}{z}{Q}{R}} \tag{\textsc{c-assoc}}
   \end{align*}
-  where for \textsc{c-assoc} we presuppose that $v \notin fv(P)$ and $y \notin fv(R)$.
+  where for \textsc{c-assoc} we presuppose that $v \notin \fv(P)$ and $y \notin \fv(R)$.
 \end{definition}
 
 \textsc{c-comm} and \textsc{c-assoc} correspond
 to the conversions \textsc{CComm} and \textsc{CAssoc}, respectively.
-Together, they allow us to view an abstract syntax tree built form nested \textsc{cut}s
+Together, they allow us to view an abstract syntax tree built from nested \textsc{cut}s
 as a flat multiset of processes.
 
 The structural proof conversion \textsc{LComm} is captured by the axiom
@@ -283,35 +284,35 @@ must first deal with the notions of free variables and substitution. We first
 define the set of free variables of processes, statements and terms.
 
 \begin{definition}[Free variables] \label{def:pi-fd:free-vars}
-  The set of free variables, written $fv(P)$ ($fv(M)$) is recursively defined
+  The set of free variables, written $\fv(P)$ ($\fv(M)$) is recursively defined
   as follows:
   {\allowdisplaybreaks
   \begin{align*}
-    fv(\link{M_1}{M_2}) &\coloneq fv(M_1) \cup fv(M_2) \\
-    fv(\parcomp{x}{y}{P}{Q}) &\coloneq (fv(P) \cup fv(Q)) \setminus \{x, y\} \\
-    fv(P \seq xS) &\coloneq (fv(P) \setminus x) \cup fv(S) \\
-    fv(\Lambda) &\coloneq \varnothing \\
-    fv(x) &\coloneq \{x\} \\
-    fv(\slselect{x.P}) &\coloneq fv(P) \setminus x \\
-    fv(\srselect{x.P}) &\coloneq fv(P) \setminus x \\
-    fv(\schoice{x.P}{y.Q}) &\coloneq (fv(P) \setminus x) \cup (fv(Q) \setminus y) \\
-    fv(\ssend{x.P}{y.Q}) &\coloneq (fv(P) \setminus x) \cup (fv(Q) \setminus y) \\
-    fv(\sreceive{x}{y}{P}) &\coloneq fv(P) \setminus \{x, y\} \\
-    fv(\sclose) &\coloneq \varnothing \\
-    fv(\swait{P}) &\coloneq fv(P)
+    \fv(\link{M_1}{M_2}) &\coloneq \fv(M_1) \cup \fv(M_2) \\
+    \fv(\parcomp{x}{y}{P}{Q}) &\coloneq (\fv(P) \cup \fv(Q)) \setminus \{x, y\} \\
+    \fv(P \seq xS) &\coloneq (\fv(P) \setminus x) \cup \fv(S) \\
+    \fv(\Lambda) &\coloneq \varnothing \\
+    \fv(x) &\coloneq \{x\} \\
+    \fv(\slselect{x.P}) &\coloneq \fv(P) \setminus x \\
+    \fv(\srselect{x.P}) &\coloneq \fv(P) \setminus x \\
+    \fv(\schoice{x.P}{y.Q}) &\coloneq (\fv(P) \setminus x) \cup (\fv(Q) \setminus y) \\
+    \fv(\ssend{x.P}{y.Q}) &\coloneq (\fv(P) \setminus x) \cup (\fv(Q) \setminus y) \\
+    \fv(\sreceive{x}{y}{P}) &\coloneq \fv(P) \setminus \{x, y\} \\
+    \fv(\sclose) &\coloneq \varnothing \\
+    \fv(\swait{P}) &\coloneq \fv(P)
   \end{align*}
   }
   We say that a process is \emph{closed}, if its set of free variables is empty.
 \end{definition}
 
-A consequence of linear typing is, that the typing contexts and
+A consequence of linear typing is that the typing contexts and
 the set of free variables for well-typed processes coincide.
 
 \begin{lemma}[\rocqicon~Domains are strict] \label{lemma:strict-domains}
-  If $\Gamma \vdash P$ ($\Gamma \vdash M$), then $dom(\Gamma) = fv(P)$ ($fv(M)$).
+  If $\Gamma \vdash P$ ($\Gamma \vdash M$), then $\dom(\Gamma) = \fv(P)$ ($\fv(M)$).
 \end{lemma}
 
-Lemma \ref{lemma:strict-domains} tells us, that the channels a process
+Lemma \ref{lemma:strict-domains} tells us that the channels a process
 may communicate along are exactly the axioms that are yet to be the subject
 of a communication statement.
 
@@ -328,11 +329,11 @@ reflects the structure of our Rocq formalization more faithfully.}.
   \[
     \sigma \Coloneqq [M_1, \hdots, M_n/x_1, \hdots, x_n]
   \]
-  \item The domain $dom(\sigma)$ and range $rng(\sigma)$ of a substitution
+  \item The domain $\dom(\sigma)$ and range $\rng(\sigma)$ of a substitution
   is defined as follows:
   \begin{align*}
-    dom([M_1, \hdots, M_n/x_1, \hdots, x_n]) &= \{x_1, \hdots, x_n\} \\
-    rng([M_1, \hdots, M_n/x_1, \hdots, x_n]) &= fv(M_1) \cup \hdots \cup fv(M_n)
+    \dom([M_1, \hdots, M_n/x_1, \hdots, x_n]) &= \{x_1, \hdots, x_n\} \\
+    \rng([M_1, \hdots, M_n/x_1, \hdots, x_n]) &= \fv(M_1) \cup \hdots \cup \fv(M_n)
   \end{align*}
   \item The action of a substitution $\sigma$ on processes and messages is defined
   recursively:
@@ -343,7 +344,7 @@ reflects the structure of our Rocq formalization more faithfully.}.
     (P \seq xS)\sigma &\coloneq (P \sigma')\sigma \seq x'(S\sigma) \\
     \Lambda\sigma &\coloneq \Lambda \\
     x[M_1, \hdots, M_n/x_1, \hdots, x_n] &\coloneq M_i \quad \text{if } x = x_i \\
-    x\sigma &\coloneq x \quad \text{if } x \notin dom(\sigma) \\
+    x\sigma &\coloneq x \quad \text{if } x \notin \dom(\sigma) \\
     (\slselect{x.P})\sigma &\coloneq \slselect{x'.(P\sigma')\sigma} \\
     (\srselect{x.P})\sigma &\coloneq \srselect{x'.(P\sigma')\sigma} \\
     (\schoice{x.P}{y.Q})\sigma &\coloneq \schoice{x'.(P\sigma')\sigma}{y'.(Q\sigma')\sigma} \\
@@ -367,7 +368,7 @@ reflects the structure of our Rocq formalization more faithfully.}.
 
 \begin{definition}[Cons for substitutions] \label{def:pi-fd:subst-cons}
   Extending a substitution $\sigma = [M_1, \hdots, M_n/x_1, \hdots, x_n]$
-  to additionally substitute $M$ for $x$, given $x \notin dom(\sigma)$, is
+  to additionally substitute $M$ for $x$, given $x \notin \dom(\sigma)$, is
   defined as
   \[
     (x \coloneq M) \cdot \sigma \coloneq [M, M_1, \hdots, M_n/x, x_1, \hdots, x_n]
@@ -389,7 +390,7 @@ we define in terms of the identity substitution.
   We define a single substitution, written $P[M/x]$ ($M'[M/x]$),
   as the simultaneous identity substitution on free variables extended with a mapping for $x$:
   \[
-    P[M/x] \coloneq (x \coloneq M) \cdot id_{fv(P) \setminus x}
+    P[M/x] \coloneq (x \coloneq M) \cdot id_{\fv(P) \setminus x}
   \]
 \end{definition}
 
@@ -419,7 +420,7 @@ for substitutions.
 
     \begin{prooftree}
       \hypo{\Gamma \vdash \sigma : \Delta}
-      \hypo{x \notin dom(\Gamma)}
+      \hypo{x \notin \dom(\Gamma)}
       \infer2[\textsc{wf-subst-cons-fv}]{\Gamma \vdash (x \coloneq M) \cdot \sigma : \Delta}
     \end{prooftree}
   \end{center}
@@ -429,7 +430,7 @@ We later prove that well-formed substitutions preserve linear typing using the f
 Definition \ref{def:wf-substitution} ensures that substituted messages are typed
 in pairwise disjoint contexts.
 
-\section{Operational Semantics}
+\section{Operational Semantics} \label{ch:pi-fd:op-semantics}
 We can now define the operation of single-step \emph{contraction} $\contr$, which
 allows to eliminate a single redex in a process.
 
@@ -504,24 +505,24 @@ Rules \textsc{r-$\otimes\parr$}, \textsc{r-$\oplus\with_1$}, \textsc{r-$\oplus\w
 and \textsc{r-$1\bot$} correspond to the logical cut reductions in Figure \ref{sec:linear-fd:logical-cuts}.
 The rule \textsc{r-seq} eliminates a structural cut by permuting a rule
 directly to its axiom. \textsc{r-axcut} incorporates the structural cut reductions \textsc{AxCut} and \textsc{LCut}
-of $\LFD$ (Figure \ref{sec:linear-fd:structural-cut-reductions}), but opposed to $\LFD$,
+of $\LFD$ (Figure \ref{sec:linear-fd:structural-cut-reductions}), but in contrast to $\LFD$,
 the resulting structural redex in \textsc{LCut} is immediately eliminated via substitution.
 
 \textsc{r-cong-cut} and \textsc{r-cong-seq} allow contractions beneath cuts and
 sequences. The former enables concurrent processes to be reduced in parallel;
 the latter allows futures to be fulfilled in any order. However, $\contr$ is
 not a congruence: Reduction within messages and statements is not possible.
-Consequently, statements serve a synchronization points in processes.
+Consequently, statements serve synchronization points in processes.
 
 Finally, the rule \textsc{r-struct} allows to contract a redex in a different
-process which lays in the same equivalence class w.r.t. $\equiv$. Sometimes,
+process which lies in the same equivalence class w.r.t. $\equiv$. Sometimes,
 $\equiv$ may reveal a redex that was not yet syntactically present in a process, e.g.
 the process
 \[
     \parcomp{z}{w}{\parcomp{x}{y}{P}{\link{z}{M}}}{Q}
 \]
 cannot apply \textsc{r-seq} using $\link{z}{M}$. However, assuming
-$z \notin fv(P)$ and $y \notin fv(Q)$, the congruent process
+$z \notin \fv(P)$ and $y \notin \fv(Q)$, the congruent process
 \[
     \parcomp{x}{y}{P}{\parcomp{z}{w}{\link{z}{M}}{Q}}
 \]
@@ -552,7 +553,7 @@ It serves as a bidirectional link, forwarding anything received on $x$ to $y$
 and vice versa. The same interpretation also holds in $\piFD$.
 
 However, there is another way to interpret the forwarding process $\link{x}{y}$.
-Since, $\LFD$'s formula property extends to $\piFD$ as well,
+Since $\LFD$'s formula property extends to $\piFD$ as well,
 any channel must first be created using $\textsc{t-ax}$. Thus, in its most primitive form,
 $\textsc{t-ax}$ can be thought of as the command creating a new channel with endpoints named $x$ and $y$ adhering
 to protocol $A$ and $A^\bot$, respectively,
@@ -592,7 +593,7 @@ the $\pi$-calculus:
 
 $P$ and $Q$ may execute in parallel and communicate via the channel endpoints
 $x$ and $y$. Requiring every parallel composition to be enclosed by a scope
-restriction is one of the insight of linear logic leading to deadlock freedom:
+restriction is one of the insights of linear logic leading to deadlock freedom:
 The typing ensures that $x$ and $y$ belong to different processes, whereas scope
 restrictions in the untyped $\pi$-calculus may link endpoints belonging to the same thread.
 
@@ -601,7 +602,7 @@ by $Q$ along $y$. If either $P$ or $Q$ eventually reduces to a link which forwar
 along $x$ or $y$, respectively, \textsc{r-axcut} implements a message passing between
 the two concurrent processes.
 
-Opposed to process interpretations based on classical linear logic, \textsc{cut} in
+As opposed to process interpretations based on classical linear logic, \textsc{cut} in
 $\piFD$ only serves as a way to run communicating processes in parallel. Communication
 that happens between endpoints of a channel is handled by links instead.
 
@@ -629,15 +630,22 @@ a message of type $A$ that will be forwarded along $v$ and a continuation proces
 $R$. The latter specifies a continuation channel $z$ which handles the
 rest of the session protocol $B$.
 
-As for \textsc{cut}, the typing guarantees, that the output channel $v$ and the continuation channel
+As for \textsc{cut}, the typing guarantees that the output channel $v$ and the continuation channel
 $z$ belong to two different processes. Therefore, the output cannot depend on its
 own continuation, as may be the case in the untyped $\pi$-calculus, thus avoiding
 deadlocks.
 
-It is worth noting, that $\piFD$ uses a new channel $z$ for $x$'s continuation.
+It is worth noting that $\piFD$ uses a new channel $z$ for $x$'s continuation.
 Since every message in $\piFD$ also specifies a continuation
 process, we can use an $\eta$-expanded link of the new continuation channel as a message's continuation
-process to express asynchronous communication - the $\eta$-expansion now serving as a \emph{forwarder}.
+process to express asynchronous communication - the $\eta$-expansion now serving as a \emph{forwarder}:
+Instead of sending the message $\ssend{v.Q}{z.R}$, we send the message
+$M \coloneq \ssend{v.\link{v'}{v}}{z.\link{z'}{z}}$. Using \textsc{cut}, we can
+now execute the output and continuation process before the message is received:
+\[
+  \parcomp{z'}{z}{\parcomp{v'}{v}{P \seq M}{Q}}{R}.
+\]
+
 This idea follows Boudol's \cite{Boudol1992:Asynchrony} translation from a synchronous $\pi$-calculus to an
 asynchronous one. The relation of $\piFD$ to the
 asynchronous $\pi$-calculus is further elaborated in Section \ref{sec:examples:async-communication}.
