@@ -4,14 +4,14 @@
 
 Functional programming, with its foundation being the $\lambda$-calculus,
 enjoys a plethora of strong, theoretical properties. Particularly with
-the use of structured data in the form of (co)data types, many functional programming
-languages allow for complex reasoning about the flow of data.
+the addition of structured data in the form of data types, many functional programming
+languages allow for reasoning about complex flow of data.
 
 However, with the surge of mobile applications, web services and data centers,
 the nature of programming is becoming increasingly parallel. Thus, our programs
-need not only structure their data, but also their communication. Milner's
-$\pi$-calculus \cite{Milner1992:PiCalculus} is one of the process calculi that emerged in the search of
-a model for concurrent computation.
+need not only structure their data, but also their communication.
+Consequently, process calculi emerged in the search of a model for concurrent
+computation---Milner's $\pi$-calculus \cite{Milner1992:PiCalculus} being a prominent example.
 
 The need for structured concurrency gave rise to \emph{session types}
 which have been introduced by Honda \cite{Honda1993:TypesForDyadicInteraction}.
@@ -65,7 +65,12 @@ when designing the rules of a sequent calculus.
 
 \section{Designing Sequent-Style Calculi}
 The meaning of the logical connectives can be understood in terms of the logical rules
-which define their justifications or refutations. In a sequent calculus, these rules
+which define their justifications or refutations\footnote{This idea was already noted by Gentzen
+(\enquote{Die Einführungen stellen sozusagen die \enquote{Definitionen} der betreffenden Zeichen dar,
+und die Beseitigungen sind letzten Endes nur Konsequenzen hiervon} \cite[p. 189]{Gentzen1935:Untersuchungen1})
+and was further explored by logicians and philosophers such as Wittgenstein \cite{Wittgenstein1974:PhilosophicalGrammar},
+Prawitz \cite{Prawitz1974:IdeaOfAGeneralProofTheory}, and Dummett \cite{Dummett1991:LogicalBasisOfMetaphysics}.}.
+In a sequent calculus, these rules
 can be classified using two criteria: rules either \emph{introduce} their connective
 in the conclusion or \emph{eliminate} it from their premises, and they either do so
 on the \emph{left} or the \emph{right} side of the turnstile. Thus, for some generic
@@ -170,7 +175,8 @@ $\vdash (A \land B) \to (B \land A)$.
 \end{center}
 
 Suppose we had derivations $\mathcal{D}_A$ and $\mathcal{D}_B$ for the sequents
-$\vdash A$ and $\vdash B$, respectively, then we could spark a computation as follows:
+$\vdash A$ and $\vdash B$, respectively, then we can initiate a computation
+by applying an implication elimination as follows:
 
 \begin{center}
   \begin{prooftree}
@@ -428,11 +434,14 @@ to make this interpretation of $\FD$ precise.
 \section{Contribution and Structure}
 We present a term assignment for a version of Parigot's Free Deduction,
 called System $\LFD$, and demonstrate how the choice of elimination rules naturally
-describes both synchronous and asynchronous communication. Thus showing that $\LFD$ serves as an alternative
-logical foundation for the $\pi$-calculus. The main contribution
+describes both synchronous and asynchronous communication. Thus showing that $\LFD$ is as an alternative
+logical foundation for the $\pi$-calculus. The main technical contribution
 of this thesis consists of mechanized proofs for type safety and the
 Church-Rosser property for $\LFD$'s term assignment
-system, $\piFD$\footnote{The Rocq development is available at \url{https://github.com/flipsim/master-thesis}.}.
+system, $\piFD$\footnote{The Rocq development is available at \url{https://github.com/flipsim/master-thesis}.
+Lemmata and theorems stated in the thesis that have been formalized are annotated
+with the symbol $\rocqicon$. For a mapping between the metatheory presented
+in this thesis and the formalization, we refer to Appendix \ref{app:mechanization-map}.}.
 
 The rest of this thesis is structured in three parts.
 \begin{itemize}
@@ -440,5 +449,10 @@ The rest of this thesis is structured in three parts.
         of Free Deduction and how $\LFD$ is derived from it.
   \item The second part introduces the term assignment system $\piFD$ and its relation
         to existing Curry-Howard interpretations of linear logics.
-  \item The last part delves into the metatheory of $\piFD$.
+  \item The last part delves into the metatheory of $\piFD$: We prove type
+        preservation (Theorem \ref{theorem:preservation}), deadlock freedom
+        (Theorem \ref{theorem:progress}), and the Church-Rosser property
+        (Theorem \ref{theorem:church-rosser}). To formalize Theorem \ref{theorem:progress},
+        we identify the set of terminated processes---which coincides with (weak) normal forms
+        of the underlying logical framework---and show that they are irreducible (Lemma \ref{lemma:normalforms}).
 \end{itemize}

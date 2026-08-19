@@ -3,12 +3,12 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Parigot's Free Deduction was not presented in the context of linear logic.
-The framework $\LFD$, on the other hand, can be regarded as a linear correspondent
+Our framework $\LFD$, on the other hand, can be regarded as a linear correspondent
 to $\FD$.
 
 \section{The Logical Framework LFD}
 The propositions of $\LFD$ are the usual propositions
-of linear logic, however, we omit the additive units.
+of linear logic, however, we omit the additive units $0$ and $\top$.
 
 \begin{definition}[Propositions]
   The propositions of $\LFD$ are inductively defined as follows
@@ -218,10 +218,10 @@ we consider cut elimination up to a class of
 sound proof conversions (Figure \ref{sec:linear-fd:structural-proof-conversions}).
 These proof conversions are not necessary for cut elimination,
 but they avoid the need to specify symmetric versions for every computation rule (\textsc{CComm}, \textsc{LComm})
-and allow cuts to be reordered (\textsc{CAssoc}), i.e. we do not have to start eliminating
+and allow cuts to be reordered (\textsc{CAssoc}), i.e., we do not have to start eliminating
 the top-most cuts, but can also choose to eliminate lower cuts first by permuting them.
-Together, these rules induce a congruence relation on proofs which corresponds
-to the structural congruence of processes in the $\pi$-calculus.
+Together, these rules induce a congruence relation on proofs which plays
+an analogous role to structural congruence in the $\pi$-calculus.
 
 \begin{figure}[tbh]
   \centering
@@ -385,9 +385,9 @@ with appropriate derivations, the reordering cannot be detected once the
 now blocking prefix performs its communication.
 
 If we take commuting conversions into account, the normal forms of $\LFD$ are
-similar to the ones of $\FD$ except for the use of one-sided sequents. However,
-if we omit contextual rewriting and commuting conversions, each derivation of $\LFD$
-has a \emph{weak normal form}.
+similar to the ones of $\FD$ except for the use of one-sided sequents.
+If we omit contextual rewriting and commuting conversions, each derivation of $\LFD$
+merely has a \emph{weak normal form}.
 
 \begin{definition}[Weak normal form]
   A derivation $\mathcal{D}$ is in weak normal form, if $\mathcal{D} \equiv \mathcal{N}$,
@@ -424,12 +424,12 @@ modifying the $\pi$-calculus reduction strategy and its notion of structural con
 or adapting the cut elimination procedure.
 
 Bellin and Scott worked out a tight correspondence between a synchronous $\pi$-calculus
-and multiplicative linear logic \cite{Bellin1994:PiCalcAndLinearLogic}, which, however, 
+and multiplicative linear logic \cite{Bellin1994:PiCalcAndLinearLogic}, which, however,
 comes at the cost of additional congruences for processes allowing for two reads
 to be permuted along the same thread. Caires and Pfenning \cite{Caires2010:ILLasSessions}, on the other hand,
 achieve a tight correspondence only by restricting cut elimination to omit
-commuting conversions. An exact correspondence has been developed by Honda
+commuting conversions---as we do. An exact correspondence has been developed by Honda
 and Laurent \cite{Honda2010:PolarizedProofNets} for polarized linear logic and
 the synchronous $\pi$-calculus with control \cite{Honda2004:PiCalculusWithControl}.
-However, their cut elimination procedure is now no longer fully contextual and requires
+However, their cut elimination procedure is no longer fully contextual and requires
 that cuts are eliminated only if they are not enclosed by exponential boxes.
