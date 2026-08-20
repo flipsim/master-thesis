@@ -313,7 +313,7 @@ the set of free variables for well-typed processes coincide.
 \end{lemma}
 
 Lemma \ref{lemma:strict-domains} tells us that the channels a process
-may communicate along are exactly the axioms that are yet to be the subject
+may externally communicate along are exactly the axioms that are yet to be the subject
 of a communication statement.
 
 The second notion, substitution, is the primary operation enabling
@@ -431,7 +431,7 @@ Definition \ref{def:wf-substitution} ensures that substituted messages are typed
 in pairwise disjoint contexts.
 
 \section{Operational Semantics} \label{ch:pi-fd:op-semantics}
-We can now define the operation of single-step \emph{contraction} $\contr$, which
+We now define the operation of single-step \emph{contraction} $\contr$, which
 allows to eliminate a single redex in a process.
 
 \begin{definition}[Contraction $\contr$] \label{def:pi-fd:contr}
@@ -515,7 +515,7 @@ not a congruence: Reduction within messages and statements is not possible.
 Consequently, statements serve synchronization points in processes.
 
 Finally, the rule \textsc{r-struct} allows to contract a redex in a different
-process which lies in the same equivalence class w.r.t. $\equiv$. Sometimes,
+process of same equivalence class w.r.t. $\equiv$. Sometimes,
 $\equiv$ may reveal a redex that was not yet syntactically present in a process, e.g.
 the process
 \[

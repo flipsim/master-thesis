@@ -50,7 +50,9 @@ of the branching process $if \; x \; then \; P \; else \; Q$ with a boolean valu
 we end up with the following reductions:
 \begin{align*}
         &\; if \; x \; then \; P \; else \; Q \seq x \leftarrow true \\
+       =&\; \link{x}{\schoice{x.\link{x}{\swait{P}}}{x.\link{x}{\swait{Q}}}} \seq x \leftarrow true \\
   \contr&\; \link{true}{\schoice{x.\link{x}{\swait{P}}}{x.\link{x}{\swait{Q}}}} \\
+       =&\; \link{\slselect{z.\link{z}{\sclose}}}{\schoice{x.\link{x}{\swait{P}}}{x.\link{x}{\swait{Q}}}} \\
   \contr&\; \parcomp{z}{x}{\link{z}{\sclose}}{\link{x}{\swait{P}}} \\
   \contr&\; \link{\sclose}{\swait{P}} \\
   \contr&\; P
