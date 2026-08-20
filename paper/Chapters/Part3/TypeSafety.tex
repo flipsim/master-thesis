@@ -178,8 +178,37 @@ where cuts have been reorganized into a flat topology, a form we call
   to a cut in canonical cut form as a cut list.
 \end{remark}
 
-Since, conceptually, canonical cut forms can be viewed as lists, we can
-concatenate two of them into a single, flattened canonical cut form.
+\begin{example}
+  Let us consider the process
+  \[
+    \parcomp{x}{y}{\parcomp{a}{b}{P}{Q}}{\parcomp{c}{d}{N}{R}}
+  \]
+  where $\parcomp{a}{b}{P}{Q}$ and $\parcomp{c}{d}{N}{R}$ are already canonical cut form.
+  The process itself is not in canonical cut form since the outermost cut
+  contains a cut in its left operand. However, if the process is well-typed,
+  then we have either $x \notin \fv(P)$ or $x \notin \fv(Q)$.
+
+  If $x \notin \fv(P)$, an application of \textsc{c-assoc} immediately
+  transforms the process into canonical form:
+  \begin{align*}
+         &\;\parcomp{x}{y}{\parcomp{a}{b}{P}{Q}}{\parcomp{c}{d}{N}{R}} \\
+  \equiv &\;\parcomp{a}{b}{P}{\parcomp{x}{y}{Q}{\parcomp{c}{d}{N}{R}}}
+  \end{align*}
+
+  However, if $x \notin \fv(Q)$, we first have to commute the left cut
+  via \textsc{c-comm} before applying \textsc{c-assoc}:
+  \begin{align*}
+         &\;\parcomp{x}{y}{\parcomp{a}{b}{P}{Q}}{\parcomp{c}{d}{N}{R}} \\
+  \equiv &\;\parcomp{x}{y}{\parcomp{b}{a}{Q}{P}}{\parcomp{c}{d}{N}{R}} \\
+  \equiv &\;\parcomp{b}{a}{Q}{\parcomp{x}{y}{P}{\parcomp{c}{d}{N}{R}}}
+  \end{align*}
+
+  What we have illustrated is exactly the procedure that lies at the heart of
+  Lemma \ref{lemma:cut-list-append}:
+  Since, conceptually, canonical cut forms can be viewed as lists, we can
+  concatenate two of them into a single, flattened canonical cut form,
+  though not necessarily preserving their respective orders.
+\end{example}
 
 \begin{lemma}[\rocqicon~Appending cut lists] \label{lemma:cut-list-append}
   If $\Gamma \vdash \parcomp{x}{y}{P}{Q}$ and both $P$ and $Q$ are in canonical
