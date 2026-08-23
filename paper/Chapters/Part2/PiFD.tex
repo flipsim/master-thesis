@@ -59,7 +59,7 @@ as opposed to the propositions of $\LFD$.
 
 The syntax of $\piFD$ differentiates between \emph{processes}, \emph{statements}
 and \emph{messages}. The last two syntactic categories are not necessary,
-however they allow the operational semantics to be written more concisely.
+however, they allow the operational semantics to be written more concisely.
 Similarly, we add the nil process $\Lambda$ to allow for closed processes,
 at the cost of losing consistency.
 
@@ -197,7 +197,7 @@ we did not want to omit their definition.}.
 
 The processes of $\piFD$ are the term assignments for $\LFD$ derivations.
 A link consisting of two futures corresponds to an axiom of $\LFD$.
-Every elimination rule is represented by a sequencing, i.e. applying
+Every elimination rule is represented by a sequencing, i.e., applying
 multiple elimination rules in succession corresponds to a sequence of communication
 statements. For the elimination rule of $\otimes$, we obtain the following
 term decoration:
@@ -212,7 +212,7 @@ term decoration:
   \end{prooftree}
 \end{center}
 
-The statements of $\piFD$ exactly correspond to the secondary premises
+The statements of $\piFD$ exactly correspond to the secondary prem\-is\-es
 of every elimination rule in $\LFD$. Having them live in their own syntactic
 category allows the permutation of logical rules to be expressed by a substitution
 of messages for futures: a process $P \seq xS$ \emph{fulfills} the future
@@ -512,10 +512,10 @@ the resulting structural redex in \textsc{LCut} is immediately eliminated via su
 sequences. The former enables concurrent processes to be reduced in parallel;
 the latter allows futures to be fulfilled in any order. However, $\contr$ is
 not a congruence: Reduction within messages and statements is not possible.
-Consequently, statements serve synchronization points in processes.
+Consequently, statements serve as synchronization points in processes.
 
 Finally, the rule \textsc{r-struct} allows to contract a redex in a different
-process of same equivalence class w.r.t. $\equiv$. Sometimes,
+process of the same equivalence class w.r.t. $\equiv$. Sometimes,
 $\equiv$ may reveal a redex that was not yet syntactically present in a process, e.g.
 the process
 \[
@@ -540,7 +540,7 @@ Reduction $\red$ is now defined as a sequence of contractions up to congruence.
 
 \begin{remark}
   Instead of defining $\red$ in terms of a union, we could have defined
-  $P \red Q$, if there exists $P_1, \hdots, P_n$, such that
+  $P \red Q$, if there exist $P_1, \hdots, P_n$ such that
   \[
     P = P_1 \contr P_2 \contr \hdots \contr P_{n-1} \equiv P_n = Q
   \]
@@ -638,7 +638,7 @@ deadlocks.
 It is worth noting that $\piFD$ uses a new channel $z$ for $x$'s continuation.
 Since every message in $\piFD$ also specifies a continuation
 process, we can use an $\eta$-expanded link of the new continuation channel as a message's continuation
-process to express asynchronous communication - the $\eta$-expansion now serving as a \emph{forwarder}:
+process to express asynchronous com\-mu\-ni\-ca\-tion---the $\eta$-expansion now serving as a \emph{forwarder}:
 Instead of sending the message $\ssend{v.Q}{z.R}$, we send the message
 $M \coloneq \ssend{v.\link{v'}{v}}{z.\link{z'}{z}}$. Using \textsc{cut}, we can
 now execute the output and continuation process before the message is received:
@@ -664,10 +664,10 @@ $x$'s dual endpoint, say $y$, is typed $A^\bot \parr B^\bot$:
 The message $\sreceive{a}{b}{Z}$ specifies a process $Z$, which handles
 an output of type $A$ along channel $a$ and the continuation along $b$.
 If both $x$ and $y$ have received their messages, \textsc{r-$\otimes\parr$}
-forks the receiving process $Z$, the output process $Q$ and the continuation process $R$
+forks the receiving process $Z$, the output process $Q$, and the continuation process $R$
 and links them accordingly:
 \[
-    \parcomp{b}{z}{\parcomp{a}{v}{Z}{Q}}{R}
+    \parcomp{b}{z}{\parcomp{a}{v}{Z}{Q}}{R}.
 \]
 
 \subsection{Additives as Selection and Choice}
