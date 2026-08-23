@@ -11,7 +11,7 @@ However, with the surge of mobile applications, web services and data centers,
 the nature of programming is becoming increasingly parallel. Thus, our programs
 need not only structure their data, but also their communication.
 Consequently, process calculi emerged in the search of a model for concurrent
-computation---Milner's $\pi$-calculus \cite{Milner1992:PiCalculus} being a prominent example.
+computation---Milner's $\pi$-cal\-cu\-lus \cite{Milner1992:PiCalculus} being a prominent example.
 
 The need for structured concurrency gave rise to \emph{session types}
 which have been introduced by Honda \cite{Honda1993:TypesForDyadicInteraction}.
@@ -40,14 +40,14 @@ to the ones for simplifying proofs.
 
 Natural deduction is not the only logic that witnesses this connection. The
 Curry-Howard view has proved to be more general and has been applied to various
-other logics, such as Gentzen's sequent calculus $\LK$ \cite{Gentzen1935:Untersuchungen2} - introduced within the
+other logics, such as Gentzen's sequent calculus $\LK$ \cite{Gentzen1935:Untersuchungen2}---introduced within the
 same paper as his natural deduction. Curien and Herbelin's $\lambda\mu\tilde{\mu}$-calculus \cite{Curien2000:DualityOfComputation}
 is one of the languages that, through the lens of the Curry-Howard-correspondence,
 reveals the computational content of classical $\LK$ proofs.
 
 The sequent calculus' deep symmetries lend themselves to study a variety of
-features through duality - such as (co)data-types \cite{Binder2025:Thesis} or
-(co)induction \cite{Downen2015:StructuralRecursion} - while at the same time being a suitable intermediate
+features through duality---such as (co)data-types \cite{Binder2025:Thesis} or
+(co)induction \cite{Downen2015:StructuralRecursion}---while at the same time being a suitable intermediate
 representation for compilers \cite{Schuster2025:AxCut}.
 As such, the study of sequent calculi can guide us in our
 exploration of the design of programming languages. Naturally, we may want to apply this
@@ -226,8 +226,8 @@ this detour by substituting the proof of $\vdash A \land B$ into $\mathcal{D}$.
   \end{prooftree}
 \end{center}
 
-This created two new detours: R-$\land$-Intro followed by R-$\land$-Elim$_1$
-(R-$\land$-Elim$_2$). Eliminating them finally creates a proof in normal form.
+This created two new detours: \textsc{r-$\land$-i} followed by \textsc{r-$\land$-e$_1$}
+(\textsc{r-$\land$-e$_2$}). Eliminating them finally creates a proof in normal form.
 
 \begin{center}
   \begin{prooftree}
@@ -265,7 +265,7 @@ now has the form
   \end{prooftree}
 \end{center}
 
-To spark a computation, we require the rule of cut (again assuming the existence
+To spark a computation, we require the rule of \textsc{cut} (again assuming the existence
 of derivations $\mathcal{D}_A$ and $\mathcal{D}_B$).
 
 \begin{center}
@@ -363,7 +363,7 @@ Now, a proof $\mathcal{D}$ of the formula $\tau := (A \land B) \to (B \land A)$ 
 The derivation already highlights the characteristic of $\FD$'s normal forms: Every
 main premise is an axiom which is causing the derivations to grow as right-deep trees.
 Thus, as will be explained later, for a computation to occur, an axiom must be subject to both its left and right
-eliminations rule.
+elimination rule.
 
 \begin{center}
   \begin{prooftree}
@@ -403,7 +403,7 @@ yields the first simplification step.
   \end{prooftree}
 \end{center}
 
-This reveals a second detour involving L-$\land$-E and R-$\land$-E which
+This reveals a second detour involving \textsc{l-$\land$-e} and \textsc{r-$\land$-e} which
 can also be discharged via proof composition to yield the following normal form.
 
 \begin{center}

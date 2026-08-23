@@ -2,7 +2,7 @@
 \chapter{Free Deduction}\label{ch:free-deduction}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-In this section we introduce the logical Framework of \enquote{Free Deduction} ($\FD$)
+In this section, we introduce the logical framework of \enquote{Free Deduction} ($\FD$)
 and discuss the normalization procedure for proofs of $\FD$, as described by Parigot.
 Using $\FD$ as a starting point, we derive the framework $\LFD$ in Section \ref{ch:linear-fd}.
 
@@ -210,7 +210,6 @@ through the BHK-interpretation \cite{Heyting1974:Intuitionismus,Kolmogorov1932:D
 deriving a formula. Given the sufficient grounds, the elimination rules
 can be justified through an \emph{inversion} and \emph{dual inversion principle} \cite{Negri2002:varieties-of-linear-calculi}.
 The former states
-
 \begin{samepage}
 \begin{equation*}
   \parbox{0.85\textwidth}{\centering \itshape 
@@ -222,7 +221,6 @@ The former states
   --- \textsc{Negri}, \textit{Varieties in Linear Logic} (2001)
 \end{flushright}
 \end{samepage}
-
 and determines the shape of the inference figure for which the principal formula
 occurs in the succedent, i.e. the right-elimination form. For example,
 the sufficient grounds for deriving the formula $A \otimes B$ is a proof
@@ -237,7 +235,6 @@ of $A$ and a proof $B$. From the inversion principle we obtain
 \end{center}
 
 The dual inversion principle, conversely, determines the shape of the left-elimination form:
-
 \begin{samepage}
 \begin{equation*}
   \parbox{0.85\textwidth}{\centering \itshape
@@ -248,7 +245,6 @@ The dual inversion principle, conversely, determines the shape of the left-elimi
   --- \textsc{Negri}, \textit{Varieties in Linear Logic} (2001)
 \end{flushright}
 \end{samepage}
-
 This suggests the following inference figure.
 \begin{center}
   \begin{prooftree}
@@ -299,27 +295,27 @@ or
     \hypo{}
     \infer1[\textsc{ax}]{A \vdash A}
 
-    \hypo{\mathcal{D}_i}
-    \ellipsis{}{\Pi_i \vdash \Theta_i}
-    \delims{ \left( }{ \right)_{i} }
-    \hypo{\hspace{-1.5em}} % by default, spacing between hypos is 1.5em
-
-    \infer3[\textsc{r$\odot$}]{\Gamma_1, A \vdash \Delta_1}
-
     \hypo{\mathcal{D}_k'}
     \ellipsis{}{\Pi'_k \vdash \Theta'_k}
     \delims{ \left( }{ \right)_{k} }
+    \hypo{\hspace{-1.5em}} % by default, spacing between hypos is 1.5em
+
+    \infer3[\textsc{r$\odot$}]{\Gamma_2, A \vdash \Delta_2}
+
+    \hypo{\mathcal{D}_i}
+    \ellipsis{}{\Pi_i \vdash \Theta_i}
+    \delims{ \left( }{ \right)_{i} }
     \hypo{\hspace{-1.5em}}
 
     \infer3[\textsc{l$\odot$}]{\Gamma_1, \Gamma_2 \vdash \Delta_1, \Delta_2}
   \end{prooftree}
 \end{center}
 
-Both derivations refer to the same \emph{logical redex}, i.e. we will treat
+Both derivations refer to the same \emph{logical redex}, i.e., we will treat
 them up to the order of their left and right elimination rule.
 Their reduct is defined through a substitution
-of minor premises of R$\odot$ (L$\odot$) for axioms in minor premises of
-L$\odot$ (R$\odot$). The choice of which rule supplies the premises that are
+of minor premises of \textsc{r$\odot$} (\textsc{l$\odot$}) for axioms in minor premises of
+\textsc{l$\odot$} (\textsc{r$\odot$}). The choice of which rule supplies the premises that are
 being substituted for reflects the non-determinism of classical logic: Either
 choice eventually normalizes the proof, but allowing both reductions comes
 at the cost of losing confluence. For example, the logical redex for $\oplus$
@@ -359,7 +355,7 @@ the substitution based on the polarity of the connective.
 
 \begin{remark}
   Section \ref{ch:linear-fd} suggests yet another approach: Instead of
-  relying on proof composition for normalization, we may reintroduce Cut
+  relying on proof composition for normalization, we may reintroduce \textsc{cut}
   and interpret $\FD$ proofs as proof nets.
 \end{remark}
 
@@ -386,7 +382,7 @@ at a derivation of the following form:
   \end{prooftree}
 \end{center}
 
-$\mathcal{R}$ is either a left or right elimination rule, such that $A \odot B$
+$\mathcal{R}$ is either a left or right elimination rule such that $A \odot B$
 is not an active formula. Permuting $L\odot$ above $\mathcal{R}$ results in
 
 \begin{center}
@@ -438,6 +434,6 @@ neither logical nor structural redexes, then it is in normal form.
   A derivation in $\FD$ is in normal form if every main premise is an axiom.
 \end{definition}
 
-The next step in our development involves some changes to $\FD$, that make
+The next step in our development involves some changes to $\FD$ that make
 it more suited as the basis of a process calculus. The resulting
 framework $\LFD$ will retain the notions of logical and structural cuts.

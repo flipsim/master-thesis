@@ -11,7 +11,7 @@ The propositions of $\LFD$ are the usual propositions
 of linear logic, however, we omit the additive units $0$ and $\top$.
 
 \begin{definition}[Propositions]
-  The propositions of $\LFD$ are inductively defined as follows
+  The propositions of $\LFD$ are inductively defined as follows:
   \[
     A, B \Coloneqq X
               \mid X^\bot
@@ -25,7 +25,7 @@ of linear logic, however, we omit the additive units $0$ and $\top$.
 \end{definition}
 
 As opposed to Parigot's representation, we drop implication for ease of
-representation and instead define linear implication $A \to B$ as usual ($A^\bot \parr B$).
+representation and instead define linear implication $A \multimap B$ as usual ($A^\bot \parr B$).
 Additionally, following other representations of classical linear logic, we no longer
 use two-sided sequents. Instead, we collapse all formulas into the antecedent
 via linear negation. Whether to collapse the formulas into the antecedent or
@@ -135,7 +135,7 @@ instead use a procedure that is closer to Negri's proof of admissibility.
 
 The reason for this is that we will loosen the correspondence between cut elimination
 in $\LFD$ and process reduction in $\piFD$. While cut elimination requires
-contextual rewriting, i.e. we must eliminate cuts which lay high-up in the proof derivation,
+contextual rewriting, i.e., we must eliminate cuts which lay high-up in the proof derivation,
 processes of $\pi$-calculi are typically not allowed to be reduced in all contexts.
 Instead, communication statements, which will later correspond to the logical elimination
 rules, serve as synchronization points. As a consequence, the derivation of \textsc{cut}
@@ -374,12 +374,12 @@ The following derivation illustrates a commuting conversion for $\otimes$.
 \end{figure}
 
 Even though these conversions are necessary for cut elimination, we will
-omit them in our current development, following \cite{Caires2010:ILLasSessions}.
+omit them in our current development, following \citet{Caires2010:ILLasSessions}.
 The reason for this is that they generally do not preserve process behavior,
 because a formerly concurrent process of a cut is now blocked by a prefix
 of another process.
 Instead, they yield \emph{observational equivalences} according to
-\emph{typed context bisimilarity} as defined by \cite{Perez2012:LinearLogicRelationsConcur}.
+\emph{typed context bisimilarity} as defined by \citet{Perez2012:LinearLogicRelationsConcur}.
 The insight is that if all formulas occurring in the context are cut
 with appropriate derivations, the reordering cannot be detected once the
 now blocking prefix performs its communication.
@@ -423,8 +423,8 @@ A tighter computational correspondence thus typically involves either
 modifying the $\pi$-calculus reduction strategy and its notion of structural congruence,
 or adapting the cut elimination procedure.
 
-Bellin and Scott worked out a tight correspondence between a synchronous $\pi$-calculus
-and multiplicative linear logic \cite{Bellin1994:PiCalcAndLinearLogic}, which, however,
+Bellin and Scott \cite{Bellin1994:PiCalcAndLinearLogic} worked out a tight correspondence between a synchronous $\pi$-calculus
+and multiplicative linear logic, which, however,
 comes at the cost of additional congruences for processes allowing for two reads
 to be permuted along the same thread. Caires and Pfenning \cite{Caires2010:ILLasSessions}, on the other hand,
 achieve a tight correspondence only by restricting cut elimination to omit
