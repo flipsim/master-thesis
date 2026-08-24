@@ -139,7 +139,7 @@ Revisiting the derivation in Free Deduction from the introduction (translated to
     \hypo{B \otimes A, B^\bot \parr A^\bot \vdash}
     \hypo{B, B^\bot \vdash}
     \hypo{A, A^\bot \vdash}
-    \infer3[$\otimes$]{A, B, B^\bot \parr A^\bot}
+    \infer3[$\otimes$]{A, B, B^\bot \parr A^\bot \vdash}
 
     \infer2[$\parr$]{A \otimes B, B^\bot \parr A^\bot \vdash}
 
@@ -159,7 +159,7 @@ we can now give its term assignment:
 
 \section{Asynchronous Communication} \label{sec:examples:async-communication}
 Up until now, we have only considered examples, where clients perform their
-output synchronously, i.e. the output and continuation processes start their execution only
+output synchronously, i.e., the output and continuation processes start their execution only
 after the server has received the client's message. However, $\piFD$ allows
 for asynchronous communication as well. We will illustrate the difference using
 a server that computes the conjunction of two boolean values.
@@ -212,8 +212,8 @@ The client communicates with the server via the process
   server \leftrightarrow ! [ \tilde{v}_1 . \link{\tilde{v}_1}{v_1} \mid server . server \leftrightarrow ! [ \tilde{v}_2 . \link{\tilde{v}_2}{v_2} \mid res . \link{res}{\star} ]]
 \]
 However, this process does not contain the computations for the inputs itself. Instead,
-it only tells the server the locations $v_1$ and $v_2$, where the results will eventually
-be forwarded to. The computations are then forked in separate processes
+it only tells the server the locations $v_1$ and $v_2$, to which the results will eventually
+be forwarded. The computations are then forked in separate processes
 $P_1(x_1)$ and $P_2(x_2)$. As a consequence, the client can start computing both boolean
 values in parallel without having to wait for either to be received by the server first.
 
@@ -248,5 +248,5 @@ has the typing
   \tilde{y} : A, \tilde{x} : B, x : A^\bot \parr B^\bot \vdash x\langle\tilde{y},\tilde{x}\rangle
 \]
 Thus, given processes $\Gamma_1, y : A^\bot \vdash P_1$ and $\Gamma_2, x' : B^\bot \vdash P_2$,
-we can derive the same typing for $\otimes$ - with formulas being collapsed into the antecedent - by
-composing $P_1$, $P_2$ and $x\langle\tilde{y},\tilde{x}\rangle$ with \textsc{cut}s.
+we can derive the same typing for $\otimes$---with formulas being collapsed into the antecedent---by
+composing $P_1$, $P_2$, and $x\langle\tilde{y},\tilde{x}\rangle$ with \textsc{cut}s.
