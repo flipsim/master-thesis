@@ -204,7 +204,7 @@ simple reduction.
     % 1/bot l
     \link{\sclose}{\swait{P}}
     &\simplred P
-    \tag{\textsc{sr-$1\bot$}}
+    \tag{\textsc{sr-$1\bot$-l}}
     \\
     % 1/bot r
     \link{\swait{P}}{\sclose}
@@ -297,7 +297,7 @@ an \textsc{axcut} reduct can be obtained using $\equiv$ and $\contr$.
   Let $Q$ be a process such that $Q = \mathcal{E}[M]$ and $\mathsf{WF} \, \mathcal{E}_x$.
   There exists a process $L$ such that
   \[
-    \parcomp{x}{y}{Q}{P} \equiv L \quad {and} \quad
+    \parcomp{x}{y}{Q}{P} \equiv L \quad \text{and} \quad
     L \contr \mathsf{reduct}(\mathcal{E}, M, P, x, y).
   \]
 \end{lemma}
@@ -458,14 +458,18 @@ can always be reconciled.
   \begin{enumerate}[itemsep=1em, label=Case:, leftmargin=*]
     \item (\textsc{sr-seq}) \\
       The last rule of the derivation of $P \simplred N$ may be one of the following:
-      \textsc{sr-refl}, \textsc{sr-seq} or \textsc{sr-cong-seq}. For the first two,
+      \textsc{sr-refl}, \textsc{sr-seq}, or \textsc{sr-cong-seq}. For the first two,
       the result follows trivially. For the latter, we are looking at the following situation:
       \[
          P = Q' \seq xS \simplred Q'[S/x] = Q \quad \text{and} \quad
          P = Q' \seq xS \simplred Q'' \seq xS = N \quad
       \]
       with $Q' \simplred Q''$. Thus, using Lemma \ref{lemma:simplred-invar-subst},
-      we have $Q'[S/x] \simplred Q''[S/x]$. Therefore,
+      we have
+      \[
+        Q'[S/x] \simplred Q''[S/x].
+      \]
+      Therefore,
       \[
         Q = Q'[S/x] \parred Q''[S/x] = R
       \]
@@ -476,7 +480,7 @@ can always be reconciled.
 
     \item (\textsc{sr-cong-seq}) \\
       Again, the last rule of the derivation of $P \simplred N$ may be one of the following:
-      \textsc{sr-refl}, \textsc{sr-seq} or \textsc{sr-cong-seq}. The case \textsc{sr-refl} follows trivially.
+      \textsc{sr-refl}, \textsc{sr-seq}, or \textsc{sr-cong-seq}. The case \textsc{sr-refl} follows trivially.
       If the derivation ends with \textsc{sr-seq}, we argue using Lemma
       \ref{lemma:simplred-invar-subst} as above. Lastly, for \textsc{sr-cong-seq},
       we have
@@ -558,7 +562,7 @@ can always be reconciled.
               \mathsf{reduct}(E', M', \mathcal{E}[M], y, x) = N
           \end{align*}
           with $\mathsf{WF} \, \mathcal{E}_x$ and $\mathsf{WF} \, \mathcal{E}'_y$.
-          The results follow using Lemma \ref{lemma:critical-pairs}, since $M \equiv N$.
+          The results follow using Lemma \ref{lemma:critical-pairs}, since $Q \equiv N$.
       \end{enumerate}
     \item (\textsc{sr-axcut-r}) \\
       Analogous to the previous case.
@@ -992,7 +996,7 @@ and a multi-step sequence.
      & \zb{P} \arrow[dl, "\parred"'] \arrow[dr, "\parred"] & & & \\
     \zb{Q} \arrow[dr, dashrightarrow, "\parred"'] & & \zb{N_1} \arrow[dl, dashrightarrow, "\parred"] \arrow[dr, "\parred"] & & \\
      & \zb{T_1} \arrow[dr, dashrightarrow, "\parred"'] & & \zb{N_2} \arrow[dl, dashrightarrow, "\parred"] \arrow[dr, dotted, "\parred"] & \\
-     &     & \zb{T_2} \arrow[dr, dotted, "\parred"'] & & \zb{N_n} \arrow[dl, dashrightarrow, "\parred"] \\
+     &     & \zb{T_2} \arrow[dr, dotted, "\parred"'] & & \zb{N} \arrow[dl, dashrightarrow, "\parred"] \\
      &     &     & \zb{R} &
   \end{tikzcd}
 \end{center}
