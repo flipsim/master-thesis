@@ -7,7 +7,7 @@ enjoys a plethora of strong, theoretical properties. Particularly with
 the addition of structured data in the form of data types, many functional programming
 languages allow for reasoning about complex flow of data.
 
-However, with the surge of mobile applications, web services and data centers,
+However, with the surge of mobile applications, web services, and data centers,
 the nature of programming is becoming increasingly parallel. Thus, our programs
 need not only structure their data, but also their communication.
 Consequently, process calculi emerged in the search of a model for concurrent
@@ -42,7 +42,7 @@ Natural deduction is not the only logic that witnesses this connection. The
 Curry-Howard view has proved to be more general and has been applied to various
 other logics, such as Gentzen's sequent calculus $\LK$ \cite{Gentzen1935:Untersuchungen2}---introduced within the
 same paper as his natural deduction. Curien and Herbelin's $\lambda\mu\tilde{\mu}$-calculus \cite{Curien2000:DualityOfComputation}
-is one of the languages that, through the lens of the Curry-Howard-correspondence,
+is one of the languages that, through the lens of the Curry-Howard correspondence,
 reveals the computational content of classical $\LK$ proofs.
 
 The sequent calculus' deep symmetries lend themselves to study a variety of
@@ -335,8 +335,8 @@ to this proof and its simplifications.
 \end{align*}
 
 Now, opposed to $\ND$, the driver of computation is the interplay between
-producers, e.g. an abstraction, and consumers, e.g. a call stack $(a, b) \cdot \alpha$ -
-the latter not being a first-class entity in $\ND$. Thus, we see that the underlying
+producers, e.g. an abstraction, and consumers, e.g. a call stack $(a, b) \cdot \alpha$---the
+latter not being a first-class entity in $\ND$. Thus, we see that the underlying
 logical framework influences not only the structure of our programs, but also
 its features and model of computation.
 
@@ -418,16 +418,16 @@ can also be discharged via proof composition to yield the following normal form.
 \end{center}
 
 This looks similar to the normal form we reached in $\LK$, but the axiom
-$B \land A \vdash B \land A$ cannot be eliminated - and it does not have to be in order to
+$B \land A \vdash B \land A$ cannot be eliminated---and it does not have to be in order to
 satisfy the subformula property. Previously, we could interpret
 the resulting normal forms as an ordered pair $(b, a)$. This analogy fails in $\FD$
 due to the presence of an additional axiom. Therefore, we suggest for $\FD$ to be
 interpreted in the context of communicating processes: The axiom $B \land A \vdash B \land A$
 creates a binary session channel, and every elimination rule specifies the \enquote{payload}
 to send along this channel. Whenever a channel has witnessed communication on both
-sides, i.e. a left and right elimination rule meet, we can perform a step of communication.
+sides, i.e., a left and right elimination rule meet, we can perform a step of communication.
 A normal form having only axioms as main premises thus corresponds to channels
-waiting for external communication, i.e. the program only specified the behavior
+waiting for external communication, i.e., the program only specified the behavior
 for one side of the channel. This thesis will provide a suitable term assignment
 to make this interpretation of $\FD$ precise.
 

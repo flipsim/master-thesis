@@ -100,8 +100,8 @@ reduction.
   &\contr &&\; \ssend{x.true(x)}{res.\link{res}{\star}} \leftrightarrow \\
   &       &&\; ?(input, output). \\
   &       &&\; \quad if \; input \; then \; \{\link{output}{false}\} \; else \; \{\link{output}{true}\} \\
-  &\contr &&\; (\nu \; output \; res) (\nu \; input \; x) \\
-  &       &&\; \quad ((if \; input \; then \; \{\link{output}{false}\} \; else \; \{\link{output}{true}\} \\
+  &\contr &&\; (\nu \; output \; res) ((\nu \; input \; x) \\
+  &       &&\; \quad (if \; input \; then \; \{\link{output}{false}\} \; else \; \{\link{output}{true}\} \\
   &       &&\; \quad \mid true(x)) \\
   &       &&\; \quad \mid \link{res}{\star}) \\
   &\contr &&\; (\nu \; input \; x) \\
