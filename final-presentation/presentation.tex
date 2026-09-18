@@ -1,0 +1,1156 @@
+\documentclass[11pt, aspectratio=169, xcolor={dvipsnames}, usepdftitle=false]{beamer}
+\usepackage{presentation}
+
+\usepackage{amsmath, amsthm, amssymb} \renewcommand{\qedsymbol}{\textsc{qed}}
+\usepackage{mathtools}
+\usepackage{cmll}
+\usepackage{ebproof}
+\usepackage{csquotes}
+\usepackage{enumitem}
+
+\usepackage{circuitikz}
+\usepackage{tikz-cd}
+\usetikzlibrary{babel}
+% command for labels in commuting diagrams
+\newcommand{\zb}[2][1em]{\makebox[#1]{$\displaystyle#2$}}
+
+\input{macros.tex}
+
+\hypersetup{pdfpagemode=UseNone, hidelinks, pdfdisplaydoctitle=true,%
+%
+% Enter presentation title to populate PDF metadata:
+pdftitle={presentation}}
+
+% Enter path to PDF file with figures:
+\newcommand{\pdf}{figures.pdf}
+
+% Enter title:
+\title{Free Deduction as Sessions}
+
+% Enter authors:
+\author{Filip Šimić}
+
+% Enter location and date:
+\date{16.09.2026}
+
+\begin{document}
+\frame{\titlepage}
+
+% Free Deduction as Sessions
+\begin{frame}
+  \begin{center}
+  \begin{minipage}[t]{0.4\textwidth}
+    \centering
+    \textbf{Logical Framework}
+
+    \bigskip
+
+    {\LARGE Free Deduction}
+
+    \bigskip
+
+    \textbf{LFD}
+
+    \bigskip
+
+    \begin{flushleft}
+    \scalebox{.7}{
+    \begin{minipage}[t]{\textwidth}
+      \visible<2->{
+      \begin{prooftree}[separation=0.7em]
+        \hypo{\tau, \tau^\bot \vdash }
+
+        \hypo{A \otimes B, A^\bot \parr B^\bot \vdash}
+
+        \hypo{B \otimes A, B^\bot \parr A^\bot \vdash}
+        \hypo{B, B^\bot \vdash}
+        \hypo{A, A^\bot \vdash}
+        \infer3[$\otimes$]{A, B, B^\bot \parr A^\bot \vdash}
+
+        \infer2[$\parr$]{A \otimes B, B^\bot \parr A^\bot \vdash}
+
+        \infer2[$\multimap$]{(A \otimes B) \prec (B \otimes A) \vdash}
+      \end{prooftree}
+      }
+    \end{minipage}
+    }
+  \end{flushleft}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.05\textwidth}
+    \centering
+    \phantom{FOO}
+
+    \bigskip
+
+    \large as
+
+    \bigskip
+
+    \phantom{foo}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.4\textwidth}
+    \centering
+    \textbf{Process Calculus}
+
+    \bigskip
+
+    {\LARGE Sessions}
+
+    \bigskip
+
+    $\boldsymbol{\pi}$\textbf{FD}
+
+    \bigskip
+
+    \begin{center}
+      \scalebox{.7}{
+        \begin{minipage}[t]{\textwidth}
+          \vspace{-4em}
+          \visible<3->{
+          \begin{align*}
+            &\textbf{swap}(c : (A \otimes B) \prec (B \otimes A)) \coloneq \\
+            &\qquad \linkbf{c}{c^\bot} \seq \\
+            &\qquad c^\bot \textbf{?} (pair, output) . \{ \\
+            &\qquad \qquad pair \boldsymbol{\leftrightarrow} \textbf{?}(a, b) . \{ \\
+            &\qquad \qquad \qquad \linkbf{output}{\ssendbf{b^\bot.\linkbf{b}{b^\bot}}{a^\bot.\linkbf{a}{a^\bot}}} \\
+            &\qquad \qquad \} \\
+            &\qquad \}
+          \end{align*}
+          }
+        \end{minipage}
+    }
+    \end{center}
+  \end{minipage}
+  \end{center}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Around Introduction and Elimination
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\heading{Around Introduction and Elimination}
+\end{frame}
+
+% Paper slide: This thesis is in a sense a follow up to the Intro/Elim paper
+\begin{frame}
+  \includegraphics[page=2, trim={0cm 14cm 0cm 3cm}, clip, width=0.9\linewidth]{paper/ostermann-introelim.pdf}
+\end{frame}
+
+% Discuss the design matrix for sequent-style calculi
+\begin{frame}
+  \frametitle{Designing Sequent-Style Calculi}
+  \begin{center}
+    \begin{minipage}{0.49\textwidth}
+      \centering
+      \begin{prooftree}
+        \hypo{P_1 \hdots P_n}
+        \infer1[\textsc{l-$\odot$-intro}]{\Gamma, \odot(T_1, \hdots, T_n) \vdash \Delta}
+      \end{prooftree}
+      \\ \bigskip \bigskip
+      \begin{prooftree}
+        \hypo{\Gamma, \odot(T_1, \hdots, T_n) \vdash \Delta}
+        \hypo{P_1 \hdots P_n}
+        \infer2[\textsc{l-$\odot$-elim}]{C}
+      \end{prooftree}
+    \end{minipage}\hfill
+    \begin{minipage}{0.49\textwidth}
+      \centering
+      \begin{prooftree}
+        \hypo{P_1 \hdots P_n}
+        \infer1[\textsc{r-$\odot$-intro}]{\Gamma \vdash \odot(T_1, \hdots, T_n), \Delta}
+      \end{prooftree}
+      \\ \bigskip \bigskip
+      \begin{prooftree}
+        \hypo{\Gamma \vdash \odot(T_1, \hdots, T_n), \Delta}
+        \hypo{P_1 \hdots P_n}
+        \infer2[\textsc{r-$\odot$-elim}]{C}
+      \end{prooftree}
+    \end{minipage}
+  \end{center}
+\end{frame}
+
+% Since this work is in the domain of Curry-Howard interpretations
+% we can choose to start with Free Deduction or piFD, but we choose the latter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Programming with Sessions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\heading{Programming with Sessions}
+\end{frame}
+
+\begin{frame}
+  \begin{minipage}[t]{0.45\textwidth}
+    \begin{align*}
+      &\textbf{not}(client : \bool \prec \bool) \coloneq \\
+      \onslide<2,5->{&\qquad \link{client}{server} \seq} \\
+      \onslide<3,5->{&\qquad server \textbf{?} (input, output).}\onslide<3,5->{\{} \\
+      \onslide<4,5->{&\qquad \qquad \textbf{if} \; input \; \\
+      &\qquad \qquad \textbf{then} \; \{ \linkbf{output}{\textbf{false}} \} \\
+      &\qquad \qquad \textbf{else} \; \{ \linkbf{output}{\textbf{true}} \}} \\
+      \onslide<3,5->{&\qquad \}}
+    \end{align*}
+  \end{minipage}
+  \visible<5->{\begin{minipage}[t]{0.45\textwidth}
+    \begin{align*}
+      &\textbf{true\_client}(server : \bool \multimap \bool) \coloneq \\
+      \onslide<6,8->{&\qquad \linkbf{server}{client} \seq} \\
+      \onslide<7->{&\qquad client \textbf{!} [v . \linkbf{v}{\textbf{true}} \mid res. \link{res}{\star}]}
+    \end{align*}
+  \end{minipage}
+  }
+
+  \visible<8->{
+  \begin{align*}
+    \parcompbf{\;client}{\;server}{\textbf{not}(client)}{\textbf{true\_client}(server)}
+  \end{align*}
+  }
+\end{frame}
+
+\begin{frame}
+  \begin{align*}
+         &\; \parcompbf{\;client}{\;server}{\textbf{not}(client)}{\textbf{true\_client}(server)} \\
+    \red &\; \ssendbf{v . \linkbf{v}{\textbf{true}}}{res . \linkbf{res}{\star}} \leftrightarrow \\
+         &\; \textbf{?}(input, output). \\
+         &\; \quad \textbf{if} \; input \; \textbf{then} \; \{\linkbf{output}{\textbf{false}}\} \; \textbf{else} \; \{\linkbf{output}{\textbf{true}}\} \\
+    \visible<2->{
+    \red &\; (\boldsymbol{\nu} \; output \; res) ((\boldsymbol{\nu} \; input \; v) \\
+         &\; \quad (\textbf{if} \; input \; \textbf{then} \; \{\linkbf{output}{\textbf{false}}\} \; \textbf{else} \; \{\linkbf{output}{\textbf{true}}\} \\
+         &\; \quad \mid \linkbf{v}{\textbf{true}}) \\
+         &\; \quad \mid \linkbf{res}{\star}) \\
+    }
+    \visible<3->{
+    \red &\; \textbf{if} \; \textbf{true} \; \textbf{then} \; \{\linkbf{\star}{\textbf{false}}\} \; \textbf{else} \; \{\linkbf{\star}{\textbf{true}}\} \\
+    }
+    \visible<4->{
+    \red &\; \linkbf{\star}{\textbf{false}}
+    }
+  \end{align*}
+\end{frame}
+
+\begin{frame}
+\heading{A Tour of Free Deduction}
+\end{frame}
+
+\begin{frame}
+  \includegraphics[page=3, trim={1cm 13.5cm 1cm 2cm}, clip, width=0.9\linewidth]{paper/parigot-freededuction.pdf}
+\end{frame}
+
+\begin{frame}
+  \frametitle{The Justifications of the Elimination Rules}
+  \begin{center}
+    \begin{prooftree}
+      \hypo{\Gamma_1 \vdash A, \Delta_1}
+      \hypo{\Gamma_2 \vdash B, \Delta_2}
+      \infer2[]{\Gamma_1, \Gamma_2 \vdash A \otimes B, \Delta_1, \Delta_2}
+    \end{prooftree}
+  \end{center}
+
+  \begin{center}
+  \begin{minipage}[t]{0.45\textwidth}
+    \visible<2->{
+    \begin{center}
+      \textbf{Inversion Principle}
+    \end{center}
+    }
+    \visible<3->{
+    \begin{center}
+    \enquote{Whatever follows from the grounds for deriving a
+    formula must follow from that formula.}
+
+    \bigskip
+
+      \begin{prooftree}
+        \hypo{\Gamma_1 \vdash A \otimes B, \Delta_1}
+        \hypo{\Gamma_2, A, B \vdash \Delta_2}
+        \infer2[]{\Gamma_1, \Gamma_2 \vdash \Delta_1, \Delta_2}
+      \end{prooftree}
+    \end{center}
+    }
+  \end{minipage}
+  \begin{minipage}{0.05\textwidth}
+    %
+  \end{minipage}
+  \begin{minipage}[t]{0.45\textwidth}
+    \visible<2->{
+    \begin{center}
+      \textbf{Dual Inversion Principle}
+    \end{center}
+    }
+    \visible<4->{
+    \begin{center}
+    \enquote{Whatever follows from a formula must follow from
+    the sufficient grounds for deriving the formula.}
+
+    \bigskip
+
+      \begin{prooftree}
+        \hypo{\Gamma_1, A \otimes B \vdash \Delta_1}
+        \hypo{\Gamma_2 \vdash A, \Delta_2}
+        \hypo{\Gamma_3 \vdash B, \Delta_3}
+        \infer3[]{\Gamma_1, \Gamma_2, \Gamma_3 \vdash \Delta_1, \Delta_2, \Delta_3}
+      \end{prooftree}
+    \end{center}
+    }
+  \end{minipage}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Cut is Derivable}
+  \begin{center}
+    \begin{prooftree}
+      \hypo{0 \oplus A \vdash 0 \oplus A}
+      \hypo{\al{\Gamma \vdash A, \Delta}}
+      \infer2[\textsc{l$\oplus$}]{\Gamma \vdash 0 \oplus A, \Delta}
+
+      \hypo{0 \vdash 0}
+      \infer1[\textsc{r$0$}]{0 \vdash}
+      \hypo{\al{\Pi, A \vdash \Theta}}
+      \infer3[\textsc{r$\oplus$}]{\Gamma, \Pi \vdash \Delta, \Theta}
+    \end{prooftree}
+
+    \bigskip \bigskip
+
+    What is a \al{cut-free} proof in $\FD$?
+
+    \bigskip
+
+    \visible<2->{
+    OR
+
+    \bigskip
+
+    What proofs possess the \al{subformula property}?
+    }
+  \end{center}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Cut Elimination in Free Deduction
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+  \heading{Normalization in Free Deduction}
+\end{frame}
+
+% Formula Property
+\begin{frame}
+  \frametitle{When do Free Deduction Proofs violate the Subformula Property?}
+  \textbf{Observation: }
+  Every instance of the logical rules removes the principal formula from the sequent entirely.
+
+  \bigskip
+
+  \begin{lemma}[Formula Property]
+    Every formula $A$ which occurs in the conclusion $\Gamma \vdash \Delta$
+    of a proof in $\FD$ comes from an axiom $A \vdash A$.
+  \end{lemma}
+\end{frame}
+
+% Logical Redexes
+\begin{frame}
+  \frametitle{Detours in Proofs of Free Deduction: Logical Redexes}
+  To violate the subformula property, both formulas of $A \vdash A$ must be subject of an elimination.
+
+  \bigskip
+
+  \begin{center}
+    \begin{prooftree}
+      \hypo{}
+      \infer1[\textsc{ax}]{A \vdash A}
+
+      \hypo{\mathcal{D}_i}
+      \ellipsis{}{\Pi_i \vdash \Theta_i}
+      \delims{ \left( }{ \right)_{i} }
+      \hypo{\hspace{-1.5em}} % by default, spacing between hypos is 1.5em
+
+      \infer3[\textsc{l$\odot$}]{\Gamma_1 \vdash A, \Delta_1}
+
+      \hypo{\mathcal{D}_k'}
+      \ellipsis{}{\Pi'_k \vdash \Theta'_k}
+      \delims{ \left( }{ \right)_{k} }
+      \hypo{\hspace{-1.5em}}
+
+      \infer3[\textsc{r$\odot$}]{\Gamma_1, \Gamma_2 \vdash \Delta_1, \Delta_2}
+    \end{prooftree}
+  \end{center}
+\end{frame}
+
+% Logical Redex Example: Plus
+% \begin{frame}
+%   \frametitle{Logical Redex: $\oplus$}
+%   \begin{center}
+%   \begin{prooftree}
+%     \hypo{}
+%     \infer1[\textsc{ax}]{A \oplus B \vdash A \oplus B}
+%     \hypo{\mathcal{D}_1}
+%     \ellipsis{}{\Gamma, A \vdash \Delta}
+%     \hypo{\mathcal{D}_2}
+%     \ellipsis{}{\Gamma, B \vdash \Delta}
+%     \infer3[\textsc{r$\oplus$}]{\Gamma, A \oplus B \vdash \Delta}
+%     \hypo{\mathcal{D}_3}
+%     \ellipsis{}{\Pi \vdash A, \Theta}
+%     \infer2[\textsc{l$\oplus_1$}]{\Gamma, \Pi \vdash \Delta, \Theta}
+%   \end{prooftree}
+% \end{center}
+% \visible<2->{
+% may reduce to
+% \begin{center}
+%   \begin{prooftree}
+%     \hypo{\mathcal{D}_1[\mathcal{D}_3 / A]}
+%     \ellipsis{}{\Gamma, \Pi \vdash \Delta, \Theta}
+%   \end{prooftree}
+%   \qquad or \qquad
+%   \begin{prooftree}
+%     \hypo{\mathcal{D}_3[\mathcal{D}_1 / A]}
+%     \ellipsis{}{\Gamma, \Pi \vdash \Delta, \Theta}
+%   \end{prooftree}
+% \end{center}
+% }
+% \end{frame}
+
+% Structural Redexes
+\begin{frame}
+  \frametitle{Detours in Proofs of Free Deduction: Structural Redexes}
+
+  \begin{center}
+    \begin{prooftree}
+      \hypo{P_1, \hdots, P_{i - 1}}
+      \hypo{\mathcal{D}}
+      \ellipsis{}{\Gamma_i, A \odot B \vdash \Delta_i}
+      \hypo{P_{i + 1}, \hdots, P_n}
+      \infer3[$\mathcal{R}$]{\Gamma, A \odot B \vdash \Delta}
+      \hypo{P_1', \hdots, P_m'}
+      \infer2[\textsc{l$\odot$}]{\Gamma' \vdash \Delta'}
+    \end{prooftree}
+  \end{center}
+
+  \visible<2->{
+  \begin{center}
+    $\rotatebox[origin=c]{-90}{$\rightsquigarrow$}$
+
+    \begin{prooftree}
+      \hypo{P_1, \hdots, P_{i - 1}}
+
+      \hypo{\mathcal{D}}
+      \ellipsis{}{\Gamma_i, A \odot B \vdash \Delta_i}
+      \hypo{P_1', \hdots, P_m'}
+      \infer2[\textsc{l$\odot$}]{\Gamma'' \vdash \Delta''}
+
+      \hypo{P_{i + 1}, \hdots, P_n}
+      \infer3[$\mathcal{R}$]{\Gamma' \vdash \Delta'}
+    \end{prooftree}
+  \end{center}
+  }
+\end{frame}
+
+% Cut Elimination and Process Reduction
+\begin{frame}
+  \frametitle{How do Cut Elimination and Process Reduction relate? - A first Approximation}
+
+  \begin{center}
+  \begin{minipage}[t]{0.45\textwidth}
+    \begin{center}
+      \textbf{Logical Redexes}
+    \end{center}
+    \begin{center}
+    Communication between channel endpoints
+    \end{center}
+  \end{minipage}
+  \begin{minipage}{0.05\textwidth}
+    %
+  \end{minipage}
+  \begin{minipage}[t]{0.45\textwidth}
+    \begin{center}
+      \textbf{Structural Redexes}
+    \end{center}
+    \begin{center}
+    Fulfilling a promise with a value
+    \end{center}
+  \end{minipage}
+  \end{center}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% From FD to LFD
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\heading{From FD to LFD}
+\end{frame}
+
+% Linear Negation / Collapsing Chirality
+\begin{frame}
+  \frametitle{Communication occurs between Dual Types}
+  \begin{definition}[Linear Negation]
+    \vspace{-1.5em}
+    \begin{align*}
+      1^\bot &\coloneq \bot
+      & \bot^\bot &\coloneq 1 \\
+      (A \otimes B)^\bot &\coloneq A^\bot \parr B^\bot
+      & (A \parr B)^\bot &\coloneq A^\bot \otimes B^\bot \\
+      (A \oplus B)^\bot &\coloneq A^\bot \with B^\bot
+      & (A \with B)^\bot &\coloneq A^\bot \oplus B^\bot
+    \end{align*}
+  \end{definition}
+
+  \bigskip
+
+  \begin{center}
+    \begin{prooftree}
+      \hypo{}
+      \infer1[]{A \vdash A}
+    \end{prooftree}
+    $\quad \rightsquigarrow \quad$
+    \begin{prooftree}
+      \hypo{}
+      \infer1[]{A, A^\bot \vdash}
+    \end{prooftree}
+    \visible<2->{
+    $\quad \rightsquigarrow \quad$
+    \begin{prooftree}
+      \hypo{}
+      \infer1[]{\al{x} : A, \al{y} : A^\bot \vdash \al{\link{x}{y}}}
+    \end{prooftree}
+    }
+  \end{center}
+\end{frame}
+
+% Demonstrate term assignment using tensor
+\begin{frame}
+  \frametitle{Adding Term Assignments}
+  $\qquad$
+  \begin{center}
+    \begin{prooftree}
+      \hypo{\Gamma_1, A \otimes B \vdash \Delta_1}
+      \hypo{\Gamma_2 \vdash A, \Delta_2}
+      \hypo{\Gamma_3 \vdash B, \Delta_3}
+      \infer3[]{\Gamma_1, \Gamma_2, \Gamma_3 \vdash \Delta_1, \Delta_2, \Delta_3}
+    \end{prooftree}
+
+    \bigskip\bigskip
+
+    \visible<2->{
+    $\rightsquigarrow \qquad$
+    \begin{prooftree}
+      \hypo{\Gamma_1, A \otimes B \vdash}
+      \hypo{\Gamma_2, A^\bot \vdash}
+      \hypo{\Gamma_3, B^\bot \vdash}
+      \infer3[$\otimes$]{\Gamma_1, \Gamma_2, \Gamma_3 \vdash}
+    \end{prooftree}
+    $\qquad$
+    }
+
+    \bigskip\bigskip
+
+    \visible<3->{
+    $\rightsquigarrow \qquad$
+    \begin{prooftree}
+      \hypo{\Gamma_1, \al{x} : A \otimes B \vdash \al{P}}
+      \hypo{\Gamma_2, \al{v} : A^\bot \vdash \al{Q}}
+      \hypo{\Gamma_3, \al{z} : B^\bot \vdash \al{R}}
+      \infer3[]{\Gamma_1, \Gamma_2, \Gamma_3 \vdash \al{P \seq x \ssend{v.Q}{z.R}}}
+    \end{prooftree}
+    $\qquad$
+    }
+  \end{center}
+\end{frame}
+
+% Introdouce new syntactic category: Messages
+\begin{frame}
+  \frametitle{How to Eliminate Structural Redexes in $\pi$FD?}
+  \begin{center}
+  $\quad\qquad$
+  \begin{prooftree}
+    \hypo{\Gamma_1, \al{x} : A \otimes B \vdash \al{P}}
+    \hypo{\Gamma_2, \al{v} : A^\bot \vdash \al{Q}}
+    \hypo{\Gamma_3, \al{z} : B^\bot \vdash \al{R}}
+    \infer3[]{\Gamma_1, \Gamma_2, \Gamma_3 \vdash \al{P \seq x \ssend{v.Q}{z.R}}}
+  \end{prooftree}
+  $\qquad$
+
+  \bigskip\bigskip
+
+  \visible<2->{
+  $\rightsquigarrow \qquad$
+  \begin{prooftree}
+    \hypo{\Gamma_1, \al{x} : A \otimes B \vdash \al{P}}
+    \hypo{\Gamma_2, \al{v} : A^\bot \vdash \al{Q}}
+    \hypo{\Gamma_3, \al{z} : B^\bot \vdash \al{R}}
+    \infer2[\textsc{t$\otimes$}]{\Gamma_2, \Gamma_3 \vdash \al{\ssend{v.Q}{z.R}}}
+    \infer2[\textsc{t-seq}]{\Gamma_1, \Gamma_2, \Gamma_3 \vdash \al{P \seq x \ssend{v.Q}{z.R}}}
+  \end{prooftree}
+  }
+
+  \bigskip\bigskip
+
+  \visible<3->{
+  $\contr \qquad P[\al{\ssend{v.Q}{z.R}} \; / \; x]$
+  }
+  \end{center}
+\end{frame}
+
+% Demonstrate missing reduction from introduction
+\begin{frame}
+  \begin{minipage}[t]{0.45\textwidth}
+    \begin{align*}
+      &\textbf{true\_client}(server : \bool \multimap \bool) \coloneq \\
+      &\qquad \linkbf{server}{client} \seq \\
+      &\qquad client \textbf{!} [v . \linkbf{v}{\textbf{true}} \mid res. \link{res}{\star}]
+    \end{align*}
+  \end{minipage}
+  \visible<2->{
+  \begin{minipage}[t]{0.04\textwidth}
+
+    \bigskip\bigskip\bigskip
+
+    $\rightsquigarrow$
+  \end{minipage}
+  \begin{minipage}[t]{0.45\textwidth}
+    \begin{align*}
+      &\textbf{true\_client}(server : \bool \multimap \bool) \coloneq \\
+      &\qquad server \boldsymbol{\leftrightarrow} \, \textbf{!} [v . \linkbf{v}{\textbf{true}} \mid res. \link{res}{\star}]
+    \end{align*}
+  \end{minipage}
+  }
+\end{frame}
+
+\begin{frame}
+  \frametitle{Syntax}
+
+  \begin{definition}[Syntax of $\piFD$]
+  \phantom{foo}
+  % \vspace{-4em}
+  \begin{minipage}[t]{0.45\textwidth}
+    \vspace{-2em}
+    \begin{flalign*}
+      P, Q \; &\Coloneq &\!\!\!\!\!&                      & \textbf{Process} \\
+              &         &\!\!\!\!\!& \link{M}{M}          & \textit{link} \\
+              &\;\;\mid &\!\!\!\!\!& P \seq xS            & \textit{sequencing} \\
+              &\;\;\mid &\!\!\!\!\!& \Lambda              & \textit{nil process} \\
+              \visible<2->{&\;\;\mid &\!\!\!\!\!&  \al{\parcomp{x}{y}{P}{Q}} & \al{\textit{cut}}} \\
+      M \;    &\Coloneq &\!\!\!\!\!&                      & \textbf{Message} \\
+              &         &\!\!\!\!\!& \future{x}           & \textit{future} \\
+              &\;\;\mid &\!\!\!\!\!& S                    & \textit{statement}
+    \end{flalign*}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{0.45\textwidth}
+    \vspace{-2em}
+    \begin{flalign*}
+      S \; &\Coloneq &\!\!\!\!\!&                    & \textbf{Statement} \\
+           &         &\!\!\!\!\!& \slselect{x.P}     & \textit{selection} \\
+           &\;\;\mid &\!\!\!\!\!& \srselect{x.P}     & \textit{selection} \\
+           &\;\;\mid &\!\!\!\!\!& \schoice{x.P}{x.P} & \textit{choice} \\
+           &\;\;\mid &\!\!\!\!\!& \ssend{x.P}{x.P}   & \textit{output} \\
+           &\;\;\mid &\!\!\!\!\!& \sreceive{x}{x}{P} & \textit{input} \\
+           &\;\;\mid &\!\!\!\!\!& \sclose            & \textit{close} \\
+           &\;\;\mid &\!\!\!\!\!& \swait{P}          & \textit{wait}
+    \end{flalign*}
+  \end{minipage}
+\end{definition}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Cut enables Communication between Concurrent Processes}
+  \begin{center}
+    \begin{prooftree}
+      \hypo{\Gamma, A \vdash}
+      \hypo{\Delta, A^\bot \vdash}
+      \infer2[]{\Gamma, \Delta \vdash}
+    \end{prooftree}
+    $\quad\rightsquigarrow\quad$
+    \begin{prooftree}
+      \hypo{\Gamma, \al{x} : A \vdash \al{P}}
+      \hypo{\Delta, \al{y} : A^\bot \vdash \al{Q}}
+      \infer2[]{\Gamma, \Delta \vdash \al{\parcomp{x}{y}{P}{Q}}}
+    \end{prooftree}
+  \end{center}
+
+  % \visible<2->{
+  % \begin{example}
+  %   With $A \prec B \coloneq A \otimes B^\bot$ and $A \multimap B \coloneq A^\bot \parr B$,
+  %   we have
+
+  %   \begin{center}
+  %     \begin{prooftree}
+  %       \hypo{client : \bool \prec \bool \vdash \textbf{not}(client)}
+  %       \hypo{server : \bool \multimap \bool, \star : \bool^\bot \vdash \textbf{true\_client}(server)}
+  %       \infer2[]{\star : \bool^\bot \vdash \parcompbf{\;client}{\;server}{\textbf{not}(client)}{\textbf{true\_client}(server)}}
+  %     \end{prooftree}
+  %   \end{center}
+  % \end{example}
+  % }
+\end{frame}
+
+\begin{frame}
+  \frametitle{Cut Reduction as Message Passing between Processes}
+  \vspace{-2em}
+  \begin{align*}
+    \parcomp{x}{y}{\link{x}{M}}{P}
+    &\contr P[M/y]
+    \tag{\textsc{r-axcut}}
+  \end{align*}
+
+  \visible<3->{
+  \begin{center}
+    \begin{prooftree}
+      \hypo{P \contr P'}
+      \infer1[\textsc{r-cong-cut}]{\parcomp{x}{y}{P}{Q} \contr \parcomp{x}{y}{P'}{Q}}
+    \end{prooftree}
+    \quad
+    \begin{prooftree}
+      \hypo{P \equiv P'}
+      \hypo{P' \contr Q'}
+      \hypo{Q' \equiv Q}
+      \infer3[\textsc{r-struct}]{P \contr Q}
+    \end{prooftree}
+  \end{center}
+  }
+
+  \visible<2->{
+  \begin{example}
+    \vspace{-2em}
+    \begin{align*}
+           &\; \parcompbf{\;client}{\;server}{\textbf{not}(client)}{\textbf{true\_client}(server)} \\
+         = &\; \parcompbf{\;client}{\;server}{\textbf{not}(client)}{server \boldsymbol{\leftrightarrow} \, \textbf{!} [v . \linkbf{v}{\textbf{true}} \mid res. \link{res}{\star}]} \\
+      \red &\; \ssendbf{v . \linkbf{v}{\textbf{true}}}{res . \linkbf{res}{\star}} \leftrightarrow \\
+           &\; \textbf{?}(input, output). \\
+           &\; \quad \textbf{if} \; input \; \textbf{then} \; \{\linkbf{output}{\textbf{false}}\} \; \textbf{else} \; \{\linkbf{output}{\textbf{true}}\}
+    \end{align*}
+  \end{example}
+  }
+\end{frame}
+
+\begin{frame}
+  \frametitle{Logical Cut Reduction for Input and Output}
+  \begin{equation*}
+      \begin{aligned}
+        &\begin{prooftree}[separation=0.5em]
+            \hypo{A \otimes B, A^\bot \parr B^\bot \vdash}
+            \hypo{\mathcal{D}_A}
+            \ellipsis{}{\Gamma, A^\bot \vdash}
+            \hypo{\mathcal{D}_B}
+            \ellipsis{}{\Delta, B^\bot \vdash}
+            \infer3[$\otimes$]{\Gamma, \Delta, A^\bot \parr B^\bot \vdash}
+            \hypo{\mathcal{D}}
+            \ellipsis{}{\Theta, A, B \vdash}
+            \infer2[$\parr$]{\Gamma, \Delta, \Theta \vdash}
+          \end{prooftree}
+        % \onslide<1>{
+        % \quad\contr\quad
+        % \begin{prooftree}
+        %   \hypo{\mathcal{D}[\mathcal{D}_A / A, \mathcal{D}_B / B]}
+        %   \ellipsis{}{\Gamma, \Delta, \Theta \vdash}
+        % \end{prooftree}
+        % }
+        \\ \\
+        % \visible<2->{
+        &\qquad\qquad\contr\quad
+        \begin{prooftree}[separation=0.5em]
+          \hypo{\Gamma, A^\bot \vdash}
+          \hypo{\Delta, B^\bot \vdash}
+          \hypo{\Theta, A, B \vdash}
+          \infer2[\textsc{cut}]{\Delta, \Theta, A \vdash}
+          \infer2[\textsc{cut}]{\Gamma, \Delta, \Theta \vdash}
+        \end{prooftree}
+        % }
+      \end{aligned}
+  \end{equation*}
+  \vspace{-1em}
+  % \visible<3->{
+  \begin{align}
+    % tensor/par
+    \link{\ssend{v.P}{z.Q}}{\sreceive{a}{b}{R}}
+    &\quad\contr\quad \parcomp{b}{z}{\parcomp{a}{v}{R}{P}}{Q}
+    \tag{\textsc{r-$\otimes\parr$}}
+  \end{align}
+  % }
+\end{frame}
+
+\begin{frame}
+  \frametitle{Logical Cut Reduction for Input and Output}
+  \vspace{-2em}
+  \begin{align}
+    % tensor/par
+    \link{\ssend{v.P}{z.Q}}{\sreceive{a}{b}{R}}
+    &\quad\contr\quad \parcomp{b}{z}{\parcomp{a}{v}{R}{P}}{Q}
+    \tag{\textsc{r-$\otimes\parr$}}
+  \end{align}
+
+  \begin{example}
+    \vspace{-2em}
+    \begin{align*}
+           &\; \ssendbf{v . \linkbf{v}{\textbf{true}}}{res . \linkbf{res}{\star}} \leftrightarrow \\
+           &\; \textbf{?}(input, output). \\
+           &\; \quad \textbf{if} \; input \; \textbf{then} \; \{\linkbf{output}{\textbf{false}}\} \; \textbf{else} \; \{\linkbf{output}{\textbf{true}}\} \\
+      \red &\; (\boldsymbol{\nu} \; output \; res) ((\boldsymbol{\nu} \; input \; v) \\
+           &\; \quad (\textbf{if} \; input \; \textbf{then} \; \{\linkbf{output}{\textbf{false}}\} \; \textbf{else} \; \{\linkbf{output}{\textbf{true}}\} \\
+           &\; \quad \mid \linkbf{v}{\textbf{true}}) \\
+           &\; \quad \mid \linkbf{res}{\star}) \\
+    \end{align*}
+    \vspace{-4em}
+  \end{example}
+\end{frame}
+
+\begin{frame}
+\heading{Metatheory}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Type Safety}
+  \begin{theorem}[\rocqicon~Preservation]
+    If $\Gamma \vdash P$ and $P \contr Q$, then $\Gamma \vdash Q$.
+  \end{theorem}
+
+  \begin{theorem}[\rocqicon~Progress]
+    If $\Gamma \vdash P$, then $P \contr P'$ for some process $P'$ or
+    $P$ is final.
+  \end{theorem}
+
+  \begin{corollary}[\rocqicon~Progress for closed processes]
+    If $\vdash P$, then $P \contr P'$ for some process $P'$ or
+    $P = \Lambda$.
+  \end{corollary}
+
+  % \begin{theorem}[\rocqicon~Final processes are irreducible]
+  %   If $\Gamma \vdash P$, then $P$ is final if and only if $P$ is irreducible.
+  % \end{theorem}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{The Church-Rosser Property}
+  \begin{theorem}[\rocqicon~Church-Rosser]
+    Let $\Gamma \vdash P$ be a well-typed process.
+    If $P \red Q$ and $P \red N$, then $Q \red R$ and $N \red R$ for some $R$.
+    Pictorially,
+    \begin{center}
+      \begin{tikzcd}[
+          row sep={1.5cm,between origins},
+          column sep={1.5cm,between origins}
+        ]
+            & \zb{P} \arrow[dl, "\red"'] \arrow[dr, "\red"] & \\
+        \zb{Q} \arrow[dr, dashrightarrow, "\red"'] &   & \zb{N} \arrow[dl, dashrightarrow, "\red"] \\
+            & \zb{R} &
+      \end{tikzcd}
+    \end{center}
+  \end{theorem}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Conclusion}
+
+  \begin{itemize}
+    \item \textbf{Elimination-Based Foundation for Session Calculi}
+      \begin{itemize}
+        \item Shifted from traditional introduction-rule foundations to an elimination-only framework
+      \end{itemize}
+
+    \bigskip
+
+    \item \textbf{Novel Curry-Howard Interpretation for Session-Based Communication}
+      \begin{itemize}
+        \item Link processes represent the state of a channel.
+        \item Communication between concurrent processes (\textsc{cut}) and channel endpoints (links) is disentangled.
+      \end{itemize}
+
+    \bigskip
+
+    \item \textbf{Mechanized Metatheory}
+      \begin{itemize}
+        \item Fully formalized in \rocqicon~Rocq (Preservation, Progress, and Church-Rosser).
+      \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\lastslide
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Backup slides
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Structural Congruence
+\begin{frame}
+  \frametitle{Structural Congruence: Factoring out Syntactic Differences}
+  \begin{definition}[Structural congruence]
+    Structural congruence $\equiv$ is defined as the least congruence relation
+    that is closed under rules
+    \begin{align*}
+      \link{x}{y} &\equiv \link{y}{x} \tag{\textsc{c-link}} \\
+      \parcomp{x}{y}{P}{Q} &\equiv \parcomp{y}{x}{Q}{P} \tag{\textsc{c-comm}} \\
+      \parcomp{v}{z}{\parcomp{x}{y}{P}{Q}}{R}
+        &\equiv \parcomp{x}{y}{P}{\parcomp{v}{z}{Q}{R}} \tag{\textsc{c-assoc}}
+    \end{align*}
+    where for \textsc{c-assoc} we presuppose that $v \notin \fv(P)$ and $y \notin \fv(R)$.
+  \end{definition}
+\end{frame}
+
+% Typing
+\begin{frame}
+  \begin{center}
+    \begin{flushright}
+      Processes \framebox{$\Gamma \vdash P$}
+    \end{flushright}
+
+    \begin{prooftree}
+      \hypo{\Gamma \vdash M_1 : A}
+      \hypo{\Delta \vdash M_2 : A^\bot}
+      \infer2[\textsc{t-ax}]{\Gamma \circ \Delta \vdash \link{M_1}{M_2}}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{\Gamma, x : A \vdash P}
+      \hypo{\Delta, y : A^\bot \vdash Q}
+      \infer2[\textsc{t-cut}]{\Gamma \circ \Delta \vdash \parcomp{x}{y}{P}{Q}}
+    \end{prooftree}
+    \hfill
+    \begin{prooftree}
+      \hypo{\Gamma, x : A \vdash P}
+      \hypo{\Delta \vdash S : A}
+      \infer2[\textsc{t-seq}]{\Gamma \circ \Delta \vdash P \seq xS}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{}
+      \infer1[\textsc{t-nil}]{\vdash \Lambda}
+    \end{prooftree}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \begin{center}
+    \begin{flushright}
+      Messages \framebox{$\Gamma \vdash M : A$} and
+      statements \framebox{$\Gamma \vdash S : A$}
+    \end{flushright}
+    \vspace{1em}
+
+    \begin{prooftree}[center=false]
+      \hypo{}
+      \infer1[\textsc{t-id}]{x : A \vdash x : A}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{\Gamma, z : A^\bot \vdash Q}
+      \infer1[\textsc{t-$\oplus_1$}]{\Gamma \vdash \slselect{z.Q} : A \oplus B}
+    \end{prooftree}
+    \qquad
+    \begin{prooftree}
+      \hypo{\Gamma, z : B^\bot \vdash Q}
+      \infer1[\textsc{t-$\oplus_2$}]{\Gamma \vdash \srselect{z.Q} : A \oplus B}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{\Gamma, z_1 : A^\bot \vdash Q_1}
+      \hypo{\Gamma, z_2 : B^\bot \vdash Q_2}
+      \infer2[\textsc{t-$\with$}]{\Gamma \vdash \schoice{z_1.Q_1}{z_2.Q_2} : A \with B}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}
+      \hypo{\Gamma, v : A^\bot \vdash Q}
+      \hypo{\Delta, z : B^\bot \vdash R}
+      \infer2[\textsc{t-$\otimes$}]{\Gamma \circ \Delta \vdash \ssend{v.Q}{z.R} : A \otimes B}
+    \end{prooftree}
+    \qquad
+    \begin{prooftree}
+      \hypo{\Gamma, v : A^\bot, z : B^\bot \vdash Q}
+      \infer1[\textsc{t-$\parr$}]{\Gamma \vdash \sreceive{v}{z}{Q} : A \parr B}
+    \end{prooftree}
+
+    \bigskip
+
+    \begin{prooftree}[center=false]
+      \hypo{}
+      \infer1[\textsc{t-$1$}]{\vdash \sclose{} : 1}
+    \end{prooftree}
+    \qquad
+    \begin{prooftree}[center=false]
+      \hypo{\Gamma \vdash Q}
+      \infer1[\textsc{t-$\bot$}]{\Gamma \vdash \swait{Q} : \bot}
+    \end{prooftree}
+  \end{center}
+\end{frame}
+
+% Operational Semantics
+\begin{frame}
+  \frametitle{Operational Semantics}
+  \begin{definition}[Contraction $\contr$]
+  \begin{align}
+    % tensor/par
+    \link{\ssend{v.P}{z.Q}}{\sreceive{a}{b}{R}}
+    &\contr \parcomp{b}{z}{\parcomp{a}{v}{R}{P}}{Q}
+    \tag{\textsc{r-$\otimes\parr$}}
+    \\
+    % plus/with
+    \link{\slselect{z.P}}{\schoice{v.Q}{w.R}}
+    &\contr \parcomp{z}{v}{P}{Q}
+    \tag{\textsc{r-$\oplus\with_1$}}
+    \\
+    \link{\srselect{z.P}}{\schoice{v.Q}{w.R}}
+    &\contr \parcomp{z}{w}{P}{R}
+    \tag{\textsc{r-$\oplus\with_2$}}
+    \\
+    % 1/bot
+    \link{\sclose}{\swait{P}}
+    &\contr P
+    \tag{\textsc{r-$1\bot$}}
+    \\
+    % AxCut
+    \parcomp{x}{y}{\link{x}{M}}{P}
+    &\contr P[M/y]
+    \tag{\textsc{r-axcut}}
+    \\
+    % Seq
+    P \seq xS
+    &\contr P[S/x]
+    \tag{\textsc{r-seq}}
+  \end{align}
+\end{definition}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Operational Semantics (continued)}
+  \begin{definition}[Contraction $\contr$ (continued)]
+  \begin{center}
+    % congruence: cut
+    \hfill
+    \begin{prooftree}
+      \hypo{P \contr P'}
+      \infer1[]{\parcomp{x}{y}{P}{Q} \contr \parcomp{x}{y}{P'}{Q}}
+    \end{prooftree}
+    \hfill (\textsc{r-cong-cut})
+
+    \bigskip
+
+    % congruence: seq
+    \hfill
+    \begin{prooftree}
+      \hypo{P \contr P'}
+      \infer1[]{P \seq s \contr P' \seq s}
+    \end{prooftree}
+    \hfill
+    (\textsc{r-cong-seq})
+
+    \bigskip
+
+    % struct
+    \hfill
+    \begin{prooftree}
+      \hypo{P \equiv P'}
+      \hypo{P' \contr Q'}
+      \hypo{Q' \equiv Q}
+      \infer3[]{P \contr Q}
+    \end{prooftree}
+    \hfill
+    (\textsc{r-struct})
+  \end{center}
+\end{definition}
+\end{frame}
+
+% Ephemeral Booleans
+\begin{frame}
+  \frametitle{A Church-Encoding for Linear Booleans}
+  \vspace{-2em}
+  \begin{align*}
+    \bool &\coloneq 1 \oplus 1 \\
+    \cobool &\coloneq \bot \with \bot \\
+    \\[-1em]
+    true(x : \cobool) &\coloneq \link{x}{y} \seq y \slselect{z.\link{z}{\sclose}} \\
+    false(x : \cobool) &\coloneq \link{x}{y} \seq y \srselect{z.\link{z}{\sclose}} \\
+    \\[-1em]
+    true &\coloneq \slselect{z.\link{z}{\sclose}} \\
+    false &\coloneq \srselect{z.\link{z}{\sclose}} \\
+    \\[-1em]
+    if \; x \; then \; P \; else \; Q
+    &\coloneq \link{x}{\schoice{x.\link{x}{\swait{P}}}{x.\link{x}{\swait{Q}}}}
+  \end{align*}
+\end{frame}
+
+\begin{frame}
+  \frametitle{A Church-Encoding for Linear Booleans (continued)}
+  \vspace{-2em}
+  \begin{align*}
+          &\; if \; x \; then \; P \; else \; Q \seq x \leftarrow true \\
+         =&\; \link{x}{\schoice{x.\link{x}{\swait{P}}}{x.\link{x}{\swait{Q}}}} \seq x \leftarrow true \\
+    \contr&\; \link{true}{\schoice{x.\link{x}{\swait{P}}}{x.\link{x}{\swait{Q}}}} \\
+         =&\; \link{\slselect{z.\link{z}{\sclose}}}{\schoice{x.\link{x}{\swait{P}}}{x.\link{x}{\swait{Q}}}} \\
+    \contr&\; \parcomp{z}{x}{\link{z}{\sclose}}{\link{x}{\swait{P}}} \\
+    \contr&\; \link{\sclose}{\swait{P}} \\
+    \contr&\; P
+  \end{align*}
+\end{frame}
+
+% Normalforms
+\begin{frame}
+  \begin{definition}[Weak normal form]
+  A derivation $\mathcal{D}$ is in weak normal form, if $\mathcal{D} \equiv \mathcal{N}$,
+  where $\mathcal{N}$ is of the form
+  \begin{center}
+    \begin{prooftree}
+      \hypo{\mathcal{D}_1}
+      \hypo{\mathcal{D}_2}
+      \hypo{\hdots}
+      \hypo{\mathcal{D}_{n-1}}
+      \ellipsis{}{\Gamma_{n-1}, A_{n-1}^\bot, C_{n-1} \vdash}
+      \hypo{\mathcal{D}_n}
+      \ellipsis{}{\Gamma_n, A_n^\bot, C_{n - 1}^\bot \vdash}
+      \infer2[\textsc{cut}]{\Gamma_{n-1}', A_{n-1}^\bot, A_n^\bot, C_{n-2}^\bot \vdash}
+      \infer[no rule]1{\vdots}
+      \infer3[\textsc{cut}]{\Gamma_2', A_2^\bot, \hdots, A_n^\bot, C_1^\bot \vdash}
+      \infer2[\textsc{cut}]{\Gamma_1', A_1^\bot, A_2^\bot, \hdots, A_n^\bot \vdash}
+    \end{prooftree}
+  \end{center}
+  such that every $\mathcal{D}_i$ has the shape
+  \vspace{-1em}
+  \begin{center}
+    \begin{prooftree}
+      \hypo{A_i, A_i^\bot \vdash}
+      \hypo{(P_i)^j}
+      \infer2[$\odot_i$]{\Gamma_i, A_i^\bot, C_i \vdash}
+    \end{prooftree}
+  \end{center}
+  % \vspace{-1em}
+  $\odot_i$ is the principal connective of the formula $A_i$ and $C_i$ is the $i$-th
+  \textsc{cut}'s principal formula.
+\end{definition}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Which processes do we consider as terminated and non-deadlocked?}
+  \begin{definition}[Link list]
+    The set of \emph{link lists} and their associated \emph{spines} (sequences of names) are
+    inductively defined by the following clauses.
+    \begin{enumerate}[label=(\roman*)]
+      \item If $P_1 \equiv \link{x_1}{M_1}$ and $P_2 \equiv \link{x_2}{M_2}$ such that
+            $M_1$ and $M_2$ are not futures, then $\parcomp{x}{y}{P_1}{P_2}$
+            is a link list with spine $\spine(P) = [x_1, x_2]$.
+      \item If $L \equiv \link{x}{M}$ such that $M$ is not a future and
+            $Q$ is a link list with spine $\spine(Q) = \vec{x}$, then 
+            $P = \parcomp{a}{b}{L}{Q}$ is a link list with spine $\spine(P) = x :: \vec{x}$.
+    \end{enumerate}
+  \end{definition}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Which processes do we consider as terminated and non-deadlocked?}
+  \begin{definition}[Final process]
+    A process $P$ is \emph{final} if it satisfies one of the following conditions:
+    \begin{enumerate}[label=(\roman*)]
+      \item $P = \Lambda$.
+      \item $P$ is of the form $\link{x}{M}$ or $\link{M}{x}$.
+      \item There exists a link list $Q$ such that $P \equiv Q$ and
+            every channel $a \in \spine(Q)$ is free in $Q$.
+    \end{enumerate}
+  \end{definition}
+\end{frame}
+
+\end{document}
